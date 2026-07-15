@@ -25,7 +25,7 @@ export function HeroSection() {
           <WaitlistForm />
         </div>
 
-        <div className="relative lg:pl-4">
+        <div className="relative flex justify-center overflow-visible lg:justify-end lg:pl-0">
           <PhoneMockup />
         </div>
       </div>

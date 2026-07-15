@@ -5,9 +5,8 @@ import { StatsBar } from "@/components/landing/StatsBar";
 
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#05070A]">
-      <div className="landing-glow pointer-events-none absolute inset-0" aria-hidden="true" />
-      <div className="landing-grid-bg pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
+    <div className="landing-page-bg relative flex min-h-screen flex-col overflow-hidden">
+      <div className="landing-page-overlay pointer-events-none absolute inset-0" aria-hidden="true" />
 
       <Header />
       <main className="relative flex-1">
