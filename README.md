@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# roamkit-web — Next.js 15 App Router
 
-## Getting Started
+Public site and customer UI for RoamKit. See [roamkit-docs](https://github.com/roamkit-net/roamkit-docs) for architecture and standards.
 
-First, run the development server:
+## Layout
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+app/           # Routes and layouts (App Router)
+components/    # Reusable UI components (Faza 1+)
+lib/           # API client and shared utilities
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Requires the API from `roamkit-api` and infra from `roamkit-infra`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd ../roamkit-infra/docker
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up -d
+```
 
-## Learn More
+Then in this repo:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000). The landing page reads `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Next.js dev server |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript `--noEmit` |
+| `npm run build` | Production build |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## CI / deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Workflows in `.github/workflows/` lint, typecheck, and build on every PR. On merge to `develop`, the pipeline builds and pushes `ghcr.io/roamkit-net/roamkit-web` and deploys to staging via SSH.
+
+Staging uses `NEXT_PUBLIC_API_URL=https://api.staging.roamkit.net` (baked at Docker build time).

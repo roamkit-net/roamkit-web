@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-node.yml
+
+  docker:
+    needs: ci
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      image-name: roamkit-web
+    secrets: inherit
+
+  deploy:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/deploy-staging.yml
+    secrets: inherit
