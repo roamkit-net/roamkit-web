@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { UserMenu } from "@/components/UserMenu";
 import {
   ApiError,
   Esim,
@@ -12,7 +13,6 @@ import {
   fetchMe,
   fetchMyEsims,
   isAuthenticated,
-  logout,
 } from "@/lib/api";
 
 function formatUsage(esim: Esim): string {
@@ -77,11 +77,6 @@ export default function MyEsimsPage() {
     };
   }, [router]);
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-4xl">
@@ -103,13 +98,14 @@ export default function MyEsimsPage() {
                 : "View ICCID, QR, and installation details for your eSIMs."}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-          >
-            Sign out
-          </button>
+          {user ? (
+            <UserMenu email={user.email} />
+          ) : (
+            <span
+              className="inline-flex h-10 w-10 rounded-full bg-slate-200"
+              aria-hidden="true"
+            />
+          )}
         </div>
 
         {isLoading ? (

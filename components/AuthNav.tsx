@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { UserMenu } from "@/components/UserMenu";
 import {
   ApiError,
   clearTokens,
@@ -14,15 +15,6 @@ type AuthNavState =
   | { status: "loading" }
   | { status: "anonymous" }
   | { status: "authenticated"; email: string };
-
-function emailInitial(email: string): string {
-  const local = email.split("@")[0] ?? "";
-  const first = local.trim().charAt(0);
-  return first ? first.toUpperCase() : "?";
-}
-
-const avatarClassName =
-  "inline-flex h-10 w-10 items-center justify-center rounded-full bg-sky-700 text-sm font-semibold text-white hover:bg-sky-800";
 
 const placeholderClassName =
   "inline-flex h-10 w-10 rounded-full bg-slate-200";
@@ -70,16 +62,7 @@ export function AuthNav() {
   }
 
   if (state.status === "authenticated") {
-    return (
-      <Link
-        href="/me/esims"
-        className={avatarClassName}
-        title={state.email}
-        aria-label={state.email}
-      >
-        {emailInitial(state.email)}
-      </Link>
-    );
+    return <UserMenu email={state.email} />;
   }
 
   return (
