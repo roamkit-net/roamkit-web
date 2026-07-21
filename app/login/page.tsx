@@ -55,6 +55,14 @@ export default function LoginPage() {
         error={error}
         onSubmit={handleSubmit}
       />
+      <p className="mt-4 text-center text-sm text-slate-600">
+        <Link
+          href="/forgot-password"
+          className="font-medium text-sky-700 hover:text-sky-800"
+        >
+          Forgot password?
+        </Link>
+      </p>
     </AuthShell>
   );
 }

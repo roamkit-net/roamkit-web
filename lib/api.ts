@@ -284,20 +284,99 @@ async function tryRefreshAccessToken(): Promise<boolean> {
   }
 }
 
-export async function registerUser(
-  email: string,
-  password: string,
-): Promise<User> {
+export async function registerUser(email: string): Promise<{ detail: string }> {
   try {
-    return await fetchApi<User>("/api/v1/auth/register/", {
+    return await fetchApi<{ detail: string }>("/api/v1/auth/register/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     });
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
         formatApiValidationMessage(error.body, "Registration failed."),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
+}
+
+export async function activateAccount(
+  uid: string,
+  token: string,
+  password: string,
+  passwordConfirm: string,
+): Promise<User> {
+  try {
+    return await fetchApi<User>("/api/v1/auth/activate/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid,
+        token,
+        password,
+        password_confirm: passwordConfirm,
+      }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatApiValidationMessage(error.body, "Unable to activate account."),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
+}
+
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ detail: string }> {
+  try {
+    return await fetchApi<{ detail: string }>("/api/v1/auth/password-reset/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatApiValidationMessage(error.body, "Unable to request password reset."),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
+}
+
+export async function confirmPasswordReset(
+  uid: string,
+  token: string,
+  password: string,
+  passwordConfirm: string,
+): Promise<{ detail: string }> {
+  try {
+    return await fetchApi<{ detail: string }>(
+      "/api/v1/auth/password-reset/confirm/",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid,
+          token,
+          password,
+          password_confirm: passwordConfirm,
+        }),
+      },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatApiValidationMessage(error.body, "Unable to reset password."),
         error.status,
         error.body,
       );

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AuthShell, EmailOnlyForm } from "@/components/AuthForm";
-import { ApiError, isAuthenticated, registerUser } from "@/lib/api";
+import { ApiError, isAuthenticated, requestPasswordReset } from "@/lib/api";
 
-export default function RegisterPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,13 +23,13 @@ export default function RegisterPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await registerUser(email);
+      await requestPasswordReset(email);
       setSubmittedEmail(email);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Unable to create your account right now.");
+        setError("Unable to send a reset email right now.");
       }
     } finally {
       setIsLoading(false);
@@ -40,10 +40,10 @@ export default function RegisterPage() {
     return (
       <AuthShell
         title="Check your email"
-        subtitle={`We sent a confirmation link to ${submittedEmail}. Open it to set your password and activate your account.`}
+        subtitle={`If an account exists for ${submittedEmail}, we sent a password reset link.`}
         footer={
           <>
-            Already activated?{" "}
+            Remembered your password?{" "}
             <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
               Sign in
             </Link>
@@ -67,11 +67,11 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create account"
-      subtitle="Enter your email and we will send a confirmation link to set your password."
+      title="Forgot password"
+      subtitle="Enter your email and we will send a link to reset your password."
       footer={
         <>
-          Already registered?{" "}
+          Remembered your password?{" "}
           <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
             Sign in
           </Link>
@@ -79,7 +79,7 @@ export default function RegisterPage() {
       }
     >
       <EmailOnlyForm
-        submitLabel="Send confirmation email"
+        submitLabel="Send reset link"
         loadingLabel="Sending…"
         isLoading={isLoading}
         error={error}
