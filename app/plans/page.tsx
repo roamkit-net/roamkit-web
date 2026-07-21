@@ -25,10 +25,10 @@ export default async function PlansPage() {
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <Link
-              href="/"
+              href="/me/esims"
               className="text-sm font-medium text-sky-700 hover:text-sky-800"
             >
-              ← Back to home
+              ← Back to My eSIMs
             </Link>
             <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
               RoamKit
