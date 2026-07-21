@@ -21,21 +21,29 @@ export default async function PlansPage() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-4xl">
-        <div className="mb-8">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Link
+              href="/"
+              className="text-sm font-medium text-sky-700 hover:text-sky-800"
+            >
+              ← Back to home
+            </Link>
+            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+              RoamKit
+            </p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight">eSIM Plans</h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+              Browse data plans synced from our partner catalog. Checkout arrives
+              in a later phase.
+            </p>
+          </div>
           <Link
-            href="/"
-            className="text-sm font-medium text-sky-700 hover:text-sky-800"
+            href="/login"
+            className="rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
           >
-            ← Back to home
+            Sign in
           </Link>
-          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-            RoamKit
-          </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight">eSIM Plans</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Browse data plans synced from our partner catalog. Checkout arrives
-            in a later phase.
-          </p>
         </div>
 
         {errorMessage ? (
