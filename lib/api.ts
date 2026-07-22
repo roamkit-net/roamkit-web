@@ -168,6 +168,17 @@ export type Package = {
 
 export type LocationCoverageType = "local" | "regional" | "global";
 
+export type CoverageNetwork = {
+  name: string;
+  types: string[];
+};
+
+export type LocationCoverage = {
+  code: string;
+  name: string;
+  networks: CoverageNetwork[];
+};
+
 export type Location = {
   slug: string;
   title: string;
@@ -177,6 +188,7 @@ export type Location = {
   is_popular: boolean;
   min_price_usd: string | null;
   covered_country_codes: string[];
+  coverages: LocationCoverage[];
   broader_locations?: Location[];
 };
 

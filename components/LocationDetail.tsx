@@ -4,13 +4,19 @@ import { useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { CoveragesSummary } from "@/components/CoveragesModal";
 import { LocationCard } from "@/components/LocationCard";
 import { PackageRow } from "@/components/PackageRow";
 import type { Location, Package } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
+import {
+  filterPackagesByPlan,
+  resolveActivePlanFilter,
+  shouldShowPlanFilter,
+  type PlanFilter,
+} from "@/lib/planFilters";
 
 type ServiceType = "data" | "data_calls_texts";
-type PlanFilter = "unlimited" | "standard";
 
 function isDataCallsTexts(pkg: Package): boolean {
   if ((pkg.voice_minutes ?? 0) > 0 || (pkg.text_sms ?? 0) > 0) {
@@ -57,7 +63,7 @@ export function LocationDetail({
   packages: Package[];
 }) {
   const imageSrc = locationImageSrc(location);
-  const operatorTitle = packages[0]?.operator_title ?? null;
+  const coverages = location.coverages ?? [];
   const broader = location.broader_locations ?? [];
 
   const hasData = packages.some((pkg) => !isDataCallsTexts(pkg));
@@ -79,23 +85,14 @@ export function LocationDetail({
     return packages.filter((pkg) => !isDataCallsTexts(pkg));
   }, [packages, serviceType, showServiceTabs]);
 
-  const hasUnlimited = servicePackages.some((pkg) => pkg.is_unlimited);
-  const hasStandard = servicePackages.some((pkg) => !pkg.is_unlimited);
-  const showPlanFilter = hasUnlimited && hasStandard;
+  // Visible for local, regional, and global whenever both categories exist.
+  const showPlanFilter = shouldShowPlanFilter(servicePackages);
+  const activeFilter = resolveActivePlanFilter(filter, servicePackages);
 
-  const activeFilter: PlanFilter =
-    filter === "unlimited" && !hasUnlimited && hasStandard
-      ? "standard"
-      : filter === "standard" && !hasStandard && hasUnlimited
-        ? "unlimited"
-        : filter;
-
-  const filteredPackages = useMemo(() => {
-    if (activeFilter === "unlimited") {
-      return servicePackages.filter((pkg) => pkg.is_unlimited);
-    }
-    return servicePackages.filter((pkg) => !pkg.is_unlimited);
-  }, [activeFilter, servicePackages]);
+  const filteredPackages = useMemo(
+    () => filterPackagesByPlan(servicePackages, activeFilter) as Package[],
+    [activeFilter, servicePackages],
+  );
 
   const { mostPopular, dayGroups } = useMemo(() => {
     const sorted = [...filteredPackages].sort(comparePackages);
@@ -170,11 +167,10 @@ export function LocationDetail({
             <h1 className="mt-2 text-3xl font-bold tracking-tight">
               {location.title} eSIMs
             </h1>
-            {operatorTitle ? (
-              <p className="mt-2 text-base text-slate-600">
-                Network: {operatorTitle}
-              </p>
-            ) : null}
+            <CoveragesSummary
+              coverages={coverages}
+              coverageType={location.coverage_type}
+            />
             <a
               href="#compatibility"
               className="mt-3 inline-block text-sm font-medium text-sky-700 hover:text-sky-800"
