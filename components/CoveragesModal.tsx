@@ -51,6 +51,16 @@ function flattenNetworks(coverages: LocationCoverage[]): CoverageNetwork[] {
   return networks;
 }
 
+/** Resolve a display name when Airalo sends name === ISO2 code (e.g. "AD"). */
+export function coverageCountryLabel(coverage: LocationCoverage): string {
+  const code = coverage.code?.toUpperCase();
+  const name = coverage.name?.trim() ?? "";
+  if (code && (!name || name.toUpperCase() === code)) {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) ?? code;
+  }
+  return name || code || "";
+}
+
 export function CoveragesSummary({
   coverages,
   coverageType,
@@ -167,16 +177,25 @@ export function CoveragesModal({
 
   const sortedCountries = useMemo(() => {
     return [...coverages].sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      coverageCountryLabel(a).localeCompare(coverageCountryLabel(b), undefined, {
+        sensitivity: "base",
+      }),
     );
   }, [coverages]);
 
   const filteredCountries = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return sortedCountries;
-    return sortedCountries.filter((coverage) =>
-      coverage.name.toLowerCase().includes(normalized),
-    );
+    return sortedCountries.filter((coverage) => {
+      const label = coverageCountryLabel(coverage).toLowerCase();
+      const code = (coverage.code ?? "").toLowerCase();
+      const name = (coverage.name ?? "").toLowerCase();
+      return (
+        label.includes(normalized) ||
+        code.includes(normalized) ||
+        name.includes(normalized)
+      );
+    });
   }, [query, sortedCountries]);
 
   const title = mode === "networks" ? "Networks" : "Countries + Networks";
@@ -264,7 +283,7 @@ export function CoveragesModal({
                       </span>
                     ) : null}
                     <span className="truncate font-medium text-slate-900">
-                      {coverage.name}
+                      {coverageCountryLabel(coverage)}
                     </span>
                   </div>
                   <div className="flex max-w-[55%] flex-wrap justify-end gap-x-2 gap-y-1 text-right">
