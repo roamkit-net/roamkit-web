@@ -13,7 +13,20 @@ type ServiceType = "data" | "data_calls_texts";
 type PlanFilter = "unlimited" | "standard";
 
 function isDataCallsTexts(pkg: Package): boolean {
-  return (pkg.voice_minutes ?? 0) > 0 || (pkg.text_sms ?? 0) > 0;
+  if ((pkg.voice_minutes ?? 0) > 0 || (pkg.text_sms ?? 0) > 0) {
+    return true;
+  }
+  // Airalo marks DCT operators as e.g. "data-voice-text" even when voice/text
+  // numeric fields are absent until a fresh sync.
+  const planType = (pkg.plan_type || "data").toLowerCase();
+  if (planType === "data" || planType === "topup") {
+    return false;
+  }
+  return (
+    planType.includes("voice") ||
+    planType.includes("text") ||
+    planType.includes("call")
+  );
 }
 
 function coverageLabel(coverageType: Location["coverage_type"]): string {

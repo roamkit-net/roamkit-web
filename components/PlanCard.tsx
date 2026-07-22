@@ -22,17 +22,44 @@ function formatData(plan: Package): string {
   return plan.is_unlimited ? "Unlimited" : plan.data_allowance;
 }
 
+function parseAllowanceFromTitle(
+  title: string,
+): { voiceMinutes: number | null; textSms: number | null } {
+  const voiceMatch = title.match(/(\d+)\s*mins?\b/i);
+  const textMatch = title.match(/(\d+)\s*sms\b/i);
+  return {
+    voiceMinutes: voiceMatch ? Number.parseInt(voiceMatch[1], 10) : null,
+    textSms: textMatch ? Number.parseInt(textMatch[1], 10) : null,
+  };
+}
+
+function voiceAndText(plan: Package): {
+  voiceMinutes: number | null;
+  textSms: number | null;
+} {
+  const fromFields = {
+    voiceMinutes: plan.voice_minutes,
+    textSms: plan.text_sms,
+  };
+  if ((fromFields.voiceMinutes ?? 0) > 0 || (fromFields.textSms ?? 0) > 0) {
+    return fromFields;
+  }
+  return parseAllowanceFromTitle(plan.title);
+}
+
 function hasVoiceOrText(plan: Package): boolean {
-  return (plan.voice_minutes ?? 0) > 0 || (plan.text_sms ?? 0) > 0;
+  const { voiceMinutes, textSms } = voiceAndText(plan);
+  return (voiceMinutes ?? 0) > 0 || (textSms ?? 0) > 0;
 }
 
 function formatPlanSummary(plan: Package): string {
+  const { voiceMinutes, textSms } = voiceAndText(plan);
   const parts = [formatData(plan), formatValidity(plan.validity_days)];
-  if ((plan.voice_minutes ?? 0) > 0) {
-    parts.push(`${plan.voice_minutes} mins`);
+  if ((voiceMinutes ?? 0) > 0) {
+    parts.push(`${voiceMinutes} mins`);
   }
-  if ((plan.text_sms ?? 0) > 0) {
-    parts.push(`${plan.text_sms} SMS`);
+  if ((textSms ?? 0) > 0) {
+    parts.push(`${textSms} SMS`);
   }
   return parts.join(" · ");
 }
