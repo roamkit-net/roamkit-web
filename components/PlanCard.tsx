@@ -18,8 +18,28 @@ function formatValidity(days: number): string {
   return `${days} days`;
 }
 
+function formatData(plan: Package): string {
+  return plan.is_unlimited ? "Unlimited" : plan.data_allowance;
+}
+
+function hasVoiceOrText(plan: Package): boolean {
+  return (plan.voice_minutes ?? 0) > 0 || (plan.text_sms ?? 0) > 0;
+}
+
+function formatPlanSummary(plan: Package): string {
+  const parts = [formatData(plan), formatValidity(plan.validity_days)];
+  if ((plan.voice_minutes ?? 0) > 0) {
+    parts.push(`${plan.voice_minutes} mins`);
+  }
+  if ((plan.text_sms ?? 0) > 0) {
+    parts.push(`${plan.text_sms} SMS`);
+  }
+  return parts.join(" · ");
+}
+
 export function PlanCard({ plan }: { plan: Package }) {
   const countryLabel = plan.country_code || "Global";
+  const showVoiceText = hasVoiceOrText(plan);
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -38,20 +58,24 @@ export function PlanCard({ plan }: { plan: Package }) {
         </p>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <dt className="text-slate-500">Data</dt>
-          <dd className="font-medium text-slate-900">
-            {plan.is_unlimited ? "Unlimited" : plan.data_allowance}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">Validity</dt>
-          <dd className="font-medium text-slate-900">
-            {formatValidity(plan.validity_days)}
-          </dd>
-        </div>
-      </dl>
+      {showVoiceText ? (
+        <p className="mt-4 text-sm font-medium text-slate-900">
+          {formatPlanSummary(plan)}
+        </p>
+      ) : (
+        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt className="text-slate-500">Data</dt>
+            <dd className="font-medium text-slate-900">{formatData(plan)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Validity</dt>
+            <dd className="font-medium text-slate-900">
+              {formatValidity(plan.validity_days)}
+            </dd>
+          </div>
+        </dl>
+      )}
     </article>
   );
 }

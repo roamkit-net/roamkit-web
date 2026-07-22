@@ -9,7 +9,12 @@ import { PlanCard } from "@/components/PlanCard";
 import type { Location, Package } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
 
-type PlanFilter = "all" | "unlimited" | "standard";
+type ServiceType = "data" | "data_calls_texts";
+type PlanFilter = "unlimited" | "standard";
+
+function isDataCallsTexts(pkg: Package): boolean {
+  return (pkg.voice_minutes ?? 0) > 0 || (pkg.text_sms ?? 0) > 0;
+}
 
 function coverageLabel(coverageType: Location["coverage_type"]): string {
   if (coverageType === "local") return "Local";
@@ -24,23 +29,45 @@ export function LocationDetail({
   location: Location;
   packages: Package[];
 }) {
-  const [filter, setFilter] = useState<PlanFilter>("all");
   const imageSrc = locationImageSrc(location);
   const operatorTitle = packages[0]?.operator_title ?? null;
   const broader = location.broader_locations ?? [];
 
-  const filteredPackages = useMemo(() => {
-    if (filter === "unlimited") {
-      return packages.filter((pkg) => pkg.is_unlimited);
-    }
-    if (filter === "standard") {
-      return packages.filter((pkg) => !pkg.is_unlimited);
-    }
-    return packages;
-  }, [filter, packages]);
+  const hasData = packages.some((pkg) => !isDataCallsTexts(pkg));
+  const hasDataCallsTexts = packages.some(isDataCallsTexts);
+  const showServiceTabs = hasData && hasDataCallsTexts;
 
-  const hasUnlimited = packages.some((pkg) => pkg.is_unlimited);
-  const hasStandard = packages.some((pkg) => !pkg.is_unlimited);
+  const [serviceType, setServiceType] = useState<ServiceType>(() =>
+    hasData ? "data" : "data_calls_texts",
+  );
+  const [filter, setFilter] = useState<PlanFilter>("unlimited");
+
+  const servicePackages = useMemo(() => {
+    if (!showServiceTabs) {
+      return packages;
+    }
+    if (serviceType === "data_calls_texts") {
+      return packages.filter(isDataCallsTexts);
+    }
+    return packages.filter((pkg) => !isDataCallsTexts(pkg));
+  }, [packages, serviceType, showServiceTabs]);
+
+  const hasUnlimited = servicePackages.some((pkg) => pkg.is_unlimited);
+  const hasStandard = servicePackages.some((pkg) => !pkg.is_unlimited);
+
+  const activeFilter: PlanFilter =
+    filter === "unlimited" && !hasUnlimited && hasStandard
+      ? "standard"
+      : filter === "standard" && !hasStandard && hasUnlimited
+        ? "unlimited"
+        : filter;
+
+  const filteredPackages = useMemo(() => {
+    if (activeFilter === "unlimited") {
+      return servicePackages.filter((pkg) => pkg.is_unlimited);
+    }
+    return servicePackages.filter((pkg) => !pkg.is_unlimited);
+  }, [activeFilter, servicePackages]);
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -98,32 +125,50 @@ export function LocationDetail({
         </header>
 
         <section className="mt-10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-slate-900">Plans</h2>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-slate-900">Plans</h2>
+              {showServiceTabs ? (
+                <div className="flex gap-2" role="group" aria-label="Service type">
+                  <FilterButton
+                    active={serviceType === "data"}
+                    onClick={() => setServiceType("data")}
+                  >
+                    Data
+                  </FilterButton>
+                  <FilterButton
+                    active={serviceType === "data_calls_texts"}
+                    onClick={() => setServiceType("data_calls_texts")}
+                  >
+                    Data / Calls / Texts
+                  </FilterButton>
+                </div>
+              ) : null}
+            </div>
+
             {(hasUnlimited || hasStandard) && (
-              <div className="flex gap-2" role="group" aria-label="Plan type">
-                <FilterButton
-                  active={filter === "all"}
-                  onClick={() => setFilter("all")}
-                >
-                  All
-                </FilterButton>
-                {hasUnlimited ? (
-                  <FilterButton
-                    active={filter === "unlimited"}
-                    onClick={() => setFilter("unlimited")}
-                  >
-                    Unlimited
-                  </FilterButton>
-                ) : null}
-                {hasStandard ? (
-                  <FilterButton
-                    active={filter === "standard"}
-                    onClick={() => setFilter("standard")}
-                  >
-                    Standard
-                  </FilterButton>
-                ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-medium text-slate-700">
+                  Choose your package
+                </p>
+                <div className="flex gap-2" role="group" aria-label="Data amount">
+                  {hasUnlimited ? (
+                    <FilterButton
+                      active={activeFilter === "unlimited"}
+                      onClick={() => setFilter("unlimited")}
+                    >
+                      Unlimited
+                    </FilterButton>
+                  ) : null}
+                  {hasStandard ? (
+                    <FilterButton
+                      active={activeFilter === "standard"}
+                      onClick={() => setFilter("standard")}
+                    >
+                      Standard
+                    </FilterButton>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>

@@ -162,6 +162,8 @@ export type Package = {
   price_usd: string;
   is_unlimited: boolean;
   plan_type: string;
+  voice_minutes: number | null;
+  text_sms: number | null;
 };
 
 export type LocationCoverageType = "local" | "regional" | "global";
