@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { LocationCard } from "@/components/LocationCard";
-import { PlanCard } from "@/components/PlanCard";
+import { PackageRow } from "@/components/PackageRow";
 import type { Location, Package } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
 
@@ -33,6 +33,20 @@ function coverageLabel(coverageType: Location["coverage_type"]): string {
   if (coverageType === "local") return "Local";
   if (coverageType === "regional") return "Regional";
   return "Global";
+}
+
+function formatValidityHeading(days: number): string {
+  if (days === 1) {
+    return "1 day";
+  }
+  return `${days} days`;
+}
+
+function comparePackages(a: Package, b: Package): number {
+  if (a.validity_days !== b.validity_days) {
+    return a.validity_days - b.validity_days;
+  }
+  return Number.parseFloat(a.price_usd) - Number.parseFloat(b.price_usd);
 }
 
 export function LocationDetail({
@@ -67,6 +81,7 @@ export function LocationDetail({
 
   const hasUnlimited = servicePackages.some((pkg) => pkg.is_unlimited);
   const hasStandard = servicePackages.some((pkg) => !pkg.is_unlimited);
+  const showPlanFilter = hasUnlimited && hasStandard;
 
   const activeFilter: PlanFilter =
     filter === "unlimited" && !hasUnlimited && hasStandard
@@ -81,6 +96,38 @@ export function LocationDetail({
     }
     return servicePackages.filter((pkg) => !pkg.is_unlimited);
   }, [activeFilter, servicePackages]);
+
+  const { mostPopular, dayGroups } = useMemo(() => {
+    const sorted = [...filteredPackages].sort(comparePackages);
+    if (sorted.length === 0) {
+      return { mostPopular: null as Package | null, dayGroups: [] as { days: number; packages: Package[] }[] };
+    }
+
+    const popular = sorted.reduce((cheapest, pkg) =>
+      Number.parseFloat(pkg.price_usd) < Number.parseFloat(cheapest.price_usd)
+        ? pkg
+        : cheapest,
+    );
+
+    const remaining = sorted.filter((pkg) => pkg.id !== popular.id);
+    const groups: { days: number; packages: Package[] }[] = [];
+    for (const pkg of remaining) {
+      const last = groups[groups.length - 1];
+      if (last && last.days === pkg.validity_days) {
+        last.packages.push(pkg);
+      } else {
+        groups.push({ days: pkg.validity_days, packages: [pkg] });
+      }
+    }
+
+    return { mostPopular: popular, dayGroups: groups };
+  }, [filteredPackages]);
+
+  const plansHeading = showServiceTabs
+    ? null
+    : hasDataCallsTexts
+      ? "Data / Calls / Texts"
+      : "Data";
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -139,51 +186,55 @@ export function LocationDetail({
 
         <section className="mt-10">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-slate-900">Plans</h2>
-              {showServiceTabs ? (
-                <div className="flex gap-2" role="group" aria-label="Service type">
-                  <FilterButton
-                    active={serviceType === "data"}
-                    onClick={() => setServiceType("data")}
-                  >
-                    Data
-                  </FilterButton>
-                  <FilterButton
-                    active={serviceType === "data_calls_texts"}
-                    onClick={() => setServiceType("data_calls_texts")}
-                  >
-                    Data / Calls / Texts
-                  </FilterButton>
-                </div>
-              ) : null}
-            </div>
-
-            {(hasUnlimited || hasStandard) && (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-700">
-                  Choose your package
-                </p>
-                <div className="flex gap-2" role="group" aria-label="Data amount">
-                  {hasUnlimited ? (
-                    <FilterButton
-                      active={activeFilter === "unlimited"}
-                      onClick={() => setFilter("unlimited")}
-                    >
-                      Unlimited
-                    </FilterButton>
-                  ) : null}
-                  {hasStandard ? (
-                    <FilterButton
-                      active={activeFilter === "standard"}
-                      onClick={() => setFilter("standard")}
-                    >
-                      Standard
-                    </FilterButton>
-                  ) : null}
-                </div>
+            {showServiceTabs ? (
+              <div
+                className="flex gap-6 border-b border-slate-200"
+                role="tablist"
+                aria-label="Service type"
+              >
+                <ServiceTab
+                  active={serviceType === "data"}
+                  onClick={() => setServiceType("data")}
+                >
+                  Data
+                </ServiceTab>
+                <ServiceTab
+                  active={serviceType === "data_calls_texts"}
+                  onClick={() => setServiceType("data_calls_texts")}
+                >
+                  Data / Calls / Texts
+                </ServiceTab>
               </div>
+            ) : (
+              <h2 className="border-b border-slate-200 pb-3 text-xl font-semibold text-slate-900">
+                {plansHeading}
+              </h2>
             )}
+
+            {showPlanFilter ? (
+              <div
+                className="inline-flex w-fit rounded-full bg-slate-200/80 p-1"
+                role="group"
+                aria-label="Data amount"
+              >
+                <SegmentButton
+                  active={activeFilter === "unlimited"}
+                  onClick={() => setFilter("unlimited")}
+                >
+                  Unlimited
+                </SegmentButton>
+                <SegmentButton
+                  active={activeFilter === "standard"}
+                  onClick={() => setFilter("standard")}
+                >
+                  Standard
+                </SegmentButton>
+              </div>
+            ) : null}
+
+            <p className="text-sm font-medium text-slate-700">
+              Choose your package
+            </p>
           </div>
 
           {filteredPackages.length === 0 ? (
@@ -194,13 +245,30 @@ export function LocationDetail({
               </p>
             </div>
           ) : (
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-              {filteredPackages.map((plan) => (
-                <li key={plan.id}>
-                  <PlanCard plan={plan} />
-                </li>
+            <div className="mt-4 flex flex-col gap-6">
+              {mostPopular ? (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                    Most Popular
+                  </h3>
+                  <PackageRow plan={mostPopular} showValidity />
+                </div>
+              ) : null}
+              {dayGroups.map((group) => (
+                <div key={group.days}>
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                    {formatValidityHeading(group.days)}
+                  </h3>
+                  <ul className="flex flex-col gap-3">
+                    {group.packages.map((plan) => (
+                      <li key={plan.id}>
+                        <PackageRow plan={plan} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
 
@@ -240,7 +308,33 @@ export function LocationDetail({
   );
 }
 
-function FilterButton({
+function ServiceTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        active
+          ? "-mb-px border-b-2 border-slate-900 pb-3 text-base font-semibold text-slate-900"
+          : "pb-3 text-base font-medium text-slate-500 hover:text-slate-700"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function SegmentButton({
   active,
   onClick,
   children,
@@ -255,8 +349,8 @@ function FilterButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
-          : "rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+          ? "rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white"
+          : "rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
       }
     >
       {children}
