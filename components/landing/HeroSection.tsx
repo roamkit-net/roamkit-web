@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { FeatureGrid } from "./FeatureGrid";
 import { PhoneMockup } from "./PhoneMockup";
 import { WaitlistForm } from "./WaitlistForm";
@@ -22,7 +24,18 @@ export function HeroSection() {
           </div>
 
           <FeatureGrid />
-          <WaitlistForm />
+          <div className="flex flex-col gap-3">
+            <WaitlistForm />
+            <p className="text-sm text-slate-400">
+              Already exploring?{" "}
+              <Link
+                href="/plans"
+                className="font-medium text-slate-300 underline-offset-4 transition hover:text-cyan-400 hover:underline"
+              >
+                Browse plans
+              </Link>
+            </p>
+          </div>
         </div>
 
         <div className="relative flex justify-center overflow-visible lg:justify-end lg:pl-0">

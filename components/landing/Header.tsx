@@ -17,6 +17,12 @@ export function Header() {
           </span>
         </div>
         <Link
+          href="/plans"
+          className="text-sm font-medium text-slate-300 transition hover:text-white"
+        >
+          Plans
+        </Link>
+        <Link
           href="/login"
           className="text-sm font-medium text-slate-300 transition hover:text-white"
         >
