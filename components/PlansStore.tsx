@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { LocationCard } from "@/components/LocationCard";
+import {
+  LocationSearch,
+  matchLocations,
+} from "@/components/LocationSearch";
 import type { Location, LocationListType } from "@/lib/api";
 
 const TABS: { id: LocationListType; label: string }[] = [
@@ -78,10 +82,15 @@ export function PlansStore({
   const tabParam = searchParams.get("tab");
   const activeTab = isLocationListType(tabParam) ? tabParam : initialTab;
   const copy = TAB_COPY[activeTab];
-  const visibleLocations = useMemo(
-    () => filterLocations(locations, activeTab),
-    [locations, activeTab],
-  );
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const trimmedQuery = debouncedQuery.trim();
+  const isSearching = trimmedQuery.length > 0;
+  const visibleLocations = useMemo(() => {
+    if (isSearching) {
+      return matchLocations(locations, trimmedQuery);
+    }
+    return filterLocations(locations, activeTab);
+  }, [locations, activeTab, isSearching, trimmedQuery]);
 
   function selectTab(tab: LocationListType) {
     const params = new URLSearchParams(searchParams.toString());
@@ -114,6 +123,11 @@ export function PlansStore({
             {copy.description}
           </p>
         </div>
+
+        <LocationSearch
+          locations={locations}
+          onDebouncedQueryChange={setDebouncedQuery}
+        />
 
         <div
           className="mb-8 flex flex-wrap gap-2 border-b border-slate-200 pb-4"
@@ -150,12 +164,25 @@ export function PlansStore({
           </div>
         ) : visibleLocations.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-lg font-medium text-slate-900">
-              No destinations available yet
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              Run a package sync on the API to populate the catalog.
-            </p>
+            {isSearching ? (
+              <>
+                <p className="text-lg font-medium text-slate-900">
+                  No destinations match “{trimmedQuery}”
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Try another country, region, or ISO code.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium text-slate-900">
+                  No destinations available yet
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Run a package sync on the API to populate the catalog.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
