@@ -16,6 +16,9 @@ on:
         required: false
         type: string
         default: .
+    secrets:
+      GHCR_TOKEN:
+        required: true
 
 jobs:
   build:

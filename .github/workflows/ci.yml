@@ -21,7 +21,8 @@ jobs:
     uses: ./.github/workflows/docker-build-push.yml
     with:
       image-name: roamkit-web
-    secrets: inherit
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
   deploy:
     needs: docker
