@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AuthNav } from "@/components/AuthNav";
 import { LocationCard } from "@/components/LocationCard";
 import {
   LocationSearch,
@@ -110,22 +110,19 @@ export function PlansStore({
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-4xl">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="text-sm font-medium text-sky-700 hover:text-sky-800"
-          >
-            ← Back to home
-          </Link>
-          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-            RoamKit Store
-          </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight">
-            {copy.title}
-          </h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            {copy.description}
-          </p>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+              RoamKit Store
+            </p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight">
+              {copy.title}
+            </h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+              {copy.description}
+            </p>
+          </div>
+          <AuthNav />
         </div>
 
         <LocationSearch
