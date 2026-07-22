@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { LocationDetail } from "@/components/LocationDetail";
 import { ApiError, fetchAllPackages, fetchLocation } from "@/lib/api";
 
 const ESIM_SUFFIX = "-esim";
+
+/** Partner/Airalo aliases → canonical /global-esim store URL. */
+const GLOBAL_SLUG_REDIRECTS = new Set([
+  "world",
+  "worldwide",
+  "discover",
+  "discover-global",
+]);
 
 function parseLocationSlug(param: string): string | null {
   if (!param.endsWith(ESIM_SUFFIX)) {
@@ -45,6 +53,10 @@ export default async function LocationEsimPage({
   const slug = parseLocationSlug(locationParam);
   if (!slug) {
     notFound();
+  }
+
+  if (GLOBAL_SLUG_REDIRECTS.has(slug.toLowerCase())) {
+    permanentRedirect("/global-esim");
   }
 
   try {

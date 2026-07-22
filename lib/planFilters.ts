@@ -22,7 +22,7 @@ export function hasStandardPlans(packages: PlanFilterable[]): boolean {
  * Never for Data / Calls / Texts (even if a DCT row is flagged unlimited).
  * Same rule for local, regional, and global.
  *
- * After Partner sync, world/regional locations that sell both Unlimited and
+ * After Partner sync, global/regional locations that sell both Unlimited and
  * Standard Data SKUs show the control; catalogs with only one category do not.
  */
 export function shouldShowPlanFilter(
