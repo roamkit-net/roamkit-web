@@ -30,4 +30,6 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/deploy-staging.yml
-    secrets: inherit
+    secrets:
+      STAGING_HOST: ${{ secrets.STAGING_HOST }}
+      STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
