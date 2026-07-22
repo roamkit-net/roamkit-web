@@ -85,12 +85,16 @@ export function PlansStore({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const trimmedQuery = debouncedQuery.trim();
   const isSearching = trimmedQuery.length > 0;
+  const searchResults = useMemo(
+    () => (isSearching ? matchLocations(locations, trimmedQuery) : null),
+    [locations, isSearching, trimmedQuery],
+  );
   const visibleLocations = useMemo(() => {
-    if (isSearching) {
-      return matchLocations(locations, trimmedQuery);
+    if (searchResults) {
+      return [...searchResults.primary, ...searchResults.broader];
     }
     return filterLocations(locations, activeTab);
-  }, [locations, activeTab, isSearching, trimmedQuery]);
+  }, [locations, activeTab, searchResults]);
 
   function selectTab(tab: LocationListType) {
     const params = new URLSearchParams(searchParams.toString());
@@ -183,6 +187,34 @@ export function PlansStore({
                 </p>
               </>
             )}
+          </div>
+        ) : searchResults ? (
+          <div className="space-y-8">
+            {searchResults.primary.length > 0 ? (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {searchResults.primary.map((location) => (
+                  <li key={location.slug}>
+                    <LocationCard location={location} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {searchResults.broader.length > 0 ? (
+              <div>
+                {searchResults.primary.length > 0 ? (
+                  <p className="mb-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    Also available in…
+                  </p>
+                ) : null}
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {searchResults.broader.map((location) => (
+                    <li key={location.slug}>
+                      <LocationCard location={location} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">

@@ -174,7 +174,7 @@ export type Location = {
   image_url: string;
   is_popular: boolean;
   min_price_usd: string | null;
-  covered_country_codes?: string[];
+  covered_country_codes: string[];
   broader_locations?: Location[];
 };
 
