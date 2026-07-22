@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "cdn-revamp.airalo.com",
+      },
+      {
+        protocol: "https",
         hostname: "sandbox.airalo.com",
       },
     ],
