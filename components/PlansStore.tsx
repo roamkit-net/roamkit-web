@@ -1,0 +1,172 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { LocationCard } from "@/components/LocationCard";
+import type { Location, LocationListType } from "@/lib/api";
+
+const TABS: { id: LocationListType; label: string }[] = [
+  { id: "popular", label: "Popular" },
+  { id: "local", label: "Local" },
+  { id: "regional", label: "Regional" },
+  { id: "global", label: "Global" },
+  { id: "all", label: "All" },
+];
+
+const TAB_COPY: Record<
+  LocationListType,
+  { title: string; description: string }
+> = {
+  popular: {
+    title: "Popular destinations",
+    description: "Top places travelers pick first — stay online from day one.",
+  },
+  local: {
+    title: "Local eSIMs",
+    description: "Country-specific plans with local coverage where you land.",
+  },
+  regional: {
+    title: "Regional eSIMs",
+    description: "One plan across multiple countries in the same region.",
+  },
+  global: {
+    title: "Global eSIMs",
+    description: "Worldwide coverage for multi-stop trips and frequent flyers.",
+  },
+  all: {
+    title: "All destinations",
+    description: "Browse every location in the RoamKit catalog.",
+  },
+};
+
+function isLocationListType(value: string | null): value is LocationListType {
+  return (
+    value === "popular" ||
+    value === "local" ||
+    value === "regional" ||
+    value === "global" ||
+    value === "all"
+  );
+}
+
+function filterLocations(
+  locations: Location[],
+  tab: LocationListType,
+): Location[] {
+  if (tab === "all") {
+    return locations;
+  }
+  if (tab === "popular") {
+    return locations.filter((location) => location.is_popular);
+  }
+  return locations.filter((location) => location.coverage_type === tab);
+}
+
+export function PlansStore({
+  locations,
+  errorMessage,
+  initialTab,
+}: {
+  locations: Location[];
+  errorMessage: string | null;
+  initialTab: LocationListType;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab = isLocationListType(tabParam) ? tabParam : initialTab;
+  const copy = TAB_COPY[activeTab];
+  const visibleLocations = useMemo(
+    () => filterLocations(locations, activeTab),
+    [locations, activeTab],
+  );
+
+  function selectTab(tab: LocationListType) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "popular") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const query = params.toString();
+    router.push(query ? `/plans?${query}` : "/plans", { scroll: false });
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
+      <main className="mx-auto w-full max-w-4xl">
+        <div className="mb-8">
+          <Link
+            href="/"
+            className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          >
+            ← Back to home
+          </Link>
+          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            RoamKit Store
+          </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight">
+            {copy.title}
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+            {copy.description}
+          </p>
+        </div>
+
+        <div
+          className="mb-8 flex flex-wrap gap-2 border-b border-slate-200 pb-4"
+          role="tablist"
+          aria-label="Destination types"
+        >
+          {TABS.map((tab) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => selectTab(tab.id)}
+                className={
+                  isActive
+                    ? "rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
+                    : "rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+                }
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {errorMessage ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+            <p className="font-medium">{errorMessage}</p>
+            <p className="mt-2 text-sm">
+              Ensure the API is running and packages have been synced.
+            </p>
+          </div>
+        ) : visibleLocations.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-lg font-medium text-slate-900">
+              No destinations available yet
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
+              Run a package sync on the API to populate the catalog.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {visibleLocations.map((location) => (
+              <li key={location.slug}>
+                <LocationCard location={location} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </div>
+  );
+}

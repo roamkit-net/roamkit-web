@@ -164,6 +164,27 @@ export type Package = {
   plan_type: string;
 };
 
+export type LocationCoverageType = "local" | "regional" | "global";
+
+export type Location = {
+  slug: string;
+  title: string;
+  country_code: string;
+  coverage_type: LocationCoverageType;
+  image_url: string;
+  is_popular: boolean;
+  min_price_usd: string | null;
+  covered_country_codes?: string[];
+  broader_locations?: Location[];
+};
+
+export type LocationListType =
+  | "popular"
+  | "local"
+  | "regional"
+  | "global"
+  | "all";
+
 export type PaginatedResponse<T> = {
   count: number;
   next: string | null;
@@ -171,13 +192,102 @@ export type PaginatedResponse<T> = {
   results: T[];
 };
 
-export async function fetchPackages(
-  country?: string,
-): Promise<PaginatedResponse<Package>> {
-  const query = country ? `?country=${encodeURIComponent(country)}` : "";
-  return fetchApi<PaginatedResponse<Package>>(`/api/v1/packages/${query}`, {
+export async function fetchPackages(options?: {
+  country?: string;
+  location?: string;
+  page?: number;
+}): Promise<PaginatedResponse<Package>> {
+  const params = new URLSearchParams();
+  if (options?.country) {
+    params.set("country", options.country);
+  }
+  if (options?.location) {
+    params.set("location", options.location);
+  }
+  if (options?.page && options.page > 1) {
+    params.set("page", String(options.page));
+  }
+  const query = params.toString();
+  const suffix = query ? `?${query}` : "";
+  return fetchApi<PaginatedResponse<Package>>(`/api/v1/packages/${suffix}`, {
     cache: "no-store",
   });
+}
+
+export async function fetchAllPackages(options?: {
+  country?: string;
+  location?: string;
+}): Promise<Package[]> {
+  const results: Package[] = [];
+  let page = 1;
+
+  for (;;) {
+    const response = await fetchPackages({ ...options, page });
+    results.push(...response.results);
+    if (!response.next || page >= 40) {
+      break;
+    }
+    page += 1;
+  }
+
+  return results;
+}
+
+export async function fetchLocations(
+  type?: LocationListType,
+  options?: { page?: number },
+): Promise<PaginatedResponse<Location>> {
+  const params = new URLSearchParams();
+  if (type && type !== "all") {
+    params.set("type", type);
+  }
+  if (options?.page && options.page > 1) {
+    params.set("page", String(options.page));
+  }
+  const query = params.toString();
+  const suffix = query ? `?${query}` : "";
+  return fetchApi<PaginatedResponse<Location>>(`/api/v1/locations/${suffix}`, {
+    cache: "no-store",
+  });
+}
+
+export async function fetchAllLocations(
+  type?: LocationListType,
+): Promise<Location[]> {
+  const results: Location[] = [];
+  let page = 1;
+
+  for (;;) {
+    const response = await fetchLocations(type, { page });
+    results.push(...response.results);
+    if (!response.next || page >= 40) {
+      break;
+    }
+    page += 1;
+  }
+
+  return results;
+}
+
+export async function fetchLocation(slug: string): Promise<Location> {
+  return fetchApi<Location>(
+    `/api/v1/locations/${encodeURIComponent(slug)}/`,
+    { cache: "no-store" },
+  );
+}
+
+export function flagImageUrl(countryCode: string): string {
+  return `https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`;
+}
+
+export function locationImageSrc(location: Pick<Location, "image_url" | "country_code">): string | null {
+  if (location.image_url) {
+    return location.image_url;
+  }
+  if (location.country_code) {
+    return flagImageUrl(location.country_code);
+  }
+  return null;
 }
 
 export type AuthTokens = {
