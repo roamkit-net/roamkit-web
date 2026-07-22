@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { CompatibilityButton } from "@/components/CompatibilityButton";
 import { CoveragesSummary } from "@/components/CoveragesModal";
 import { LocationCard } from "@/components/LocationCard";
 import { PackageRow } from "@/components/PackageRow";
@@ -175,12 +176,7 @@ export function LocationDetail({
               coverages={coverages}
               coverageType={location.coverage_type}
             />
-            <a
-              href="#compatibility"
-              className="mt-3 inline-block text-sm font-medium text-sky-700 hover:text-sky-800"
-            >
-              Check compatibility
-            </a>
+            <CompatibilityButton />
           </div>
         </header>
 
@@ -290,19 +286,6 @@ export function LocationDetail({
           </section>
         ) : null}
 
-        <section
-          id="compatibility"
-          className="mt-14 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600"
-        >
-          <h2 className="text-base font-semibold text-slate-900">
-            Device compatibility
-          </h2>
-          <p className="mt-2 leading-6">
-            Most recent unlocked iPhones, Google Pixels, and Samsung Galaxy
-            devices support eSIM. Confirm your model supports eSIM before
-            purchasing.
-          </p>
-        </section>
       </main>
     </div>
   );
