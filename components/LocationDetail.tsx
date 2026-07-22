@@ -188,7 +188,7 @@ export function LocationDetail({
           <div className="flex flex-col gap-4">
             {showServiceTabs ? (
               <div
-                className="flex gap-6 border-b border-slate-200"
+                className="flex gap-8 border-b border-slate-200"
                 role="tablist"
                 aria-label="Service type"
               >
@@ -213,7 +213,7 @@ export function LocationDetail({
 
             {showPlanFilter ? (
               <div
-                className="inline-flex w-fit rounded-full bg-slate-200/80 p-1"
+                className="inline-flex w-fit rounded-full bg-slate-200/90 p-1"
                 role="group"
                 aria-label="Data amount"
               >
@@ -325,8 +325,8 @@ function ServiceTab({
       onClick={onClick}
       className={
         active
-          ? "-mb-px border-b-2 border-slate-900 pb-3 text-base font-semibold text-slate-900"
-          : "pb-3 text-base font-medium text-slate-500 hover:text-slate-700"
+          ? "-mb-px border-b-2 border-slate-900 pb-3.5 text-[15px] font-semibold tracking-tight text-slate-900 outline-none focus-visible:outline-none"
+          : "-mb-px border-b-2 border-transparent pb-3.5 text-[15px] font-medium tracking-tight text-slate-400 outline-none transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:text-slate-700"
       }
     >
       {children}
@@ -349,8 +349,8 @@ function SegmentButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white"
-          : "rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+          ? "rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white outline-none focus-visible:outline-none"
+          : "rounded-full px-5 py-2 text-sm font-medium text-slate-700 outline-none transition-colors hover:text-slate-900 focus-visible:outline-none"
       }
     >
       {children}
