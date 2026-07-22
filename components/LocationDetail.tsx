@@ -14,9 +14,8 @@ import {
   resolveActivePlanFilter,
   shouldShowPlanFilter,
   type PlanFilter,
+  type ServiceType,
 } from "@/lib/planFilters";
-
-type ServiceType = "data" | "data_calls_texts";
 
 function isDataCallsTexts(pkg: Package): boolean {
   if ((pkg.voice_minutes ?? 0) > 0 || (pkg.text_sms ?? 0) > 0) {
@@ -85,13 +84,18 @@ export function LocationDetail({
     return packages.filter((pkg) => !isDataCallsTexts(pkg));
   }, [packages, serviceType, showServiceTabs]);
 
-  // Visible for local, regional, and global whenever both categories exist.
-  const showPlanFilter = shouldShowPlanFilter(servicePackages);
+  // Data + both Unlimited/Standard only — never under Data / Calls / Texts.
+  const showPlanFilter = shouldShowPlanFilter(servicePackages, serviceType);
   const activeFilter = resolveActivePlanFilter(filter, servicePackages);
 
   const filteredPackages = useMemo(
-    () => filterPackagesByPlan(servicePackages, activeFilter) as Package[],
-    [activeFilter, servicePackages],
+    () =>
+      filterPackagesByPlan(
+        servicePackages,
+        activeFilter,
+        serviceType,
+      ) as Package[],
+    [activeFilter, servicePackages, serviceType],
   );
 
   const { mostPopular, dayGroups } = useMemo(() => {

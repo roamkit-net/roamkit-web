@@ -8,7 +8,17 @@ import {
 } from "./planFilters";
 
 describe("shouldShowPlanFilter", () => {
-  it("is true when unlimited and standard both exist", () => {
+  it("is true on Data when unlimited and standard both exist", () => {
+    assert.equal(
+      shouldShowPlanFilter(
+        [{ is_unlimited: true }, { is_unlimited: false }],
+        "data",
+      ),
+      true,
+    );
+  });
+
+  it("defaults to Data when service type is omitted", () => {
     assert.equal(
       shouldShowPlanFilter([
         { is_unlimited: true },
@@ -18,7 +28,17 @@ describe("shouldShowPlanFilter", () => {
     );
   });
 
-  it("is false for only-standard catalogs (e.g. africa/world without unlimited SKUs)", () => {
+  it("is false for Data / Calls / Texts even when both flags exist", () => {
+    assert.equal(
+      shouldShowPlanFilter(
+        [{ is_unlimited: true }, { is_unlimited: false }],
+        "data_calls_texts",
+      ),
+      false,
+    );
+  });
+
+  it("is false for only-standard catalogs", () => {
     assert.equal(
       shouldShowPlanFilter([
         { is_unlimited: false },
@@ -54,14 +74,27 @@ describe("resolveActivePlanFilter", () => {
 });
 
 describe("filterPackagesByPlan", () => {
-  it("splits unlimited vs standard", () => {
+  it("splits unlimited vs standard on Data", () => {
     const packages = [
       { is_unlimited: true, id: "u" },
       { is_unlimited: false, id: "s" },
     ];
-    assert.deepEqual(filterPackagesByPlan(packages, "unlimited"), [
+    assert.deepEqual(filterPackagesByPlan(packages, "unlimited", "data"), [
       packages[0],
     ]);
-    assert.deepEqual(filterPackagesByPlan(packages, "standard"), [packages[1]]);
+    assert.deepEqual(filterPackagesByPlan(packages, "standard", "data"), [
+      packages[1],
+    ]);
+  });
+
+  it("returns all packages for Data / Calls / Texts", () => {
+    const packages = [
+      { is_unlimited: true, id: "u" },
+      { is_unlimited: false, id: "s" },
+    ];
+    assert.deepEqual(
+      filterPackagesByPlan(packages, "unlimited", "data_calls_texts"),
+      packages,
+    );
   });
 });

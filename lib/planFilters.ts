@@ -2,6 +2,9 @@
 
 export type PlanFilter = "unlimited" | "standard";
 
+/** Data vs Data / Calls / Texts — mirrors LocationDetail service tabs. */
+export type ServiceType = "data" | "data_calls_texts";
+
 export type PlanFilterable = {
   is_unlimited: boolean;
 };
@@ -15,15 +18,20 @@ export function hasStandardPlans(packages: PlanFilterable[]): boolean {
 }
 
 /**
- * Show Unlimited | Standard only when both categories exist for the
- * current service tab. Not gated on coverage_type (local/regional/global).
+ * Show Unlimited | Standard only on the Data tab when both categories exist.
+ * Never for Data / Calls / Texts (even if a DCT row is flagged unlimited).
+ * Same rule for local, regional, and global.
  *
- * Staging notes (Partner API catalog): europe/oceania/asia/africa-safari
- * have both; hello-africa (`africa`) and Discover Global (`world`) currently
- * ship only standard SKUs in Partner sync — toggle stays hidden there.
- * Consumer Airalo may list Discover Unlimited that Partner does not sell.
+ * After Partner sync, world/regional locations that sell both Unlimited and
+ * Standard Data SKUs show the control; catalogs with only one category do not.
  */
-export function shouldShowPlanFilter(packages: PlanFilterable[]): boolean {
+export function shouldShowPlanFilter(
+  packages: PlanFilterable[],
+  serviceType: ServiceType = "data",
+): boolean {
+  if (serviceType !== "data") {
+    return false;
+  }
   return hasUnlimitedPlans(packages) && hasStandardPlans(packages);
 }
 
@@ -43,10 +51,18 @@ export function resolveActivePlanFilter(
   return filter;
 }
 
+/**
+ * Apply Unlimited | Standard only for Data. DCT returns the full list
+ * (no plan-amount filter).
+ */
 export function filterPackagesByPlan(
   packages: PlanFilterable[],
   filter: PlanFilter,
+  serviceType: ServiceType = "data",
 ): PlanFilterable[] {
+  if (serviceType !== "data") {
+    return packages;
+  }
   if (filter === "unlimited") {
     return packages.filter((pkg) => pkg.is_unlimited);
   }
