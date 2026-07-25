@@ -178,7 +178,10 @@ type BillingProviderProps = {
  */
 export function BillingProvider({ children }: BillingProviderProps) {
   const [queryClient] = useState(createBillingQueryClient);
-  const [enabled, setEnabled] = useState(false);
+  // Read session on first client render so /me/deposit does not flash "unavailable".
+  const [enabled, setEnabled] = useState(() =>
+    typeof window !== "undefined" ? isBillingSessionActive() : false,
+  );
   const pathname = usePathname();
 
   useEffect(() => {

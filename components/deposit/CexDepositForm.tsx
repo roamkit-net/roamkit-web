@@ -1,20 +1,22 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
-import { ApiError } from "@/lib/api";
+import { verifyCex } from "@/lib/billing/client";
 import {
-  type DepositInfo,
-  type DepositRequest,
-  isDepositPendingConfirmations,
+  formatDepositPendingMessage,
+  isDepositFailed,
   isDepositVerified,
-  newIdempotencyKey,
-  verifyCexDeposit,
-} from "@/lib/billing";
+} from "@/lib/billing/deposit";
+import { toBillingError } from "@/lib/billing/errors";
+import { newIdempotencyKey } from "@/lib/billing/idempotency";
+import { billingTelemetry } from "@/lib/billing/telemetry";
+import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
 import { isValidDepositAmount } from "@/lib/eip681";
+import type { BillingConfig, DepositRequest } from "@/types/billing";
 
 type CexDepositFormProps = {
-  depositInfo: DepositInfo;
+  config: BillingConfig;
   amount: string;
   onVerified: (deposit: DepositRequest) => void;
 };
@@ -31,7 +33,7 @@ function normalizeTxHash(value: string): string {
 }
 
 export function CexDepositForm({
-  depositInfo,
+  config,
   amount,
   onVerified,
 }: CexDepositFormProps) {
@@ -40,85 +42,100 @@ export function CexDepositForm({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setStatusMessage(null);
 
-    if (!isValidDepositAmount(amount, depositInfo.token_decimals)) {
+    if (!isValidDepositAmount(amount, config.decimals)) {
       setError(
-        `Enter a valid amount (max ${depositInfo.token_decimals} decimal places).`,
+        `Enter a valid amount (max ${config.decimals} decimal places).`,
       );
       return;
     }
 
     const normalizedHash = normalizeTxHash(txHash);
     if (!/^0x[0-9a-fA-F]{64}$/.test(normalizedHash)) {
-      setError("Paste a valid Polygon transaction hash (TXID).");
+      setError("Paste a valid transaction hash (TXID).");
       return;
     }
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const payload = {
+      tx_hash: normalizedHash,
+      amount_requested: amount.trim(),
+      idempotency_key: idempotencyKey,
+    };
+
     setIsSubmitting(true);
+    billingTelemetry.track("deposit_verify_clicked", { method: "cex" });
+
     try {
-      const deposit = await verifyCexDeposit({
-        tx_hash: normalizedHash,
-        amount_requested: amount.trim(),
-        idempotency_key: idempotencyKey,
-      });
+      const deposit = await verifyDepositUntilSettled(
+        (body, signal) => verifyCex(body, signal),
+        payload,
+        {
+          signal: controller.signal,
+          onUpdate: (current) => {
+            if (shouldShowPending(current)) {
+              setStatusMessage(
+                formatDepositPendingMessage(current, config.confirmations),
+              );
+            }
+          },
+        },
+      );
 
       if (isDepositVerified(deposit)) {
+        billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
         onVerified(deposit);
-        setStatusMessage("Deposit verified. Credits will appear in your balance.");
+        setStatusMessage(
+          "Deposit verified. Credits will appear in your balance.",
+        );
         setIdempotencyKey(newIdempotencyKey());
         setTxHash("");
         return;
       }
 
-      if (isDepositPendingConfirmations(deposit)) {
-        setStatusMessage(
-          `Waiting for confirmations (${deposit.confirmations}/${deposit.required_confirmations}). You can submit again with the same TXID.`,
+      if (isDepositFailed(deposit)) {
+        billingTelemetry.track("deposit_verify_failed", {
+          method: "cex",
+          code: "FAILED",
+        });
+        setError(
+          deposit.failure_reason ||
+            "Deposit could not be verified. Check the TXID and network.",
         );
-        return;
-      }
-
-      if (deposit.status === "pending") {
-        setStatusMessage(
-          `Deposit is pending. Polygon needs about ${depositInfo.min_confirmations} confirmations.`,
-        );
-        return;
-      }
-
-      setError(
-        deposit.failure_reason ||
-          "Deposit could not be verified. Check the TXID and network.",
-      );
-      setIdempotencyKey(newIdempotencyKey());
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 202) {
-        const body = err.body as DepositRequest | undefined;
-        if (body && isDepositPendingConfirmations(body)) {
-          setStatusMessage(
-            `Waiting for confirmations (${body.confirmations}/${body.required_confirmations}). Try again shortly.`,
-          );
-          return;
-        }
-        setStatusMessage(
-          `Transaction seen but not fully confirmed yet (need ~${depositInfo.min_confirmations}). Try again shortly.`,
-        );
-        return;
-      }
-      if (err instanceof ApiError && err.status === 409) {
-        setError(err.message || "This transaction was already credited.");
         setIdempotencyKey(newIdempotencyKey());
         return;
       }
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Unable to verify CEX deposit right now.",
+
+      setStatusMessage(
+        formatDepositPendingMessage(deposit, config.confirmations),
       );
-      if (!(err instanceof ApiError) || err.status !== 202) {
+    } catch (err) {
+      const mapped = toBillingError(err);
+      if (mapped.code === "ABORTED") {
+        return;
+      }
+      billingTelemetry.track("deposit_verify_failed", {
+        method: "cex",
+        code: mapped.code,
+        category: mapped.category,
+      });
+      setError(mapped.message);
+      if (mapped.category !== "pending") {
         setIdempotencyKey(newIdempotencyKey());
       }
     } finally {
@@ -132,12 +149,14 @@ export function CexDepositForm({
         CEX / manual TXID
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Withdraw {depositInfo.token_symbol} on <strong>Polygon</strong> from an
-        exchange (e.g. MEXC) to the platform wallet, then paste the transaction
-        hash here.
+        Withdraw {config.tokenSymbol} to the platform wallet from an exchange,
+        then paste the transaction hash here.
       </p>
 
-      <form className="mt-6 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        className="mt-6 space-y-4"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
             Transaction hash (TXID)
@@ -175,4 +194,9 @@ export function CexDepositForm({
       </form>
     </section>
   );
+}
+
+function shouldShowPending(deposit: DepositRequest): boolean {
+  const status = deposit.status?.trim().toLowerCase();
+  return !status || status === "pending";
 }
