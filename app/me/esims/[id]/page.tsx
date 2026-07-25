@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AuthNav } from "@/components/AuthNav";
+import { DepositCta } from "@/components/billing/DepositCta";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
+import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
   Esim,
@@ -154,20 +157,23 @@ export default function MyEsimDetailPage() {
     }
   }
 
+  const returnPath = `/me/esims/${esimId}`;
+
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-3xl">
-        <Link
-          href="/me/esims"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
-        >
-          ← Back to My eSIMs
-        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <Link
+            href="/me/esims"
+            className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          >
+            ← Back to My eSIMs
+          </Link>
+          <AuthNav />
+        </div>
 
         {isLoading ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-slate-600">Loading eSIM…</p>
-          </div>
+          <DetailSkeleton label="Loading eSIM…" />
         ) : error ? (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
             <p className="font-medium">{error}</p>
@@ -334,13 +340,20 @@ export default function MyEsimDetailPage() {
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Available top-ups
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Purchase with prepaid credits. Insufficient balance opens
-                deposit, then returns here to retry.
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Available top-ups
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Purchase with prepaid credits. Insufficient balance opens
+                    deposit, then returns here to retry.
+                  </p>
+                </div>
+                <DepositCta returnPath={returnPath} variant="secondary">
+                  Deposit credits
+                </DepositCta>
+              </div>
               {isRetrying ? (
                 <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
                   Completing your top-up after deposit…

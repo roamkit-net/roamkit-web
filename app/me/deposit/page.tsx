@@ -5,20 +5,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, Suspense } from "react";
 
+import { AuthNav } from "@/components/AuthNav";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
-import { UserMenu } from "@/components/UserMenu";
 import { isWalletConnectConfigured } from "@/config/appkit";
 import {
   ApiError,
-  User,
   clearTokens,
   fetchMe,
   isAuthenticated,
 } from "@/lib/api";
 import { formatCredits } from "@/lib/billing/format";
+import { returnDestinationLabel } from "@/lib/billing/returnLabel";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { isValidDepositAmount } from "@/lib/eip681";
 import {
@@ -70,6 +70,7 @@ function DepositPageContent() {
     config,
     features,
     isLoading: billingLoading,
+    isFetching: billingFetching,
     error: billingError,
     refreshBalance,
   } = useBilling();
@@ -78,8 +79,10 @@ function DepositPageContent() {
   const returnParam = searchParams.get("return");
   const returnPath =
     returnParam && isSafeReturnPath(returnParam) ? returnParam : null;
+  const returnLabel = returnPath
+    ? returnDestinationLabel(returnPath)
+    : null;
 
-  const [user, setUser] = useState<User | null>(null);
   const [amount, setAmount] = useState(() => {
     if (amountParam && isValidDepositAmount(amountParam, 6)) {
       return normalizeDepositAmount(amountParam);
@@ -88,6 +91,7 @@ function DepositPageContent() {
   });
   const [userError, setUserError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [returning, setReturning] = useState(false);
 
   useEffect(() => {
     billingTelemetry.track("deposit_page_open");
@@ -111,9 +115,9 @@ function DepositPageContent() {
       setUserLoading(true);
       setUserError(null);
       try {
-        const me = await fetchMe();
+        await fetchMe();
         if (!cancelled) {
-          setUser(me);
+          setUserError(null);
         }
       } catch (err) {
         if (cancelled) {
@@ -145,6 +149,7 @@ function DepositPageContent() {
       // Balance refresh is best-effort after a successful verify.
     }
     if (returnPath) {
+      setReturning(true);
       router.push(returnPath);
     }
   }, [refreshBalance, returnPath, router]);
@@ -152,6 +157,8 @@ function DepositPageContent() {
   const isLoading = userLoading || billingLoading;
   const showWallet =
     features.walletConnect && isWalletConnectConfigured() && Boolean(config);
+  const balanceRefreshing =
+    !billingLoading && billingFetching && balance != null;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -159,10 +166,10 @@ function DepositPageContent() {
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <Link
-              href="/me/esims"
+              href={returnPath ?? "/me/esims"}
               className="text-sm font-medium text-sky-700 hover:text-sky-800"
             >
-              ← My eSIMs
+              ← {returnPath ? `Back to ${returnLabel}` : "My eSIMs"}
             </Link>
             <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
               RoamKit
@@ -173,22 +180,41 @@ function DepositPageContent() {
               {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
               withdrawal TXID.
             </p>
-            {returnPath ? (
-              <p className="mt-3 max-w-2xl rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-                After a successful deposit you will return to finish your
-                purchase.
-              </p>
+            {returnPath && returnLabel ? (
+              <div className="mt-4 flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-900">
+                <p>
+                  {returning
+                    ? `Deposit confirmed — returning to ${returnLabel}…`
+                    : `After a successful deposit you will return to ${returnLabel}.`}
+                </p>
+                {!returning ? (
+                  <Link
+                    href={returnPath}
+                    className="shrink-0 font-semibold text-sky-800 underline hover:text-sky-950"
+                  >
+                    Continue without depositing
+                  </Link>
+                ) : null}
+              </div>
             ) : null}
           </div>
-          {user ? (
-            <UserMenu email={user.email} />
-          ) : (
-            <span
-              className="inline-flex h-10 w-10 animate-pulse rounded-full bg-slate-200"
-              aria-hidden="true"
-            />
-          )}
+          <AuthNav />
         </div>
+
+        {returning ? (
+          <div
+            className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-sky-950"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="font-medium">
+              Credits updated. Taking you back to {returnLabel}…
+            </p>
+            <p className="mt-2 text-sm text-sky-800">
+              Your purchase will retry automatically.
+            </p>
+          </div>
+        ) : null}
 
         {isLoading ? (
           <DepositSkeleton />
@@ -213,14 +239,19 @@ function DepositPageContent() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className={`space-y-6 ${returning ? "opacity-60" : ""}`}>
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
                     Credit balance
+                    {balanceRefreshing ? (
+                      <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+                        Updating…
+                      </span>
+                    ) : null}
                   </p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
                     {balance != null ? formatCredits(balance) : "—"}{" "}
                     <span className="text-lg font-semibold text-slate-500">
                       {config.tokenSymbol}
