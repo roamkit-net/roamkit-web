@@ -92,6 +92,14 @@ export function UserMenu({ email }: UserMenuProps) {
             My eSIMs
           </Link>
           <Link
+            href="/me/deposit"
+            role="menuitem"
+            className="block px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            onClick={() => setOpen(false)}
+          >
+            Deposit credits
+          </Link>
+          <Link
             href="/plans"
             role="menuitem"
             className="block px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
