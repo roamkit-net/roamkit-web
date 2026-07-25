@@ -9,12 +9,21 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:plan-filters": "npx --yes tsx --test lib/planFilters.test.ts",
+    "test:eip681": "npx --yes tsx --test lib/eip681.test.ts",
     "test:billing": "npx --yes tsx --test lib/billing/*.test.ts",
-    "test": "npm run test:plan-filters && npm run test:billing"
+    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing"
   },
   "dependencies": {
+    "@reown/appkit": "^1.8.23",
+    "@reown/appkit-adapter-ethers": "^1.8.23",
     "@tanstack/react-query": "^5.101.4",
+    "@x402/core": "^2.19.0",
+    "@x402/evm": "^2.19.0",
+    "@x402/extensions": "^2.19.0",
+    "@x402/svm": "^2.19.0",
+    "ethers": "^6.17.0",
     "next": "15.5.21",
+    "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "sharp": "^0.35.0"
