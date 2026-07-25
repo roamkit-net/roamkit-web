@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { DisplayCurrencyProvider } from "@/components/billing/DisplayCurrencyProvider";
 import { getBalance, getDepositInfo } from "@/lib/billing/client";
 import { toBillingConfig, toBillingFeatures } from "@/lib/billing/config";
 import { billingKeys } from "@/lib/billing/keys";
@@ -203,7 +204,9 @@ export function BillingProvider({ children }: BillingProviderProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BillingQueryBridge enabled={enabled}>{children}</BillingQueryBridge>
+      <DisplayCurrencyProvider>
+        <BillingQueryBridge enabled={enabled}>{children}</BillingQueryBridge>
+      </DisplayCurrencyProvider>
     </QueryClientProvider>
   );
 }

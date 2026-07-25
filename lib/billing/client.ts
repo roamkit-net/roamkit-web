@@ -1,6 +1,7 @@
 import { ApiError, fetchApi } from "@/lib/api";
 import type {
   BillingBalance,
+  BillingConfigResponse,
   DepositInfo,
   DepositRequest,
   VerifyDepositPayload,
@@ -44,6 +45,20 @@ export async function getBalance(
   return fetchApi<BillingBalance>("/api/v1/billing/balance/", {
     auth: true,
     cache: "no-store",
+    signal: options?.signal,
+  });
+}
+
+/**
+ * GET /api/v1/billing/config/ — public display config (AllowAny).
+ * No auth; browser/CDN may honor Cache-Control / ETag from the API.
+ */
+export async function getBillingConfig(
+  options?: BillingRequestOptions,
+): Promise<BillingConfigResponse> {
+  return fetchApi<BillingConfigResponse>("/api/v1/billing/config/", {
+    auth: false,
+    // Prefer HTTP cache when present; still pass AbortSignal for React Query.
     signal: options?.signal,
   });
 }

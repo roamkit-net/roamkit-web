@@ -1,15 +1,5 @@
+import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import type { Package } from "@/lib/api";
-
-function formatPrice(priceUsd: string): string {
-  const amount = Number.parseFloat(priceUsd);
-  if (Number.isNaN(amount)) {
-    return `${priceUsd} USD`;
-  }
-  return `${new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount)} USD`;
-}
 
 function formatValidity(days: number): string {
   if (days === 1) {
@@ -82,7 +72,7 @@ export function PackageRow({
       </p>
       <div className="flex shrink-0 items-center gap-3">
         <p className="text-base font-bold text-slate-900">
-          {formatPrice(plan.price_usd)}
+          <CatalogPriceDisplay amount={plan.price_usd} />
         </p>
         {onBuy ? (
           <button

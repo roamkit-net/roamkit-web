@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -19,7 +20,6 @@ import {
   fetchMyEsimUsage,
   isAuthenticated,
 } from "@/lib/api";
-import { formatMoney } from "@/lib/billing/format";
 
 function formatMb(value: number | null | undefined): string {
   if (value == null) {
@@ -363,9 +363,13 @@ export default function MyEsimDetailPage() {
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                   <p>
                     Top-up purchased
-                    {successTopup.amount
-                      ? ` (${formatMoney(successTopup.amount)})`
-                      : ""}
+                    {successTopup.amount ? (
+                      <>
+                        {" "}
+                        (
+                        <CatalogPriceDisplay amount={successTopup.amount} />)
+                      </>
+                    ) : null}
                     .
                   </p>
                   <button
@@ -413,7 +417,7 @@ export default function MyEsimDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-semibold text-slate-900">
-                          {formatMoney(topup.price_usd)}
+                          <CatalogPriceDisplay amount={topup.price_usd} />
                         </p>
                         <button
                           type="button"
