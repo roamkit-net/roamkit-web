@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import {
+  AccountCluster,
+  AccountClusterSkeleton,
+} from "@/components/AccountCluster";
 import { BalanceChip } from "@/components/billing/BalanceChip";
 import { UserMenu } from "@/components/UserMenu";
 import {
@@ -16,9 +20,6 @@ type AuthNavState =
   | { status: "loading" }
   | { status: "anonymous" }
   | { status: "authenticated"; email: string };
-
-const placeholderClassName =
-  "inline-flex h-10 w-10 animate-pulse rounded-full bg-slate-200";
 
 export function AuthNav() {
   const [state, setState] = useState<AuthNavState>({ status: "loading" });
@@ -57,23 +58,15 @@ export function AuthNav() {
   }, []);
 
   if (state.status === "loading") {
-    return (
-      <div className="flex items-center gap-3">
-        <span
-          className="inline-flex h-10 w-[7.5rem] animate-pulse rounded-full bg-slate-200"
-          aria-hidden="true"
-        />
-        <span className={placeholderClassName} aria-hidden="true" />
-      </div>
-    );
+    return <AccountClusterSkeleton />;
   }
 
   if (state.status === "authenticated") {
     return (
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <BalanceChip />
+      <AccountCluster>
+        <BalanceChip embedded />
         <UserMenu email={state.email} />
-      </div>
+      </AccountCluster>
     );
   }
 
