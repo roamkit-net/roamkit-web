@@ -1,6 +1,14 @@
 /**
- * Persist a spend intent across the 402 → deposit → return hop.
- * Cleared on successful retry or explicit discard.
+ * Pending spend invariants
+ *
+ * - At most one pending spend exists.
+ * - Pending spend is ephemeral.
+ * - Pending spend is removed on:
+ *   - successful retry
+ *   - explicit dismiss
+ *   - logout / auth reset
+ *   - TTL expiry
+ * - Auto-retry is allowed only while a valid pending spend exists.
  */
 
 export type PendingOrderSpend = {
@@ -23,7 +31,8 @@ export type PendingTopupSpend = {
 export type PendingSpend = PendingOrderSpend | PendingTopupSpend;
 
 const STORAGE_KEY = "roamkit_pending_spend";
-const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
+/** Pending spend older than this is removed on peek. Exported for tests. */
+export const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
 function canUseSessionStorage(): boolean {
   return typeof window !== "undefined" && typeof sessionStorage !== "undefined";
@@ -90,7 +99,12 @@ export function clearPendingSpend(): void {
   if (!canUseSessionStorage()) {
     return;
   }
-  sessionStorage.removeItem(STORAGE_KEY);
+  // Best-effort: never throw — callers like clearTokens() must still clear auth.
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Private mode / blocked storage / SecurityError, etc.
+  }
 }
 
 /**

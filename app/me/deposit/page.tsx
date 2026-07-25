@@ -25,6 +25,7 @@ import {
   isSafeReturnPath,
   normalizeDepositAmount,
 } from "@/lib/orders/insufficientCredits";
+import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 
 const WalletDepositWithAppKit = dynamic(
   () =>
@@ -167,6 +168,7 @@ function DepositPageContent() {
           <div>
             <Link
               href={returnPath ?? "/me/esims"}
+              onClick={() => clearPendingSpend()}
               className="text-sm font-medium text-sky-700 hover:text-sky-800"
             >
               ← {returnPath ? `Back to ${returnLabel}` : "My eSIMs"}
@@ -190,6 +192,7 @@ function DepositPageContent() {
                 {!returning ? (
                   <Link
                     href={returnPath}
+                    onClick={() => clearPendingSpend()}
                     className="shrink-0 font-semibold text-sky-800 underline hover:text-sky-950"
                   >
                     Continue without depositing
