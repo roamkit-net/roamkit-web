@@ -65,18 +65,36 @@ function formatLeftLabel(plan: Package, showValidity: boolean): string {
 export function PackageRow({
   plan,
   showValidity = false,
+  onBuy,
+  isBuying = false,
+  buyDisabled = false,
 }: {
   plan: Package;
   showValidity?: boolean;
+  onBuy?: (plan: Package) => void;
+  isBuying?: boolean;
+  buyDisabled?: boolean;
 }) {
   return (
     <article className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
       <p className="min-w-0 text-base font-medium text-slate-900">
         {formatLeftLabel(plan, showValidity)}
       </p>
-      <p className="shrink-0 text-base font-bold text-slate-900">
-        {formatPrice(plan.price_usd)}
-      </p>
+      <div className="flex shrink-0 items-center gap-3">
+        <p className="text-base font-bold text-slate-900">
+          {formatPrice(plan.price_usd)}
+        </p>
+        {onBuy ? (
+          <button
+            type="button"
+            onClick={() => onBuy(plan)}
+            disabled={isBuying || buyDisabled}
+            className="rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isBuying ? "Buying…" : "Buy"}
+          </button>
+        ) : null}
+      </div>
     </article>
   );
 }

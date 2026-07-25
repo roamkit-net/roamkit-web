@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import {
   ApiError,
   Esim,
@@ -15,6 +16,7 @@ import {
   fetchMyEsimUsage,
   isAuthenticated,
 } from "@/lib/api";
+import { formatMoney } from "@/lib/billing/format";
 
 function formatMb(value: number | null | undefined): string {
   if (value == null) {
@@ -35,6 +37,16 @@ export default function MyEsimDetailPage() {
   const [usageError, setUsageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false);
+
+  const {
+    purchase,
+    busyPackageId,
+    error: purchaseError,
+    successTopup,
+    isRetrying,
+    clearError: clearPurchaseError,
+    clearSuccess,
+  } = usePurchaseTopup(esimId);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -95,6 +107,34 @@ export default function MyEsimDetailPage() {
       cancelled = true;
     };
   }, [esimId, router]);
+
+  useEffect(() => {
+    if (!successTopup) {
+      return;
+    }
+    let cancelled = false;
+    async function refreshAfterTopup() {
+      try {
+        const [topupList, liveUsage] = await Promise.all([
+          fetchMyEsimTopups(esimId),
+          fetchMyEsimUsage(esimId).catch(() => null),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setTopups(topupList.results);
+        if (liveUsage) {
+          setUsage(liveUsage);
+        }
+      } catch {
+        // Listing refresh is best-effort after purchase.
+      }
+    }
+    void refreshAfterTopup();
+    return () => {
+      cancelled = true;
+    };
+  }, [esimId, successTopup]);
 
   async function refreshUsage() {
     setIsRefreshingUsage(true);
@@ -298,8 +338,44 @@ export default function MyEsimDetailPage() {
                 Available top-ups
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Browse only — purchase arrives in a later phase.
+                Purchase with prepaid credits. Insufficient balance opens
+                deposit, then returns here to retry.
               </p>
+              {isRetrying ? (
+                <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                  Completing your top-up after deposit…
+                </p>
+              ) : null}
+              {successTopup ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                  <p>
+                    Top-up purchased
+                    {successTopup.amount
+                      ? ` (${formatMoney(successTopup.amount)})`
+                      : ""}
+                    .
+                  </p>
+                  <button
+                    type="button"
+                    onClick={clearSuccess}
+                    className="font-medium underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : null}
+              {purchaseError ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  <p>{purchaseError}</p>
+                  <button
+                    type="button"
+                    onClick={clearPurchaseError}
+                    className="font-medium underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : null}
               {topups.length === 0 ? (
                 <p className="mt-4 text-sm text-slate-600">
                   No top-up packages available.
@@ -309,7 +385,7 @@ export default function MyEsimDetailPage() {
                   {topups.map((topup) => (
                     <li
                       key={topup.id}
-                      className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
                     >
                       <div>
                         <p className="font-medium text-slate-900">
@@ -322,9 +398,19 @@ export default function MyEsimDetailPage() {
                           · {topup.validity_days} days
                         </p>
                       </div>
-                      <p className="font-semibold text-slate-900">
-                        ${topup.price_usd}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className="font-semibold text-slate-900">
+                          {formatMoney(topup.price_usd)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void purchase(topup.id)}
+                          disabled={busyPackageId !== null}
+                          className="rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {busyPackageId === topup.id ? "Buying…" : "Buy"}
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

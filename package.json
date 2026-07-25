@@ -11,7 +11,8 @@
     "test:plan-filters": "npx --yes tsx --test lib/planFilters.test.ts",
     "test:eip681": "npx --yes tsx --test lib/eip681.test.ts",
     "test:billing": "npx --yes tsx --test lib/billing/*.test.ts",
-    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing"
+    "test:orders": "npx --yes tsx --test lib/orders/*.test.ts",
+    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders"
   },
   "dependencies": {
     "@reown/appkit": "^1.8.23",

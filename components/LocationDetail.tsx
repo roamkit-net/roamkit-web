@@ -7,6 +7,7 @@ import Link from "next/link";
 import { CompatibilityButton } from "@/components/CompatibilityButton";
 import { CoveragesSummary } from "@/components/CoveragesModal";
 import { LocationCard } from "@/components/LocationCard";
+import { useBuyPackage } from "@/components/orders/useBuyPackage";
 import { PackageRow } from "@/components/PackageRow";
 import type { Location, Package } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
@@ -74,6 +75,13 @@ export function LocationDetail({
     hasData ? "data" : "data_calls_texts",
   );
   const [filter, setFilter] = useState<PlanFilter>("unlimited");
+  const {
+    buy,
+    busyPackageId,
+    error: buyError,
+    isRetrying,
+    clearError,
+  } = useBuyPackage();
 
   const servicePackages = useMemo(() => {
     if (!showServiceTabs) {
@@ -233,6 +241,24 @@ export function LocationDetail({
             </p>
           </div>
 
+          {isRetrying ? (
+            <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+              Completing your purchase after deposit…
+            </div>
+          ) : null}
+          {buyError ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p>{buyError}</p>
+              <button
+                type="button"
+                onClick={clearError}
+                className="font-medium text-amber-950 underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
+
           {filteredPackages.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="font-medium text-slate-900">No plans in this filter</p>
@@ -247,7 +273,13 @@ export function LocationDetail({
                   <h3 className="mb-2 text-sm font-semibold text-slate-700">
                     Most Popular
                   </h3>
-                  <PackageRow plan={mostPopular} showValidity />
+                  <PackageRow
+                    plan={mostPopular}
+                    showValidity
+                    onBuy={(pkg) => void buy(pkg.id)}
+                    isBuying={busyPackageId === mostPopular.id}
+                    buyDisabled={busyPackageId !== null}
+                  />
                 </div>
               ) : null}
               {dayGroups.map((group) => (
@@ -258,7 +290,12 @@ export function LocationDetail({
                   <ul className="flex flex-col gap-3">
                     {group.packages.map((plan) => (
                       <li key={plan.id}>
-                        <PackageRow plan={plan} />
+                        <PackageRow
+                          plan={plan}
+                          onBuy={(pkg) => void buy(pkg.id)}
+                          isBuying={busyPackageId === plan.id}
+                          buyDisabled={busyPackageId !== null}
+                        />
                       </li>
                     ))}
                   </ul>
