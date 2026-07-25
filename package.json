@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:plan-filters": "npx --yes tsx --test lib/planFilters.test.ts"
+    "test:plan-filters": "npx --yes tsx --test lib/planFilters.test.ts",
+    "test:billing": "npx --yes tsx --test lib/billing/*.test.ts",
+    "test": "npm run test:plan-filters && npm run test:billing"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
     "next": "15.5.20",
     "react": "19.1.0",
     "react-dom": "19.1.0",
