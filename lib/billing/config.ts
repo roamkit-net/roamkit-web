@@ -1,8 +1,34 @@
 import type {
   BillingConfig,
+  BillingConfigResponse,
+  BillingDisplayConfig,
   BillingFeatures,
   DepositInfo,
+  DisplayCurrency,
 } from "@/types/billing";
+
+/** Map public billing/config → DisplayCurrency (UI formatting). */
+export function toDisplayCurrency(
+  payload: BillingConfigResponse,
+): DisplayCurrency {
+  return {
+    symbol: payload.token_symbol,
+    name: payload.token_name,
+    decimals: payload.display_decimals,
+  };
+}
+
+/** Map public billing/config → BillingDisplayConfig for caches / hooks. */
+export function toBillingDisplayConfig(
+  payload: BillingConfigResponse,
+): BillingDisplayConfig {
+  return {
+    currency: toDisplayCurrency(payload),
+    configVersion: payload.config_version,
+    billingEnabled: payload.billing_enabled,
+    tokenDecimals: payload.token_decimals,
+  };
+}
 
 /** Map deposit-info (SSoT) → BillingConfig. UI reads config only. */
 export function toBillingConfig(info: DepositInfo): BillingConfig {

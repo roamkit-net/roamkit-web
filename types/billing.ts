@@ -4,6 +4,45 @@ export type BillingBalance = {
   balance: string;
 };
 
+/** Raw GET /api/v1/billing/config/ payload (public display config). */
+export type BillingConfigResponse = {
+  config_version: number;
+  token_symbol: string;
+  token_name: string;
+  token_decimals: number;
+  display_decimals: number;
+  billing_enabled: boolean;
+};
+
+/**
+ * Internal display currency for catalog / checkout copy.
+ * Do not assume a single forever-symbol — always from billing/config.
+ */
+export type DisplayCurrency = {
+  /** From token_symbol; empty → formatters fall back to `"credits"`. */
+  symbol: string;
+  /** From token_name. */
+  name: string;
+  /** display_decimals — UI formatting precision. */
+  decimals: number;
+};
+
+/** Input to CatalogPriceDisplay / formatCatalogPrice. */
+export type CatalogPrice = {
+  amount: string;
+  currency: DisplayCurrency;
+  from?: boolean;
+};
+
+/** Mapped public billing/config for UI caches. */
+export type BillingDisplayConfig = {
+  currency: DisplayCurrency;
+  configVersion: number;
+  billingEnabled: boolean;
+  /** Ledger / on-chain precision (not used for catalog UI formatting). */
+  tokenDecimals: number;
+};
+
 /** Raw GET /api/v1/billing/deposit-info/ payload. Prefer BillingConfig in UI. */
 export type DepositInfo = {
   wallet: string;

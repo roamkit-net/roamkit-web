@@ -1,15 +1,5 @@
+import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import type { Package } from "@/lib/api";
-
-function formatPrice(priceUsd: string): string {
-  const amount = Number.parseFloat(priceUsd);
-  if (Number.isNaN(amount)) {
-    return priceUsd;
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
 
 function formatValidity(days: number): string {
   if (days === 1) {
@@ -81,7 +71,7 @@ export function PlanCard({ plan }: { plan: Package }) {
           <p className="mt-1 text-sm text-slate-600">{plan.operator_title}</p>
         </div>
         <p className="text-xl font-bold text-slate-900">
-          {formatPrice(plan.price_usd)}
+          <CatalogPriceDisplay amount={plan.price_usd} />
         </p>
       </div>
 

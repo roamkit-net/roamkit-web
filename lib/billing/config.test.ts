@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { toBillingConfig, toBillingFeatures } from "./config";
-import type { DepositInfo } from "@/types/billing";
+import {
+  toBillingConfig,
+  toBillingDisplayConfig,
+  toBillingFeatures,
+  toDisplayCurrency,
+} from "./config";
+import type { BillingConfigResponse, DepositInfo } from "@/types/billing";
 
 const sampleInfo: DepositInfo = {
   wallet: "0xabc",
@@ -28,6 +33,45 @@ const minimalInfo: DepositInfo = {
   walletconnect_enabled: false,
   subscriptions_enabled: false,
 };
+
+const sampleDisplayConfig: BillingConfigResponse = {
+  config_version: 1,
+  token_symbol: "USDT",
+  token_name: "USDT Credits",
+  token_decimals: 6,
+  display_decimals: 2,
+  billing_enabled: true,
+};
+
+describe("toDisplayCurrency / toBillingDisplayConfig", () => {
+  it("maps public billing/config fields", () => {
+    const currency = toDisplayCurrency(sampleDisplayConfig);
+    assert.deepEqual(currency, {
+      symbol: "USDT",
+      name: "USDT Credits",
+      decimals: 2,
+    });
+
+    const mapped = toBillingDisplayConfig(sampleDisplayConfig);
+    assert.deepEqual(mapped, {
+      currency,
+      configVersion: 1,
+      billingEnabled: true,
+      tokenDecimals: 6,
+    });
+  });
+
+  it("passes through empty symbol without inventing USDT", () => {
+    const mapped = toBillingDisplayConfig({
+      ...sampleDisplayConfig,
+      token_symbol: "",
+      billing_enabled: false,
+    });
+    assert.equal(mapped.currency.symbol, "");
+    assert.equal(mapped.billingEnabled, false);
+    assert.notEqual(mapped.currency.symbol, "USDT");
+  });
+});
 
 describe("toBillingConfig", () => {
   it("maps deposit-info fields without inventing values", () => {

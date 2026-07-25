@@ -1,22 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import type { Location } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
-
-function formatFromPrice(priceUsd: string | null): string {
-  if (!priceUsd) {
-    return "See plans";
-  }
-  const amount = Number.parseFloat(priceUsd);
-  if (Number.isNaN(amount)) {
-    return `from ${priceUsd} USD`;
-  }
-  return `from ${new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount)} USD`;
-}
 
 export function LocationCard({ location }: { location: Location }) {
   const imageSrc = locationImageSrc(location);
@@ -47,7 +34,11 @@ export function LocationCard({ location }: { location: Location }) {
           {location.title}
         </h2>
         <p className="mt-0.5 text-sm text-slate-600">
-          {formatFromPrice(location.min_price_usd)}
+          {location.min_price_usd ? (
+            <CatalogPriceDisplay amount={location.min_price_usd} from />
+          ) : (
+            "See plans"
+          )}
         </p>
       </div>
     </Link>

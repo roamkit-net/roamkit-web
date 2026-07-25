@@ -12,7 +12,7 @@
     "test:eip681": "npx --yes tsx --test lib/eip681.test.ts",
     "test:billing": "npx --yes tsx --test lib/billing/*.test.ts",
     "test:orders": "npx --yes tsx --test lib/orders/*.test.ts",
-    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx",
+    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/CatalogPriceDisplay.test.tsx",
     "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:components"
   },
   "dependencies": {
