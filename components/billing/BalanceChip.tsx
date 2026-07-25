@@ -36,19 +36,19 @@ export function BalanceChip({
   const showSkeleton =
     isLoading || (features.billingEnabled && balance == null && isFetching);
   const symbol = config?.tokenSymbol ?? "credits";
-  const label =
-    balance != null ? `${formatCredits(balance)} ${symbol}` : `— ${symbol}`;
+  const amount = balance != null ? formatCredits(balance) : "—";
+  const label = `${amount} ${symbol}`;
 
   const baseClass = embedded
-    ? `inline-flex h-10 items-center rounded-full px-3 text-sm font-semibold text-slate-800 transition hover:bg-sky-50 hover:text-sky-900 ${focusRingClass} `
-    : `inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900 ${focusRingClass} `;
+    ? `inline-flex h-10 min-w-[7rem] items-center justify-end rounded-full px-3 text-sm font-semibold tabular-nums text-slate-800 transition hover:bg-sky-50 hover:text-sky-900 ${focusRingClass} `
+    : `inline-flex h-10 min-w-[7rem] items-center justify-end rounded-full border border-slate-200 bg-white px-3.5 text-sm font-semibold tabular-nums text-slate-800 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900 ${focusRingClass} `;
 
   const divider = embedded ? <AccountClusterDivider /> : null;
 
   if (showSkeleton) {
     const skeletonClass = embedded
-      ? "inline-flex h-10 w-[7.5rem] animate-pulse rounded-full bg-slate-100 "
-      : "inline-flex h-10 w-[7.5rem] animate-pulse rounded-full border border-slate-200 bg-slate-100 ";
+      ? "inline-flex h-10 min-w-[7rem] animate-pulse rounded-full bg-slate-100 "
+      : "inline-flex h-10 min-w-[7rem] animate-pulse rounded-full border border-slate-200 bg-slate-100 ";
 
     return (
       <>
@@ -71,7 +71,8 @@ export function BalanceChip({
         title="Deposit credits"
         aria-label={`Credit balance ${label}. Open deposit.`}
       >
-        <span className="tabular-nums">{label}</span>
+        <span>{amount}</span>
+        <span className="hidden sm:inline"> {symbol}</span>
       </Link>
       {divider}
     </>
