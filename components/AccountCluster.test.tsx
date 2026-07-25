@@ -68,12 +68,12 @@ describe("account cluster", () => {
         balance: "12.5",
         config: {
           wallet: "0xabc",
-          chainId: 137,
-          tokenSymbol: "USDT",
+          chainId: 80002,
+          tokenSymbol: "TEST",
           decimals: 6,
           contract: "0xtoken",
           confirmations: 3,
-          eip681Uri: "ethereum:0xtoken@137/transfer?address=0xabc",
+          eip681Uri: "ethereum:0xtoken@80002/transfer?address=0xabc",
         },
         features: {
           billingEnabled: true,
@@ -87,7 +87,7 @@ describe("account cluster", () => {
     assert.match(html, /data-testid="balance-chip"/);
     assert.match(html, /data-testid="account-cluster-divider"/);
     assert.match(html, /data-testid="account-avatar"/);
-    assert.match(html, /12\.50 USDT/);
+    assert.match(html, /12\.50 TEST/);
   });
 
   it("billing disabled → only avatar, no divider", () => {

@@ -76,7 +76,10 @@ function listSourceFiles(dir: string): string[] {
         stack.push(full);
         continue;
       }
-      if (/\.(ts|tsx|js|jsx)$/.test(entry.name) && !entry.name.endsWith(".test.ts")) {
+      if (
+        /\.(ts|tsx|js|jsx)$/.test(entry.name) &&
+        !/\.test\.(ts|tsx|js|jsx)$/.test(entry.name)
+      ) {
         out.push(full);
       }
     }
