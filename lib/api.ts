@@ -1,3 +1,5 @@
+import { clearPendingSpend } from "@/lib/orders/pendingSpend";
+
 const DEFAULT_API_URL = "http://localhost:8000";
 
 const ACCESS_TOKEN_KEY = "roamkit_access_token";
@@ -45,6 +47,7 @@ export function setTokens(access: string, refresh: string): void {
 }
 
 export function clearTokens(): void {
+  clearPendingSpend();
   if (!canUseLocalStorage()) {
     return;
   }
