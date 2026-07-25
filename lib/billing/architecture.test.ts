@@ -9,7 +9,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 /**
  * UI surfaces only. Billing/orders HTTP is allowed exclusively in:
  * - `lib/billing/client.ts`
- * - `lib/orders/client.ts` (PR-4)
+ * - `lib/orders/client.ts`
+ * - `lib/orders/topupClient.ts`
  * Those paths are intentionally outside this scan.
  */
 const SCAN_DIRS = ["app", "components"] as const;
@@ -33,6 +34,12 @@ export const ARCHITECTURE_GUARD_RULES: GuardRule[] = [
     description: "raw orders HTTP from UI (use lib/orders/client.ts)",
     pattern:
       /\b(?:fetch|fetchApi)\s*\(\s*(['"`])\/api\/v1\/orders(?:\/|\1)/,
+  },
+  {
+    id: "raw-topups-fetch",
+    description: "raw top-up HTTP from UI (use lib/orders/topupClient.ts)",
+    pattern:
+      /\b(?:fetch|fetchApi)\s*\(\s*(['"`])\/api\/v1\/me\/esims\/[^'"`]*\/topups/,
   },
   {
     id: "hardcoded-chain-id",
@@ -128,6 +135,12 @@ describe("billing architecture guard", () => {
       ),
       ["raw-billing-fetch"],
     );
+    assert.deepEqual(
+      findArchitectureViolations(
+        `await fetchApi("/api/v1/me/esims/12/topups/");`,
+      ),
+      ["raw-topups-fetch"],
+    );
   });
 
   it("detects hardcoded chain/token/contract in sample snippets", () => {
@@ -152,6 +165,12 @@ describe("billing architecture guard", () => {
     assert.deepEqual(
       findArchitectureViolations(
         `import { getBalance } from "@/lib/billing/client";\nawait getBalance();`,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      findArchitectureViolations(
+        `import { createOrder } from "@/lib/orders/client";\nawait createOrder(payload);`,
       ),
       [],
     );

@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState, Suspense } from "react";
 
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
@@ -20,6 +20,11 @@ import {
 } from "@/lib/api";
 import { formatCredits } from "@/lib/billing/format";
 import { billingTelemetry } from "@/lib/billing/telemetry";
+import { isValidDepositAmount } from "@/lib/eip681";
+import {
+  isSafeReturnPath,
+  normalizeDepositAmount,
+} from "@/lib/orders/insufficientCredits";
 
 const WalletDepositWithAppKit = dynamic(
   () =>
@@ -42,7 +47,24 @@ const WalletDepositWithAppKit = dynamic(
 );
 
 export default function DepositPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
+          <main className="mx-auto w-full max-w-4xl">
+            <DepositSkeleton />
+          </main>
+        </div>
+      }
+    >
+      <DepositPageContent />
+    </Suspense>
+  );
+}
+
+function DepositPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     balance,
     config,
@@ -52,14 +74,30 @@ export default function DepositPage() {
     refreshBalance,
   } = useBilling();
 
+  const amountParam = searchParams.get("amount");
+  const returnParam = searchParams.get("return");
+  const returnPath =
+    returnParam && isSafeReturnPath(returnParam) ? returnParam : null;
+
   const [user, setUser] = useState<User | null>(null);
-  const [amount, setAmount] = useState("25");
+  const [amount, setAmount] = useState(() => {
+    if (amountParam && isValidDepositAmount(amountParam, 6)) {
+      return normalizeDepositAmount(amountParam);
+    }
+    return "25";
+  });
   const [userError, setUserError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
 
   useEffect(() => {
     billingTelemetry.track("deposit_page_open");
   }, []);
+
+  useEffect(() => {
+    if (amountParam && isValidDepositAmount(amountParam, 6)) {
+      setAmount(normalizeDepositAmount(amountParam));
+    }
+  }, [amountParam]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -106,7 +144,10 @@ export default function DepositPage() {
     } catch {
       // Balance refresh is best-effort after a successful verify.
     }
-  }, [refreshBalance]);
+    if (returnPath) {
+      router.push(returnPath);
+    }
+  }, [refreshBalance, returnPath, router]);
 
   const isLoading = userLoading || billingLoading;
   const showWallet =
@@ -132,6 +173,12 @@ export default function DepositPage() {
               {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
               withdrawal TXID.
             </p>
+            {returnPath ? (
+              <p className="mt-3 max-w-2xl rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                After a successful deposit you will return to finish your
+                purchase.
+              </p>
+            ) : null}
           </div>
           {user ? (
             <UserMenu email={user.email} />
