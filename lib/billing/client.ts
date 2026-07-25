@@ -33,19 +33,29 @@ function formatBillingError(body: unknown, fallback: string): string {
   return parts.length > 0 ? parts.join(" ") : fallback;
 }
 
+export type BillingRequestOptions = {
+  signal?: AbortSignal;
+};
+
 /** GET /api/v1/billing/balance/ */
-export async function getBalance(): Promise<BillingBalance> {
+export async function getBalance(
+  options?: BillingRequestOptions,
+): Promise<BillingBalance> {
   return fetchApi<BillingBalance>("/api/v1/billing/balance/", {
     auth: true,
     cache: "no-store",
+    signal: options?.signal,
   });
 }
 
 /** GET /api/v1/billing/deposit-info/ — SSoT for chain/token/wallet/flags. */
-export async function getDepositInfo(): Promise<DepositInfo> {
+export async function getDepositInfo(
+  options?: BillingRequestOptions,
+): Promise<DepositInfo> {
   return fetchApi<DepositInfo>("/api/v1/billing/deposit-info/", {
     auth: true,
     cache: "no-store",
+    signal: options?.signal,
   });
 }
 
@@ -53,6 +63,7 @@ async function verifyDeposit(
   path: "/api/v1/billing/verify-wallet/" | "/api/v1/billing/verify-cex/",
   payload: VerifyDepositPayload,
   fallbackError: string,
+  options?: BillingRequestOptions,
 ): Promise<DepositRequest> {
   try {
     return await fetchApi<DepositRequest>(path, {
@@ -61,6 +72,7 @@ async function verifyDeposit(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: options?.signal,
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -74,24 +86,28 @@ async function verifyDeposit(
   }
 }
 
-/** POST /api/v1/billing/verify-cex/ */
+/** POST /api/v1/billing/verify-cex/ — 202 pending bodies are returned (not thrown). */
 export async function verifyCex(
   payload: VerifyDepositPayload,
+  signal?: AbortSignal,
 ): Promise<DepositRequest> {
   return verifyDeposit(
     "/api/v1/billing/verify-cex/",
     payload,
     "Unable to verify CEX deposit.",
+    { signal },
   );
 }
 
-/** POST /api/v1/billing/verify-wallet/ */
+/** POST /api/v1/billing/verify-wallet/ — 202 pending bodies are returned (not thrown). */
 export async function verifyWallet(
   payload: VerifyDepositPayload,
+  signal?: AbortSignal,
 ): Promise<DepositRequest> {
   return verifyDeposit(
     "/api/v1/billing/verify-wallet/",
     payload,
     "Unable to verify wallet deposit.",
+    { signal },
   );
 }

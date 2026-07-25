@@ -5,17 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
+import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
 import { UserMenu } from "@/components/UserMenu";
 import { isWalletConnectConfigured } from "@/config/appkit";
-import { ApiError, User, clearTokens, fetchMe, isAuthenticated } from "@/lib/api";
 import {
-  type DepositInfo,
-  fetchBillingBalance,
-  fetchDepositInfo,
-  formatBalance,
-} from "@/lib/billing";
+  ApiError,
+  User,
+  clearTokens,
+  fetchMe,
+  isAuthenticated,
+} from "@/lib/api";
+import { formatCredits } from "@/lib/billing/format";
+import { billingTelemetry } from "@/lib/billing/telemetry";
 
 const WalletDepositWithAppKit = dynamic(
   () =>
@@ -26,7 +30,12 @@ const WalletDepositWithAppKit = dynamic(
     ssr: false,
     loading: () => (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-600">Loading wallet connector…</p>
+        <div className="animate-pulse space-y-3" aria-hidden="true">
+          <div className="h-5 w-48 rounded-lg bg-slate-200/80" />
+          <div className="h-4 w-full max-w-md rounded-lg bg-slate-200/80" />
+          <div className="h-10 w-40 rounded-lg bg-slate-200/80" />
+        </div>
+        <span className="sr-only">Loading wallet connector…</span>
       </section>
     ),
   },
@@ -34,17 +43,22 @@ const WalletDepositWithAppKit = dynamic(
 
 export default function DepositPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
-  const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null);
-  const [amount, setAmount] = useState("25");
-  const [error, setError] = useState<string | null>(null);
-  const [billingDisabled, setBillingDisabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    balance,
+    config,
+    features,
+    isLoading: billingLoading,
+    error: billingError,
+    refreshBalance,
+  } = useBilling();
 
-  const refreshBalance = useCallback(async () => {
-    const result = await fetchBillingBalance();
-    setBalance(result.balance);
+  const [user, setUser] = useState<User | null>(null);
+  const [amount, setAmount] = useState("25");
+  const [userError, setUserError] = useState<string | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  useEffect(() => {
+    billingTelemetry.track("deposit_page_open");
   }, []);
 
   useEffect(() => {
@@ -55,26 +69,14 @@ export default function DepositPage() {
 
     let cancelled = false;
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-      setBillingDisabled(false);
+    async function loadUser() {
+      setUserLoading(true);
+      setUserError(null);
       try {
         const me = await fetchMe();
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          setUser(me);
         }
-        setUser(me);
-
-        const [balanceResult, info] = await Promise.all([
-          fetchBillingBalance(),
-          fetchDepositInfo(),
-        ]);
-        if (cancelled) {
-          return;
-        }
-        setBalance(balanceResult.balance);
-        setDepositInfo(info);
       } catch (err) {
         if (cancelled) {
           return;
@@ -84,39 +86,31 @@ export default function DepositPage() {
           router.replace("/login");
           return;
         }
-        if (err instanceof ApiError && err.status === 404) {
-          setBillingDisabled(true);
-          setError(null);
-          return;
-        }
-        setError(
-          err instanceof ApiError
-            ? "Unable to load deposit details right now."
-            : "Something went wrong while loading deposit details.",
-        );
+        setUserError("Unable to load your account right now.");
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setUserLoading(false);
         }
       }
     }
 
-    void load();
+    void loadUser();
     return () => {
       cancelled = true;
     };
   }, [router]);
 
-  async function handleVerified() {
+  const handleVerified = useCallback(async () => {
     try {
       await refreshBalance();
     } catch {
       // Balance refresh is best-effort after a successful verify.
     }
-  }
+  }, [refreshBalance]);
 
+  const isLoading = userLoading || billingLoading;
   const showWallet =
-    Boolean(depositInfo?.walletconnect_enabled) && isWalletConnectConfigured();
+    features.walletConnect && isWalletConnectConfigured() && Boolean(config);
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -134,25 +128,28 @@ export default function DepositPage() {
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight">Deposit</h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-              Add prepaid credits with Polygon USDT. Send on-chain via QR /
-              WalletConnect, or paste a CEX withdrawal TXID.
+              Add prepaid credits. Send on-chain via QR
+              {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
+              withdrawal TXID.
             </p>
           </div>
           {user ? (
             <UserMenu email={user.email} />
           ) : (
             <span
-              className="inline-flex h-10 w-10 rounded-full bg-slate-200"
+              className="inline-flex h-10 w-10 animate-pulse rounded-full bg-slate-200"
               aria-hidden="true"
             />
           )}
         </div>
 
         {isLoading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-slate-600">Loading deposit details…</p>
+          <DepositSkeleton />
+        ) : userError ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+            <p className="font-medium">{userError}</p>
           </div>
-        ) : billingDisabled ? (
+        ) : !features.billingEnabled ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-lg font-medium text-slate-900">
               Billing is unavailable
@@ -161,11 +158,14 @@ export default function DepositPage() {
               Prepaid credits are not enabled in this environment yet.
             </p>
           </div>
-        ) : error ? (
+        ) : billingError || !config ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{error}</p>
+            <p className="font-medium">
+              {billingError?.message ||
+                "Unable to load deposit details right now."}
+            </p>
           </div>
-        ) : depositInfo ? (
+        ) : (
           <div className="space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-end justify-between gap-4">
@@ -174,15 +174,17 @@ export default function DepositPage() {
                     Credit balance
                   </p>
                   <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                    {balance != null ? formatBalance(balance) : "—"}{" "}
+                    {balance != null ? formatCredits(balance) : "—"}{" "}
                     <span className="text-lg font-semibold text-slate-500">
-                      {depositInfo.token_symbol}
+                      {config.tokenSymbol}
                     </span>
                   </p>
                 </div>
                 <p className="max-w-sm text-sm leading-6 text-amber-800">
-                  <strong>USDT on Polygon only.</strong> Other networks or tokens
-                  will not be credited.
+                  <strong>
+                    {config.tokenSymbol} on the configured network only.
+                  </strong>{" "}
+                  Other networks or tokens will not be credited.
                 </p>
               </div>
 
@@ -200,25 +202,29 @@ export default function DepositPage() {
                     aria-describedby="deposit-amount-hint"
                   />
                   <span className="text-sm font-medium text-slate-600">
-                    {depositInfo.token_symbol}
+                    {config.tokenSymbol}
                   </span>
                 </div>
-                <p id="deposit-amount-hint" className="mt-1.5 text-xs text-slate-500">
-                  Up to {depositInfo.token_decimals} decimal places. Used for QR,
-                  wallet pay, and CEX verification.
+                <p
+                  id="deposit-amount-hint"
+                  className="mt-1.5 text-xs text-slate-500"
+                >
+                  Up to {config.decimals} decimal places. Used for QR
+                  {features.walletConnect ? ", wallet pay," : ""} and CEX
+                  verification.
                 </p>
               </label>
             </section>
 
-            <Eip681QrPanel depositInfo={depositInfo} amount={amount} />
+            <Eip681QrPanel config={config} amount={amount} />
 
             {showWallet ? (
               <WalletDepositWithAppKit
-                depositInfo={depositInfo}
+                config={config}
                 amount={amount}
                 onVerified={() => void handleVerified()}
               />
-            ) : depositInfo.walletconnect_enabled ? (
+            ) : features.walletConnect ? (
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">
                   WalletConnect
@@ -228,29 +234,19 @@ export default function DepositPage() {
                   <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
                     NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
                   </code>{" "}
-                  is not configured for this web build. Use the EIP-681 QR or CEX
-                  TXID flow instead.
+                  is not configured for this web build. Use the EIP-681 QR or
+                  CEX TXID flow instead.
                 </p>
               </section>
-            ) : (
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  WalletConnect
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  In-app wallet deposits are disabled. Use the EIP-681 QR or paste
-                  a CEX transaction hash below.
-                </p>
-              </section>
-            )}
+            ) : null}
 
             <CexDepositForm
-              depositInfo={depositInfo}
+              config={config}
               amount={amount}
               onVerified={() => void handleVerified()}
             />
           </div>
-        ) : null}
+        )}
       </main>
     </div>
   );

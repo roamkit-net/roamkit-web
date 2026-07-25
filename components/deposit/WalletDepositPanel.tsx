@@ -13,31 +13,33 @@ import {
   parseUnits,
   type Eip1193Provider,
 } from "ethers";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiError } from "@/lib/api";
+import { verifyWallet } from "@/lib/billing/client";
 import {
-  type DepositInfo,
-  type DepositRequest,
-  isDepositPendingConfirmations,
+  formatDepositPendingMessage,
+  isDepositFailed,
   isDepositVerified,
-  newIdempotencyKey,
-  verifyWalletDeposit,
-} from "@/lib/billing";
+} from "@/lib/billing/deposit";
+import { toBillingError } from "@/lib/billing/errors";
+import { newIdempotencyKey } from "@/lib/billing/idempotency";
+import { billingTelemetry } from "@/lib/billing/telemetry";
+import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
 import { isValidDepositAmount } from "@/lib/eip681";
+import type { BillingConfig, DepositRequest } from "@/types/billing";
 
 const ERC20_ABI = [
   "function transfer(address to, uint256 value) returns (bool)",
 ] as const;
 
 type WalletDepositPanelProps = {
-  depositInfo: DepositInfo;
+  config: BillingConfig;
   amount: string;
   onVerified: (deposit: DepositRequest) => void;
 };
 
 export function WalletDepositPanel({
-  depositInfo,
+  config,
   amount,
   onVerified,
 }: WalletDepositPanelProps) {
@@ -50,74 +52,98 @@ export function WalletDepositPanel({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const verifyHash = useCallback(
     async (hash: string, idempotencyKey: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setIsVerifying(true);
       setError(null);
+      billingTelemetry.track("deposit_verify_clicked", { method: "wallet" });
+
       try {
-        const deposit = await verifyWalletDeposit({
-          tx_hash: hash,
-          amount_requested: amount.trim(),
-          idempotency_key: idempotencyKey,
-        });
+        const deposit = await verifyDepositUntilSettled(
+          (body, signal) => verifyWallet(body, signal),
+          {
+            tx_hash: hash,
+            amount_requested: amount.trim(),
+            idempotency_key: idempotencyKey,
+          },
+          {
+            signal: controller.signal,
+            onUpdate: (current) => {
+              const status = current.status?.trim().toLowerCase();
+              if (!status || status === "pending") {
+                setStatusMessage(
+                  formatDepositPendingMessage(current, config.confirmations),
+                );
+              }
+            },
+          },
+        );
 
         if (isDepositVerified(deposit)) {
+          billingTelemetry.track("deposit_verify_succeeded", {
+            method: "wallet",
+          });
           onVerified(deposit);
           setStatusMessage("Deposit verified. Credits added to your balance.");
           return;
         }
 
-        if (isDepositPendingConfirmations(deposit)) {
-          setStatusMessage(
-            `Waiting for confirmations (${deposit.confirmations}/${deposit.required_confirmations}). You can tap Verify again shortly.`,
+        if (isDepositFailed(deposit)) {
+          billingTelemetry.track("deposit_verify_failed", {
+            method: "wallet",
+            code: "FAILED",
+          });
+          setError(
+            deposit.failure_reason || "Wallet deposit could not be verified.",
           );
           return;
         }
 
-        if (deposit.status === "pending") {
-          setStatusMessage(
-            `Transaction submitted. Waiting for ~${depositInfo.min_confirmations} Polygon confirmations.`,
-          );
-          return;
-        }
-
-        setError(
-          deposit.failure_reason || "Wallet deposit could not be verified.",
+        setStatusMessage(
+          formatDepositPendingMessage(deposit, config.confirmations),
         );
       } catch (err) {
-        if (err instanceof ApiError && err.status === 403) {
-          setError("WalletConnect deposits are disabled.");
+        const mapped = toBillingError(err);
+        if (mapped.code === "ABORTED") {
           return;
         }
-        if (err instanceof ApiError && err.status === 409) {
-          setError(err.message || "This transaction was already credited.");
-          return;
-        }
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : "Unable to verify wallet deposit right now.",
-        );
+        billingTelemetry.track("deposit_verify_failed", {
+          method: "wallet",
+          code: mapped.code,
+          category: mapped.category,
+        });
+        setError(mapped.message);
       } finally {
         setIsVerifying(false);
       }
     },
-    [amount, depositInfo.min_confirmations, onVerified],
+    [amount, config.confirmations, onVerified],
   );
 
   async function handlePay() {
     setError(null);
     setStatusMessage(null);
 
-    if (!isValidDepositAmount(amount, depositInfo.token_decimals)) {
+    if (!isValidDepositAmount(amount, config.decimals)) {
       setError(
-        `Enter a valid amount (max ${depositInfo.token_decimals} decimal places).`,
+        `Enter a valid amount (max ${config.decimals} decimal places).`,
       );
       return;
     }
 
-    if (!depositInfo.wallet || !depositInfo.contract) {
+    if (!config.wallet || !config.contract) {
       setError("Deposit destination is not configured.");
       return;
     }
@@ -130,15 +156,16 @@ export function WalletDepositPanel({
     setIsSending(true);
     const idempotencyKey = newIdempotencyKey();
     try {
-      if (Number(chainId) !== depositInfo.chain_id) {
+      if (Number(chainId) !== config.chainId) {
+        // AppKit network object for the deposit chain (config.chainId is SSoT).
         await switchNetwork(polygon);
       }
 
       const provider = new BrowserProvider(walletProvider);
       const signer = await provider.getSigner();
-      const token = new Contract(depositInfo.contract, ERC20_ABI, signer);
-      const value = parseUnits(amount.trim(), depositInfo.token_decimals);
-      const tx = await token.getFunction("transfer")(depositInfo.wallet, value);
+      const token = new Contract(config.contract, ERC20_ABI, signer);
+      const value = parseUnits(amount.trim(), config.decimals);
+      const tx = await token.getFunction("transfer")(config.wallet, value);
       const hash = typeof tx.hash === "string" ? tx.hash : String(tx.hash);
 
       setStatusMessage(`Transaction sent (${hash.slice(0, 10)}…). Verifying…`);
@@ -147,7 +174,11 @@ export function WalletDepositPanel({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Wallet payment failed.";
-      if (/user rejected|denied|rejected the request|ACTION_REJECTED/i.test(message)) {
+      if (
+        /user rejected|denied|rejected the request|ACTION_REJECTED/i.test(
+          message,
+        )
+      ) {
         setError("Transaction was rejected in the wallet.");
       } else {
         setError(message);
@@ -165,9 +196,8 @@ export function WalletDepositPanel({
         WalletConnect (Reown AppKit)
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Connect a wallet and send {depositInfo.token_symbol} on Polygon. After
-        you approve the transfer we capture the transaction hash and verify it
-        with RoamKit.
+        Connect a wallet and send {config.tokenSymbol}. After you approve the
+        transfer we capture the transaction hash and verify it with RoamKit.
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
@@ -212,7 +242,7 @@ export function WalletDepositPanel({
             ? "Verifying…"
             : "Sending…"
           : isConnected
-            ? `Pay ${amount || "…"} ${depositInfo.token_symbol}`
+            ? `Pay ${amount || "…"} ${config.tokenSymbol}`
             : "Connect & pay with wallet"}
       </button>
     </section>
