@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthNav } from "@/components/AuthNav";
+import { DepositCta } from "@/components/billing/DepositCta";
 import { LocationCard } from "@/components/LocationCard";
 import {
   LocationSearch,
@@ -121,6 +122,11 @@ export function PlansStore({
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
               {copy.description}
             </p>
+            <div className="mt-4">
+              <DepositCta returnPath="/plans" variant="link">
+                Need credits? Deposit →
+              </DepositCta>
+            </div>
           </div>
           <AuthNav />
         </div>

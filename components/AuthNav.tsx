@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { BalanceChip } from "@/components/billing/BalanceChip";
 import { UserMenu } from "@/components/UserMenu";
 import {
   ApiError,
@@ -17,7 +18,7 @@ type AuthNavState =
   | { status: "authenticated"; email: string };
 
 const placeholderClassName =
-  "inline-flex h-10 w-10 rounded-full bg-slate-200";
+  "inline-flex h-10 w-10 animate-pulse rounded-full bg-slate-200";
 
 export function AuthNav() {
   const [state, setState] = useState<AuthNavState>({ status: "loading" });
@@ -57,12 +58,23 @@ export function AuthNav() {
 
   if (state.status === "loading") {
     return (
-      <span className={placeholderClassName} aria-hidden="true" />
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-flex h-10 w-[7.5rem] animate-pulse rounded-full bg-slate-200"
+          aria-hidden="true"
+        />
+        <span className={placeholderClassName} aria-hidden="true" />
+      </div>
     );
   }
 
   if (state.status === "authenticated") {
-    return <UserMenu email={state.email} />;
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <BalanceChip />
+        <UserMenu email={state.email} />
+      </div>
+    );
   }
 
   return (

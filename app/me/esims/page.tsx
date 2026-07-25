@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { UserMenu } from "@/components/UserMenu";
+import { AuthNav } from "@/components/AuthNav";
+import { DepositCta } from "@/components/billing/DepositCta";
+import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
   Esim,
@@ -97,21 +99,21 @@ export default function MyEsimsPage() {
                 ? `Signed in as ${user.email}. View ICCID, QR, and installation details.`
                 : "View ICCID, QR, and installation details for your eSIMs."}
             </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <DepositCta returnPath="/me/esims">Deposit credits</DepositCta>
+              <Link
+                href="/plans"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Browse plans
+              </Link>
+            </div>
           </div>
-          {user ? (
-            <UserMenu email={user.email} />
-          ) : (
-            <span
-              className="inline-flex h-10 w-10 rounded-full bg-slate-200"
-              aria-hidden="true"
-            />
-          )}
+          <AuthNav />
         </div>
 
         {isLoading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-slate-600">Loading your eSIMs…</p>
-          </div>
+          <ListSkeleton rows={3} label="Loading your eSIMs…" />
         ) : error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
             <p className="font-medium">{error}</p>
@@ -120,12 +122,24 @@ export default function MyEsimsPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-lg font-medium text-slate-900">No eSIMs yet</p>
             <p className="mt-2 text-sm text-slate-600">
-              Ask an admin to run{" "}
+              Deposit credits, then buy a plan from the store — or ask an admin
+              to run{" "}
               <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
                 create_sandbox_esim
               </code>{" "}
               for your account.
             </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <DepositCta variant="primary" returnPath="/me/esims">
+                Deposit credits
+              </DepositCta>
+              <Link
+                href="/plans"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Browse plans
+              </Link>
+            </div>
           </div>
         ) : (
           <ul className="grid gap-4">
