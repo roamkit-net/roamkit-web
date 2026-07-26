@@ -568,6 +568,48 @@ export async function login(
   }
 }
 
+const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
+  google_invalid_token: "Google sign-in failed. Please try again.",
+  google_email_not_verified:
+    "Your Google account email is not verified. Verify it with Google, or use email sign-in.",
+  google_account_disabled: "This account is disabled.",
+  google_sub_conflict: "This Google account is already linked to another user.",
+  google_feature_disabled: "Google sign-in is not available.",
+  google_verify_unavailable:
+    "Google sign-in is temporarily unavailable. Please try again.",
+};
+
+export function formatGoogleAuthError(body: unknown, fallback: string): string {
+  if (body && typeof body === "object") {
+    const code = (body as { code?: unknown }).code;
+    if (typeof code === "string" && GOOGLE_AUTH_ERROR_MESSAGES[code]) {
+      return GOOGLE_AUTH_ERROR_MESSAGES[code];
+    }
+  }
+  return formatApiValidationMessage(body, fallback);
+}
+
+export async function loginWithGoogle(credential: string): Promise<AuthTokens> {
+  try {
+    const tokens = await fetchApi<AuthTokens>("/api/v1/auth/google/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential }),
+    });
+    setTokens(tokens.access, tokens.refresh);
+    return tokens;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatGoogleAuthError(error.body, "Unable to sign in with Google."),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
+}
+
 export function logout(): void {
   clearTokens();
 }
