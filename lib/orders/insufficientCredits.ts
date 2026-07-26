@@ -1,5 +1,8 @@
 import { ApiError } from "@/lib/api";
+import { isSafeReturnPath } from "@/lib/navigation/safePath";
 import type { InsufficientCreditsPayload } from "@/types/orders";
+
+export { isSafeReturnPath } from "@/lib/navigation/safePath";
 
 function asRecord(body: unknown): Record<string, unknown> | null {
   if (!body || typeof body !== "object") {
@@ -69,17 +72,6 @@ export function normalizeDepositAmount(value: string): string {
   const whole = wholeRaw.replace(/^0+(?=\d)/, "") || "0";
   const frac = fracRaw.replace(/0+$/, "");
   return frac ? `${whole}.${frac}` : whole;
-}
-
-/** Only same-origin relative paths (blocks open redirects). */
-export function isSafeReturnPath(path: string): boolean {
-  if (!path.startsWith("/") || path.startsWith("//")) {
-    return false;
-  }
-  if (path.includes("://")) {
-    return false;
-  }
-  return true;
 }
 
 /** Build `/me/deposit?amount=&return=` for the 402 → deposit hop. */

@@ -22,9 +22,9 @@ import { returnDestinationLabel } from "@/lib/billing/returnLabel";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { isValidDepositAmount } from "@/lib/eip681";
 import {
-  isSafeReturnPath,
   normalizeDepositAmount,
 } from "@/lib/orders/insufficientCredits";
+import { isSafeReturnPath, loginHref } from "@/lib/navigation/safePath";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 
 const WalletDepositWithAppKit = dynamic(
@@ -105,8 +105,9 @@ function DepositPageContent() {
   }, [amountParam]);
 
   useEffect(() => {
+    const depositNext = `/me/deposit${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
     if (!isAuthenticated()) {
-      router.replace("/login");
+      router.replace(loginHref(depositNext));
       return;
     }
 
@@ -126,7 +127,7 @@ function DepositPageContent() {
         }
         if (err instanceof ApiError && err.status === 401) {
           clearTokens();
-          router.replace("/login");
+          router.replace(loginHref(depositNext));
           return;
         }
         setUserError("Unable to load your account right now.");
@@ -141,7 +142,7 @@ function DepositPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleVerified = useCallback(async () => {
     try {

@@ -17,6 +17,7 @@ import {
   isAuthenticated,
 } from "@/lib/api";
 import { needsSetup } from "@/lib/esim/telemetry";
+import { loginHref } from "@/lib/navigation/safePath";
 
 function formatUsage(esim: Esim): string {
   if (esim.usage_is_unlimited) {
@@ -37,7 +38,7 @@ export default function MyEsimsPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace("/login");
+      router.replace(loginHref("/me/esims"));
       return;
     }
 
@@ -59,7 +60,7 @@ export default function MyEsimsPage() {
         }
         if (err instanceof ApiError && err.status === 401) {
           clearTokens();
-          router.replace("/login");
+          router.replace(loginHref("/me/esims"));
           return;
         }
         setError(
