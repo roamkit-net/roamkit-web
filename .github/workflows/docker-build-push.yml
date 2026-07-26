@@ -54,11 +54,13 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
 
-      - name: Resolve public URLs and Turnstile sitekey
+      - name: Resolve public URLs, Turnstile sitekey, Google client id
         id: urls
         env:
           STAGING_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           PRODUCTION_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION }}
+          STAGING_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          PRODUCTION_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID_PRODUCTION }}
         run: |
           set -euo pipefail
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
@@ -68,6 +70,7 @@ jobs:
             echo "require_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${PRODUCTION_SITE_KEY:-}"
+            GOOGLE_CLIENT_ID="${PRODUCTION_GOOGLE_CLIENT_ID:-}"
             # Fail closed if main would bake the staging sitekey.
             if [ -n "${STAGING_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${STAGING_SITE_KEY}" ]; then
               echo "ERROR: main must not bake staging Turnstile sitekey" >&2
@@ -77,6 +80,10 @@ jobs:
               # Empty production key is allowed for Turnstile-off code deploys.
               echo "WARN: NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION empty on main (widget off bake)" >&2
             fi
+            if [ -n "${STAGING_GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_ID}" ] && [ "${GOOGLE_CLIENT_ID}" = "${STAGING_GOOGLE_CLIENT_ID}" ]; then
+              echo "ERROR: main must not bake staging Google client id" >&2
+              exit 1
+            fi
           else
             echo "api_url=https://api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "app_url=https://staging.roamkit.net" >> "$GITHUB_OUTPUT"
@@ -84,12 +91,18 @@ jobs:
             echo "require_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${STAGING_SITE_KEY:-}"
+            GOOGLE_CLIENT_ID="${STAGING_GOOGLE_CLIENT_ID:-}"
             if [ -n "${PRODUCTION_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${PRODUCTION_SITE_KEY}" ]; then
               echo "ERROR: develop/non-main must not bake production Turnstile sitekey" >&2
               exit 1
             fi
+            if [ -n "${PRODUCTION_GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_ID}" ] && [ "${GOOGLE_CLIENT_ID}" = "${PRODUCTION_GOOGLE_CLIENT_ID}" ]; then
+              echo "ERROR: develop/non-main must not bake production Google client id" >&2
+              exit 1
+            fi
           fi
           echo "turnstile_site_key=${SITE_KEY}" >> "$GITHUB_OUTPUT"
+          echo "google_client_id=${GOOGLE_CLIENT_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -103,6 +116,7 @@ jobs:
             NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
             NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ steps.urls.outputs.turnstile_site_key }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ steps.urls.outputs.google_client_id }}
             ROAMKIT_GIT_SHA=${{ github.sha }}
             ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
             ROAMKIT_IMAGE_TAG=${{ github.sha }}

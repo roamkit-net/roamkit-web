@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AuthShell, EmailOnlyForm } from "@/components/AuthForm";
-import { ApiError, isAuthenticated, registerUser } from "@/lib/api";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import {
+  ApiError,
+  isAuthenticated,
+  loginWithGoogle,
+  registerUser,
+} from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,6 +41,26 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   }
+
+  const handleGoogle = useCallback(
+    async (credential: string) => {
+      setError(null);
+      setIsLoading(true);
+      try {
+        await loginWithGoogle(credential);
+        router.push("/me/esims");
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Unable to sign in with Google right now.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [router],
+  );
 
   if (submittedEmail) {
     return (
@@ -78,13 +104,20 @@ export default function RegisterPage() {
         </>
       }
     >
-      <EmailOnlyForm
-        submitLabel="Send confirmation email"
-        loadingLabel="Sending…"
-        isLoading={isLoading}
-        error={error}
-        onSubmit={handleSubmit}
-      />
+      <div className="space-y-6">
+        <GoogleSignInButton
+          onCredential={handleGoogle}
+          onError={setError}
+          disabled={isLoading}
+        />
+        <EmailOnlyForm
+          submitLabel="Send confirmation email"
+          loadingLabel="Sending…"
+          isLoading={isLoading}
+          error={error}
+          onSubmit={handleSubmit}
+        />
+      </div>
     </AuthShell>
   );
 }

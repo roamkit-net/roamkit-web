@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AuthForm, AuthShell } from "@/components/AuthForm";
-import { ApiError, isAuthenticated, login } from "@/lib/api";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import {
+  ApiError,
+  isAuthenticated,
+  login,
+  loginWithGoogle,
+} from "@/lib/api";
 import { safeNextPath } from "@/lib/navigation/safePath";
 
 function LoginForm() {
@@ -42,6 +48,26 @@ function LoginForm() {
     }
   }
 
+  const handleGoogle = useCallback(
+    async (credential: string) => {
+      setError(null);
+      setIsLoading(true);
+      try {
+        await loginWithGoogle(credential);
+        router.push(nextPath);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Unable to sign in with Google right now.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [nextPath, router],
+  );
+
   return (
     <AuthShell
       title="Sign in"
@@ -55,21 +81,28 @@ function LoginForm() {
         </>
       }
     >
-      <AuthForm
-        submitLabel="Sign in"
-        loadingLabel="Signing in…"
-        isLoading={isLoading}
-        error={error}
-        passwordHint={
-          <Link
-            href="/forgot-password"
-            className="font-medium text-sky-700 hover:text-sky-800"
-          >
-            Forgot password?
-          </Link>
-        }
-        onSubmit={handleSubmit}
-      />
+      <div className="space-y-6">
+        <GoogleSignInButton
+          onCredential={handleGoogle}
+          onError={setError}
+          disabled={isLoading}
+        />
+        <AuthForm
+          submitLabel="Sign in"
+          loadingLabel="Signing in…"
+          isLoading={isLoading}
+          error={error}
+          passwordHint={
+            <Link
+              href="/forgot-password"
+              className="font-medium text-sky-700 hover:text-sky-800"
+            >
+              Forgot password?
+            </Link>
+          }
+          onSubmit={handleSubmit}
+        />
+      </div>
     </AuthShell>
   );
 }
