@@ -39,6 +39,27 @@ describe("lpa helpers", () => {
       "LPA:1$host$CODE",
     );
   });
+
+  it("parseLpa treats bare SM-DP+ host as address", () => {
+    const parsed = parseLpa("lpa.airalo.com");
+    assert.equal(parsed?.smdpAddress, "lpa.airalo.com");
+    assert.equal(parsed?.activationCode, "");
+    assert.equal(parseLpa("LPA:lpa.example.com")?.smdpAddress, "lpa.example.com");
+  });
+
+  it("resolveLpaUri builds from bare host + matching_id", () => {
+    assert.equal(
+      resolveLpaUri({
+        lpa: "lpa.airalo.com",
+        activationCode: "ACT-999",
+      }),
+      "LPA:1$lpa.airalo.com$ACT-999",
+    );
+    assert.equal(
+      resolveLpaUri({ lpa: "lpa.airalo.com", activationCode: "" }),
+      null,
+    );
+  });
 });
 
 describe("launchInstallAction flag", () => {

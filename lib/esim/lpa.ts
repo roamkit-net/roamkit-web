@@ -1,6 +1,9 @@
 /**
  * GSMA LPA string helpers for RoamKit install UX (provider-neutral).
  * Format: LPA:1$<SM-DP+ address>$<activation code>
+ *
+ * Providers may also store a bare SM-DP+ host in `lpa` and the activation
+ * code in `matching_id` — parse/resolve must support that shape.
  */
 
 export type ParsedLpa = {
@@ -9,21 +12,34 @@ export type ParsedLpa = {
   activationCode: string;
 };
 
+function looksLikeSmdpHost(value: string): boolean {
+  // Hostname (must include a dot) — not a GSMA body and not free text.
+  return (
+    Boolean(value) &&
+    value.includes(".") &&
+    !value.includes("$") &&
+    !/\s/.test(value)
+  );
+}
+
 export function parseLpa(lpa: string): ParsedLpa | null {
   const raw = lpa.trim();
   if (!raw) {
     return null;
   }
-  const body = raw.replace(/^LPA:/i, "");
+  const body = raw.replace(/^LPA:/i, "").trim();
   const parts = body.split("$");
-  if (parts.length < 3) {
-    return { raw, smdpAddress: "", activationCode: "" };
+  if (parts.length >= 3) {
+    return {
+      raw,
+      smdpAddress: parts[1]?.trim() ?? "",
+      activationCode: parts[2]?.trim() ?? "",
+    };
   }
-  return {
-    raw,
-    smdpAddress: parts[1]?.trim() ?? "",
-    activationCode: parts[2]?.trim() ?? "",
-  };
+  if (looksLikeSmdpHost(body)) {
+    return { raw, smdpAddress: body, activationCode: "" };
+  }
+  return { raw, smdpAddress: "", activationCode: "" };
 }
 
 /** Build a GSMA LPA URI from SM-DP+ and Activation Code. */
@@ -53,6 +69,15 @@ export function resolveLpaUri(options: {
     const parsed = parseLpa(existing);
     if (parsed?.smdpAddress && parsed.activationCode) {
       return /^LPA:/i.test(existing) ? existing : `LPA:${existing}`;
+    }
+    if (parsed?.smdpAddress) {
+      const fromHost = buildLpaUri(
+        parsed.smdpAddress,
+        options.activationCode ?? "",
+      );
+      if (fromHost) {
+        return fromHost;
+      }
     }
   }
   return buildLpaUri(options.smdpAddress ?? "", options.activationCode ?? "");
