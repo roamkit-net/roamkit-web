@@ -8,6 +8,7 @@ import {
   GuideId,
   type AndroidGuide,
   type AndroidGuideId,
+  type InstallAction,
 } from "@/lib/esim/androidGuides";
 
 function isAndroidGuideId(value: string): value is AndroidGuideId {
@@ -45,4 +46,11 @@ export function resolveAndroidGuideId(brandOrAlias: string): AndroidGuideId {
     }
   }
   return GuideId.OTHER;
+}
+
+export function guideHasInstallAction(
+  guideId: string,
+  action: InstallAction,
+): boolean {
+  return getAndroidGuide(guideId).installActions.includes(action);
 }

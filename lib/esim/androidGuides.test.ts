@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { ANDROID_GUIDES, GuideId } from "@/lib/esim/androidGuides";
 import {
   getAndroidGuide,
+  guideHasInstallAction,
   listAndroidGuides,
   resolveAndroidGuideId,
 } from "@/lib/esim/guideService";
@@ -18,6 +19,10 @@ describe("android guides registry", () => {
       assert.ok(guide.title.trim(), "title required");
       assert.ok(guide.steps.length >= 1, `${guide.id} needs steps`);
       assert.ok(Number.isFinite(guide.order), `${guide.id} needs order`);
+      assert.ok(
+        Array.isArray(guide.installActions) && guide.installActions.length > 0,
+        `${guide.id} needs installActions`,
+      );
 
       assert.equal(ids.has(guide.id), false, `duplicate id ${guide.id}`);
       ids.add(guide.id);
@@ -60,5 +65,11 @@ describe("android guides registry", () => {
     assert.equal(resolveAndroidGuideId("google"), GuideId.PIXEL);
     assert.equal(resolveAndroidGuideId("Nokia"), GuideId.OTHER);
     assert.equal(resolveAndroidGuideId(""), GuideId.OTHER);
+  });
+
+  it("guideHasInstallAction reflects registry capabilities", () => {
+    assert.equal(guideHasInstallAction(GuideId.SAMSUNG, "deep-link"), true);
+    assert.equal(guideHasInstallAction(GuideId.PIXEL, "deep-link"), false);
+    assert.equal(guideHasInstallAction(GuideId.OTHER, "guide"), true);
   });
 });
