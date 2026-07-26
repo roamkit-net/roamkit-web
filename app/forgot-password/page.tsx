@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
         footer={
           <>
             Remembered your password?{" "}
-            <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+            <Link href="/login" className="font-medium">
               Sign in
             </Link>
           </>
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
       footer={
         <>
           Remembered your password?{" "}
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         </>

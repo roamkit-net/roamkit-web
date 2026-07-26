@@ -9,6 +9,7 @@ import {
   isTurnstileConfigured,
 } from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
+import { Logo } from "@/components/landing/Logo";
 
 type AuthShellProps = {
   title: string;
@@ -19,23 +20,21 @@ type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-md">
-        <Link
-          href="/"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
-        >
-          ← Back to home
+    <div className="auth-page-bg min-h-screen px-6 py-16 text-slate-100">
+      <main className="auth-shell-enter mx-auto w-full max-w-md">
+        <Link href="/" className="inline-flex" aria-label="RoamKit home">
+          <Logo />
         </Link>
-        <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-          RoamKit
-        </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">{subtitle}</p>
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">
+          {title}
+        </h1>
+        <p className="mt-3 text-base leading-7 text-slate-400">{subtitle}</p>
+        <div className="mt-8 rounded-3xl border border-white/10 bg-white/95 p-6 text-slate-900 backdrop-blur-sm">
           {children}
         </div>
-        <p className="mt-6 text-center text-sm text-slate-600">{footer}</p>
+        <p className="mt-6 text-center text-sm text-slate-400 [&_a]:font-medium [&_a]:text-cyan-400 [&_a]:hover:text-cyan-300">
+          {footer}
+        </p>
       </main>
     </div>
   );

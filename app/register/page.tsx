@@ -71,7 +71,7 @@ export default function RegisterPage() {
         footer={
           <>
             Already activated?{" "}
-            <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+            <Link href="/login" className="font-medium">
               Sign in
             </Link>
           </>
@@ -99,7 +99,7 @@ export default function RegisterPage() {
       footer={
         <>
           Already registered?{" "}
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         </>

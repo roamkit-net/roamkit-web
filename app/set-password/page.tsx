@@ -63,7 +63,7 @@ function SetPasswordForm() {
       footer={
         <>
           Already activated?{" "}
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         </>
@@ -98,7 +98,7 @@ export default function SetPasswordPage() {
           title="Set your password"
           subtitle="Loading confirmation link…"
           footer={
-            <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+            <Link href="/login" className="font-medium">
               Sign in
             </Link>
           }
