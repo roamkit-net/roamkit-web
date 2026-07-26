@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
+import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
+import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -14,6 +16,7 @@ import {
   fetchMyEsim,
   isAuthenticated,
 } from "@/lib/api";
+import type { AndroidGuideId } from "@/lib/esim/androidGuides";
 import {
   canUseAppleInstallLink,
   detectInstallDevice,
@@ -46,6 +49,10 @@ export default function EsimSetupWizardPage() {
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const [qrZoomed, setQrZoomed] = useState(false);
   const [showManualTips, setShowManualTips] = useState(false);
+  const [androidGuideId, setAndroidGuideId] = useState<AndroidGuideId | null>(
+    null,
+  );
+  const [showPhoneInstructions, setShowPhoneInstructions] = useState(false);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -136,6 +143,17 @@ export default function EsimSetupWizardPage() {
     router.push(`/me/esims/${esimId}`);
   }
 
+  function selectAndroidGuide(id: AndroidGuideId) {
+    setAndroidGuideId(id);
+    telemetry.track("install.manual_install_clicked", {
+      resumeStep: 1,
+      payload: { manufacturer: id },
+    });
+  }
+
+  const showAndroidGuideFlow =
+    device === "android" || (device === "desktop" && showPhoneInstructions);
+
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-2xl">
@@ -207,6 +225,15 @@ export default function EsimSetupWizardPage() {
                       <p className="text-sm text-slate-600">
                         Scan this QR code with your phone to install the eSIM.
                       </p>
+                      {!showPhoneInstructions ? (
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                          onClick={() => setShowPhoneInstructions(true)}
+                        >
+                          Phone instructions
+                        </button>
+                      ) : null}
                     </>
                   ) : canUseAppleInstallLink(device) ? (
                     <>
@@ -237,11 +264,22 @@ export default function EsimSetupWizardPage() {
                         Install on Android
                       </h2>
                       <p className="text-sm text-slate-600">
-                        Scan the QR code or enter the SM-DP+ details manually in
-                        Settings → Network → SIMs.
+                        Choose your manufacturer, then scan the QR or enter
+                        SM-DP+ details.
                       </p>
                     </>
                   )}
+
+                  {showAndroidGuideFlow ? (
+                    androidGuideId ? (
+                      <AndroidInstallGuide
+                        guideId={androidGuideId}
+                        onChangePhone={() => setAndroidGuideId(null)}
+                      />
+                    ) : (
+                      <AndroidManufacturerPicker onSelect={selectAndroidGuide} />
+                    )
+                  ) : null}
 
                   {(esim.qrcode_url || esim.qrcode) && (
                     <button
@@ -282,6 +320,9 @@ export default function EsimSetupWizardPage() {
                             if (next) {
                               telemetry.track("install.manual_install_clicked", {
                                 resumeStep: 1,
+                                payload: androidGuideId
+                                  ? { manufacturer: androidGuideId }
+                                  : {},
                               });
                             }
                             return next;
