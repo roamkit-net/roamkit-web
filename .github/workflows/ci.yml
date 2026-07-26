@@ -34,12 +34,11 @@ jobs:
       STAGING_HOST: ${{ secrets.STAGING_HOST }}
       STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
 
+  # Secrets come from Environment "production" on the called workflow job —
+  # do not map them here (caller has no env access and would pass empties).
   deploy-production:
     needs: docker
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
     uses: ./.github/workflows/deploy-production.yml
-    secrets:
-      PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
-      PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
