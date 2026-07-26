@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell, PasswordPairForm } from "@/components/AuthForm";
 import { isTurnstileConfigured } from "@/components/auth/TurnstileField";
-import { activateAccount, ApiError, isAuthenticated, login } from "@/lib/api";
+import { activateAccount, ApiError, getRememberMePreference, isAuthenticated, login } from "@/lib/api";
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -43,7 +43,7 @@ function SetPasswordForm() {
         router.push("/login");
         return;
       }
-      await login(user.email, password);
+      await login(user.email, password, undefined, getRememberMePreference());
       router.push("/me/esims");
     } catch (err) {
       if (err instanceof ApiError) {

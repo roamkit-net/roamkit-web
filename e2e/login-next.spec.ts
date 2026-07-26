@@ -33,6 +33,8 @@ test.describe("login next redirect", () => {
       try {
         localStorage.removeItem("roamkit_access_token");
         localStorage.removeItem("roamkit_refresh_token");
+        sessionStorage.removeItem("roamkit_access_token");
+        sessionStorage.removeItem("roamkit_refresh_token");
       } catch {
         // ignore
       }
