@@ -40,7 +40,17 @@ Authenticated deposit UI lives at [`/me/deposit`](http://localhost:3000/me/depos
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript `--noEmit` |
 | `npm test` | Unit tests (plan filters + EIP-681 helpers) |
+| `npm run test:e2e` | Playwright catalog price acceptance + chaos (see below) |
 | `npm run build` | Production build |
+
+### Catalog price E2E (Gate D)
+
+```bash
+npx playwright install chromium
+PLAYWRIGHT_BASE_URL=https://staging.roamkit.net npm run test:e2e
+```
+
+Asserts `/global-esim` shows `catalog-price` (no sticky skeleton) and that a forced `billing/config` 500 yields `catalog-price-degraded` instead of an infinite skeleton.
 
 ## CI / deploy
 
