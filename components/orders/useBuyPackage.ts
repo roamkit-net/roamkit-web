@@ -68,7 +68,7 @@ export function useBuyPackage(): BuyPackageState {
       }
       const firstEsim = order.esims[0];
       if (firstEsim) {
-        router.push(`/me/esims/${firstEsim.id}`);
+        router.push(`/me/esims/${firstEsim.id}/setup`);
       } else {
         router.push("/me/esims");
       }

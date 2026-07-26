@@ -20,6 +20,7 @@ import {
   fetchMyEsimUsage,
   isAuthenticated,
 } from "@/lib/api";
+import { activationPolicyMessage, needsSetup } from "@/lib/esim/telemetry";
 
 function formatMb(value: number | null | undefined): string {
   if (value == null) {
@@ -192,6 +193,19 @@ export default function MyEsimDetailPage() {
                   LPA: {esim.lpa}
                 </p>
               ) : null}
+              {needsSetup(esim) ? (
+                <p className="mt-4">
+                  <Link
+                    href={`/me/esims/${esimId}/setup`}
+                    className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                  >
+                    Continue setup
+                  </Link>
+                </p>
+              ) : null}
+              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                {activationPolicyMessage(esim.activation_policy)}
+              </p>
             </header>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
