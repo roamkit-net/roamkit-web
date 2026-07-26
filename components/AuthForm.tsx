@@ -130,10 +130,14 @@ function useTurnstileGate() {
 type AuthFormProps = SharedFormProps & {
   passwordAutoComplete?: "current-password" | "new-password";
   passwordHint?: ReactNode;
+  showRememberMe?: boolean;
+  rememberMe?: boolean;
+  onRememberMeChange?: (value: boolean) => void;
   onSubmit: (
     email: string,
     password: string,
     turnstileToken?: string,
+    rememberMe?: boolean,
   ) => Promise<void> | void;
 };
 
@@ -144,6 +148,9 @@ export function AuthForm({
   error,
   passwordAutoComplete = "current-password",
   passwordHint,
+  showRememberMe = false,
+  rememberMe = true,
+  onRememberMeChange,
   onSubmit,
 }: AuthFormProps) {
   const {
@@ -163,7 +170,12 @@ export function AuthForm({
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     try {
-      await onSubmit(email, password, turnstileToken ?? undefined);
+      await onSubmit(
+        email,
+        password,
+        turnstileToken ?? undefined,
+        showRememberMe ? rememberMe : undefined,
+      );
     } finally {
       consumeToken();
     }
@@ -195,6 +207,25 @@ export function AuthForm({
         hint={passwordHint}
         autoComplete={passwordAutoComplete}
       />
+
+      {showRememberMe ? (
+        <div className="flex items-center gap-2">
+          <input
+            id="remember_me"
+            name="remember_me"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => onRememberMeChange?.(event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-sky-700 outline-none ring-sky-500 focus-visible:ring-2"
+          />
+          <label
+            htmlFor="remember_me"
+            className="text-sm font-medium text-slate-700"
+          >
+            Remember me
+          </label>
+        </div>
+      ) : null}
 
       <TurnstileField
         onTokenChange={setTurnstileToken}

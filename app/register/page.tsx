@@ -8,6 +8,7 @@ import { AuthShell, EmailOnlyForm } from "@/components/AuthForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import {
   ApiError,
+  getRememberMePreference,
   isAuthenticated,
   loginWithGoogle,
   registerUser,
@@ -47,7 +48,7 @@ export default function RegisterPage() {
       setError(null);
       setIsLoading(true);
       try {
-        await loginWithGoogle(credential);
+        await loginWithGoogle(credential, getRememberMePreference());
         router.push("/me/esims");
       } catch (err) {
         if (err instanceof ApiError) {
