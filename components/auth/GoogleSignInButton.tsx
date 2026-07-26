@@ -144,7 +144,7 @@ export function GoogleSignInButton({
     <div className={visible ? "space-y-4" : "hidden"} aria-hidden={!visible}>
       <div
         ref={containerRef}
-        className="flex min-h-[44px] w-full justify-center focus-within:outline-none focus-within:ring-2 focus-within:ring-sky-500 focus-within:ring-offset-2"
+        className="flex min-h-[44px] w-full justify-center focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2"
         aria-label="Continue with Google"
       />
       <div className="relative">
