@@ -4,10 +4,10 @@
 # API_IMAGE uses the roamkit-api :main branch tag — never this repo's SHA.
 # Persist pins into host .env so later recreates do not drift (Gate D lesson).
 #
-# Secrets: set PRODUCTION_HOST and PRODUCTION_SSH_KEY on GitHub Environment
-# "production" (Settings → Environments → production). Do not pass them from
-# the caller — caller context has no access to that environment and would
-# override with empty values.
+# Secrets must be passed from the caller (repo or org secrets). Environment
+# "production" alone is not enough for reusable workflow_call — GitHub does
+# not reliably expose env-only secrets unless the caller maps them. Prefer
+# repo secrets PRODUCTION_HOST / PRODUCTION_SSH_KEY (same pattern as staging).
 
 name: Deploy Production
 
@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: /opt/stacks/roamkit-production
+    secrets:
+      PRODUCTION_HOST:
+        required: true
+      PRODUCTION_SSH_KEY:
+        required: true
 
 jobs:
   deploy:
@@ -39,11 +44,11 @@ jobs:
         run: |
           missing=0
           if [ -z "${PRODUCTION_HOST}" ]; then
-            echo "::error::Missing PRODUCTION_HOST — add it under Settings → Environments → production"
+            echo "::error::Missing PRODUCTION_HOST — set repo secret PRODUCTION_HOST (and optionally Environment → production)"
             missing=1
           fi
           if [ -z "${PRODUCTION_SSH_KEY}" ]; then
-            echo "::error::Missing PRODUCTION_SSH_KEY — add it under Settings → Environments → production"
+            echo "::error::Missing PRODUCTION_SSH_KEY — set repo secret PRODUCTION_SSH_KEY (and optionally Environment → production)"
             missing=1
           fi
           if [ "$missing" -ne 0 ]; then
