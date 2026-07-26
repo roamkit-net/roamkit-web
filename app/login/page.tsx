@@ -8,6 +8,7 @@ import { AuthForm, AuthShell } from "@/components/AuthForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import {
   ApiError,
+  getRememberMePreference,
   isAuthenticated,
   login,
   loginWithGoogle,
@@ -20,6 +21,11 @@ function LoginForm() {
   const nextPath = safeNextPath(searchParams.get("next"));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    setRememberMe(getRememberMePreference());
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -31,11 +37,12 @@ function LoginForm() {
     email: string,
     password: string,
     turnstileToken?: string,
+    remember?: boolean,
   ) {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email, password, turnstileToken);
+      await login(email, password, turnstileToken, remember ?? rememberMe);
       router.push(nextPath);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -53,7 +60,7 @@ function LoginForm() {
       setError(null);
       setIsLoading(true);
       try {
-        await loginWithGoogle(credential);
+        await loginWithGoogle(credential, rememberMe);
         router.push(nextPath);
       } catch (err) {
         if (err instanceof ApiError) {
@@ -65,7 +72,7 @@ function LoginForm() {
         setIsLoading(false);
       }
     },
-    [nextPath, router],
+    [nextPath, rememberMe, router],
   );
 
   return (
@@ -92,6 +99,9 @@ function LoginForm() {
           loadingLabel="Signing in…"
           isLoading={isLoading}
           error={error}
+          showRememberMe
+          rememberMe={rememberMe}
+          onRememberMeChange={setRememberMe}
           passwordHint={
             <Link
               href="/forgot-password"
