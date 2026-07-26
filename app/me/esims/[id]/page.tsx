@@ -311,21 +311,29 @@ export default function MyEsimDetailPage() {
                         </a>
                       </p>
                     ) : null}
-                    {esim.installation_guide_url ? (
+                    {esimId ? (
                       <p>
-                        <a
-                          href={esim.installation_guide_url}
+                        <Link
+                          href={`/me/esims/${esimId}/setup`}
                           className="font-medium text-sky-700 hover:text-sky-800"
-                          target="_blank"
-                          rel="noreferrer"
                         >
-                          Installation guide
-                        </a>
+                          Open setup guide
+                        </Link>
                       </p>
                     ) : null}
                   </div>
                 </div>
               )}
+              {!(esim.qrcode_url || esim.qrcode) && esimId ? (
+                <p className="mt-4 text-sm text-slate-600">
+                  <Link
+                    href={`/me/esims/${esimId}/setup`}
+                    className="font-medium text-sky-700 hover:text-sky-800"
+                  >
+                    Open setup guide
+                  </Link>
+                </p>
+              ) : null}
               {esim.qrcode_installation ? (
                 <div
                   className="prose prose-sm mt-4 max-w-none text-slate-700"
