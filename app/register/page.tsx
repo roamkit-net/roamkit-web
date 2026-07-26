@@ -71,7 +71,7 @@ export default function RegisterPage() {
         footer={
           <>
             Already activated?{" "}
-            <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+            <Link href="/login" className="font-medium">
               Sign in
             </Link>
           </>
@@ -81,7 +81,7 @@ export default function RegisterPage() {
           Didn&apos;t get the email? Check spam, or{" "}
           <button
             type="button"
-            className="font-medium text-sky-700 hover:text-sky-800"
+            className="font-medium text-cyan-700 transition hover:text-cyan-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1"
             onClick={() => setSubmittedEmail(null)}
           >
             try again
@@ -99,7 +99,7 @@ export default function RegisterPage() {
       footer={
         <>
           Already registered?{" "}
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         </>

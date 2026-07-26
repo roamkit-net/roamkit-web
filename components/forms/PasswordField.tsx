@@ -8,7 +8,7 @@ import {
 } from "react";
 
 const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-slate-900 shadow-sm outline-none ring-sky-500 focus:border-sky-500 focus:ring-2";
+  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
 
 export type PasswordFieldProps = {
   label: ReactNode;

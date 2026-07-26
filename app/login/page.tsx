@@ -82,7 +82,7 @@ function LoginForm() {
       footer={
         <>
           No account yet?{" "}
-          <Link href="/register" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/register" className="font-medium">
             Create one
           </Link>
         </>
@@ -105,7 +105,7 @@ function LoginForm() {
           passwordHint={
             <Link
               href="/forgot-password"
-              className="font-medium text-sky-700 hover:text-sky-800"
+              className="font-medium text-cyan-700 transition hover:text-cyan-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1"
             >
               Forgot password?
             </Link>
@@ -127,7 +127,7 @@ export default function LoginPage() {
           footer={
             <>
               No account yet?{" "}
-              <Link href="/register" className="font-medium text-sky-700 hover:text-sky-800">
+              <Link href="/register" className="font-medium">
                 Create one
               </Link>
             </>
