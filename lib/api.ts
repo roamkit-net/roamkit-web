@@ -2,8 +2,21 @@ import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 
 const DEFAULT_API_URL = "http://localhost:8000";
 
-const ACCESS_TOKEN_KEY = "roamkit_access_token";
-const REFRESH_TOKEN_KEY = "roamkit_refresh_token";
+/**
+ * Token storage invariant
+ *
+ * At any time, valid tokens must exist in exactly one store:
+ * localStorage XOR sessionStorage XOR in-memory.
+ *
+ * If both web storages contain tokens (unexpected), localStorage wins and
+ * sessionStorage is cleared immediately on the next read or write.
+ */
+export const ACCESS_TOKEN_KEY = "roamkit_access_token";
+export const REFRESH_TOKEN_KEY = "roamkit_refresh_token";
+export const REMEMBER_ME_KEY = "roamkit_remember_me";
+
+type MemoryTokens = { access: string; refresh: string };
+let memoryTokens: MemoryTokens | null = null;
 
 export class ApiError extends Error {
   constructor(
@@ -21,38 +34,221 @@ export function getApiBaseUrl(): string {
 }
 
 function canUseLocalStorage(): boolean {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
+  try {
+    return typeof window !== "undefined" && typeof localStorage !== "undefined";
+  } catch {
+    return false;
+  }
 }
 
-export function getAccessToken(): string | null {
-  if (!canUseLocalStorage()) {
+function canUseSessionStorage(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" && typeof sessionStorage !== "undefined"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function readStorageItem(storage: Storage, key: string): string | null {
+  try {
+    const value = storage.getItem(key);
+    return value && value.length > 0 ? value : null;
+  } catch {
     return null;
   }
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-export function getRefreshToken(): string | null {
-  if (!canUseLocalStorage()) {
-    return null;
+function writeStorageItem(storage: Storage, key: string, value: string): boolean {
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
   }
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
-export function setTokens(access: string, refresh: string): void {
+function removeStorageItem(storage: Storage, key: string): void {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Best-effort — private browsing / SecurityError.
+  }
+}
+
+function clearWebStorageTokens(storage: Storage): void {
+  removeStorageItem(storage, ACCESS_TOKEN_KEY);
+  removeStorageItem(storage, REFRESH_TOKEN_KEY);
+}
+
+function storageHasTokenKeys(storage: Storage): boolean {
+  return Boolean(
+    readStorageItem(storage, ACCESS_TOKEN_KEY) ||
+      readStorageItem(storage, REFRESH_TOKEN_KEY),
+  );
+}
+
+type TokenStore = "local" | "session" | "memory";
+
+/**
+ * Resolve the active token store. Repairs dual web-storage by preferring
+ * localStorage and clearing sessionStorage.
+ */
+function resolveTokenStore(): TokenStore | null {
+  const hasLocal = canUseLocalStorage() && storageHasTokenKeys(localStorage);
+  const hasSession =
+    canUseSessionStorage() && storageHasTokenKeys(sessionStorage);
+
+  if (hasLocal) {
+    if (hasSession) {
+      clearWebStorageTokens(sessionStorage);
+    }
+    return "local";
+  }
+  if (hasSession) {
+    return "session";
+  }
+  if (memoryTokens) {
+    return "memory";
+  }
+  return null;
+}
+
+export function getRememberMePreference(): boolean {
+  if (!canUseLocalStorage()) {
+    return true;
+  }
+  try {
+    const raw = localStorage.getItem(REMEMBER_ME_KEY);
+    if (raw === null) {
+      return true;
+    }
+    return raw !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function setRememberMePreference(value: boolean): void {
   if (!canUseLocalStorage()) {
     return;
   }
-  localStorage.setItem(ACCESS_TOKEN_KEY, access);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+  try {
+    localStorage.setItem(REMEMBER_ME_KEY, value ? "true" : "false");
+  } catch {
+    // Preference is best-effort; default remains true on next load.
+  }
+}
+
+export function getAccessToken(): string | null {
+  const store = resolveTokenStore();
+  if (store === "local") {
+    return readStorageItem(localStorage, ACCESS_TOKEN_KEY);
+  }
+  if (store === "session") {
+    return readStorageItem(sessionStorage, ACCESS_TOKEN_KEY);
+  }
+  if (store === "memory") {
+    return memoryTokens?.access ?? null;
+  }
+  return null;
+}
+
+export function getRefreshToken(): string | null {
+  const store = resolveTokenStore();
+  if (store === "local") {
+    return readStorageItem(localStorage, REFRESH_TOKEN_KEY);
+  }
+  if (store === "session") {
+    return readStorageItem(sessionStorage, REFRESH_TOKEN_KEY);
+  }
+  if (store === "memory") {
+    return memoryTokens?.refresh ?? null;
+  }
+  return null;
+}
+
+/**
+ * Persist tokens in exactly one store.
+ * When `rememberMe` is omitted (silent refresh), rewrite into the current store.
+ */
+export function setTokens(
+  access: string,
+  refresh: string,
+  rememberMe?: boolean,
+): void {
+  let target: TokenStore;
+  if (rememberMe !== undefined) {
+    target = rememberMe ? "local" : "session";
+  } else {
+    const current = resolveTokenStore();
+    if (current === "session") {
+      target = "session";
+    } else if (current === "memory") {
+      target = "memory";
+    } else {
+      // local, or no existing tokens → prefer local (default remember).
+      target = "local";
+    }
+  }
+
+  if (target === "memory") {
+    memoryTokens = { access, refresh };
+    if (canUseLocalStorage()) {
+      clearWebStorageTokens(localStorage);
+    }
+    if (canUseSessionStorage()) {
+      clearWebStorageTokens(sessionStorage);
+    }
+    return;
+  }
+
+  if (target === "local") {
+    const wrote =
+      canUseLocalStorage() &&
+      writeStorageItem(localStorage, ACCESS_TOKEN_KEY, access) &&
+      writeStorageItem(localStorage, REFRESH_TOKEN_KEY, refresh);
+    if (wrote) {
+      if (canUseSessionStorage()) {
+        clearWebStorageTokens(sessionStorage);
+      }
+      memoryTokens = null;
+      return;
+    }
+  } else {
+    const wrote =
+      canUseSessionStorage() &&
+      writeStorageItem(sessionStorage, ACCESS_TOKEN_KEY, access) &&
+      writeStorageItem(sessionStorage, REFRESH_TOKEN_KEY, refresh);
+    if (wrote) {
+      if (canUseLocalStorage()) {
+        clearWebStorageTokens(localStorage);
+      }
+      memoryTokens = null;
+      return;
+    }
+  }
+
+  // Web Storage unavailable / throwing → in-memory page session.
+  memoryTokens = { access, refresh };
+  if (canUseLocalStorage()) {
+    clearWebStorageTokens(localStorage);
+  }
+  if (canUseSessionStorage()) {
+    clearWebStorageTokens(sessionStorage);
+  }
 }
 
 export function clearTokens(): void {
   clearPendingSpend();
-  if (!canUseLocalStorage()) {
-    return;
+  memoryTokens = null;
+  if (canUseLocalStorage()) {
+    clearWebStorageTokens(localStorage);
   }
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  if (canUseSessionStorage()) {
+    clearWebStorageTokens(sessionStorage);
+  }
 }
 
 export function isAuthenticated(): boolean {
@@ -543,6 +739,7 @@ export async function login(
   email: string,
   password: string,
   turnstileToken?: string,
+  rememberMe: boolean = getRememberMePreference(),
 ): Promise<AuthTokens> {
   try {
     const tokens = await fetchApi<AuthTokens>("/api/v1/auth/token/", {
@@ -554,7 +751,8 @@ export async function login(
         ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
       }),
     });
-    setTokens(tokens.access, tokens.refresh);
+    setRememberMePreference(rememberMe);
+    setTokens(tokens.access, tokens.refresh, rememberMe);
     return tokens;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -589,14 +787,18 @@ export function formatGoogleAuthError(body: unknown, fallback: string): string {
   return formatApiValidationMessage(body, fallback);
 }
 
-export async function loginWithGoogle(credential: string): Promise<AuthTokens> {
+export async function loginWithGoogle(
+  credential: string,
+  rememberMe: boolean = getRememberMePreference(),
+): Promise<AuthTokens> {
   try {
     const tokens = await fetchApi<AuthTokens>("/api/v1/auth/google/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ credential }),
     });
-    setTokens(tokens.access, tokens.refresh);
+    setRememberMePreference(rememberMe);
+    setTokens(tokens.access, tokens.refresh, rememberMe);
     return tokens;
   } catch (error) {
     if (error instanceof ApiError) {
