@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -334,29 +335,18 @@ export default function MyEsimDetailPage() {
                   </Link>
                 </p>
               ) : null}
-              {esim.qrcode_installation ? (
-                <div
-                  className="prose prose-sm mt-4 max-w-none text-slate-700"
-                  dangerouslySetInnerHTML={{ __html: esim.qrcode_installation }}
+              {esim.lpa || esim.matching_id ? (
+                <ManualInstallTips
+                  className="mt-4"
+                  lpa={esim.lpa}
+                  matchingId={esim.matching_id}
                 />
-              ) : null}
-              {esim.manual_installation ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Manual installation
-                  </h3>
-                  <div
-                    className="prose prose-sm mt-2 max-w-none text-slate-700"
-                    dangerouslySetInnerHTML={{
-                      __html: esim.manual_installation,
-                    }}
-                  />
-                </div>
               ) : null}
               {!esim.qrcode_url &&
               !esim.qrcode &&
-              !esim.qrcode_installation &&
-              !esim.manual_installation ? (
+              !esim.lpa &&
+              !esim.matching_id &&
+              !esim.direct_apple_installation_url ? (
                 <p className="mt-3 text-sm text-slate-600">
                   No installation details available yet.
                 </p>

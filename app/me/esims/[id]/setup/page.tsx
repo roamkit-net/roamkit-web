@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
+import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -40,6 +41,7 @@ export default function EsimSetupWizardPage() {
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const [qrZoomed, setQrZoomed] = useState(false);
+  const [showManualTips, setShowManualTips] = useState(false);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -265,24 +267,34 @@ export default function EsimSetupWizardPage() {
                     </p>
                   ) : null}
 
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-sky-700 hover:text-sky-800"
-                    onClick={() =>
-                      telemetry.track("install.manual_install_clicked", {
-                        resumeStep: 1,
-                      })
-                    }
-                  >
-                    Show manual install tips
-                  </button>
-                  {esim.manual_installation ? (
-                    <div
-                      className="prose prose-sm max-w-none text-slate-700"
-                      dangerouslySetInnerHTML={{
-                        __html: esim.manual_installation,
-                      }}
-                    />
+                  {esim.lpa || esim.matching_id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                        onClick={() => {
+                          setShowManualTips((open) => {
+                            const next = !open;
+                            if (next) {
+                              telemetry.track("install.manual_install_clicked", {
+                                resumeStep: 1,
+                              });
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        {showManualTips
+                          ? "Hide manual install tips"
+                          : "Show manual install tips"}
+                      </button>
+                      {showManualTips ? (
+                        <ManualInstallTips
+                          lpa={esim.lpa}
+                          matchingId={esim.matching_id}
+                        />
+                      ) : null}
+                    </>
                   ) : null}
 
                   <div className="flex flex-wrap gap-3 pt-2">
