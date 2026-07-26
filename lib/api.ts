@@ -428,12 +428,18 @@ async function tryRefreshAccessToken(): Promise<boolean> {
   }
 }
 
-export async function registerUser(email: string): Promise<{ detail: string }> {
+export async function registerUser(
+  email: string,
+  turnstileToken?: string,
+): Promise<{ detail: string }> {
   try {
     return await fetchApi<{ detail: string }>("/api/v1/auth/register/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({
+        email,
+        ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
+      }),
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -478,12 +484,16 @@ export async function activateAccount(
 
 export async function requestPasswordReset(
   email: string,
+  turnstileToken?: string,
 ): Promise<{ detail: string }> {
   try {
     return await fetchApi<{ detail: string }>("/api/v1/auth/password-reset/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({
+        email,
+        ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
+      }),
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -532,12 +542,17 @@ export async function confirmPasswordReset(
 export async function login(
   email: string,
   password: string,
+  turnstileToken?: string,
 ): Promise<AuthTokens> {
   try {
     const tokens = await fetchApi<AuthTokens>("/api/v1/auth/token/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
+      }),
     });
     setTokens(tokens.access, tokens.refresh);
     return tokens;

@@ -19,11 +19,11 @@ export default function ForgotPasswordPage() {
     }
   }, [router]);
 
-  async function handleSubmit(email: string) {
+  async function handleSubmit(email: string, turnstileToken?: string) {
     setError(null);
     setIsLoading(true);
     try {
-      await requestPasswordReset(email);
+      await requestPasswordReset(email, turnstileToken);
       setSubmittedEmail(email);
     } catch (err) {
       if (err instanceof ApiError) {

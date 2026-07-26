@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell, PasswordPairForm } from "@/components/AuthForm";
+import { isTurnstileConfigured } from "@/components/auth/TurnstileField";
 import { activateAccount, ApiError, isAuthenticated, login } from "@/lib/api";
 
 function SetPasswordForm() {
@@ -37,6 +38,11 @@ function SetPasswordForm() {
     setIsLoading(true);
     try {
       const user = await activateAccount(uid, token, password, passwordConfirm);
+      // Auto-login needs a Turnstile token when enabled — send user to /login instead.
+      if (isTurnstileConfigured()) {
+        router.push("/login");
+        return;
+      }
       await login(user.email, password);
       router.push("/me/esims");
     } catch (err) {

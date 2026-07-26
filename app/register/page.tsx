@@ -19,11 +19,11 @@ export default function RegisterPage() {
     }
   }, [router]);
 
-  async function handleSubmit(email: string) {
+  async function handleSubmit(email: string, turnstileToken?: string) {
     setError(null);
     setIsLoading(true);
     try {
-      await registerUser(email);
+      await registerUser(email, turnstileToken);
       setSubmittedEmail(email);
     } catch (err) {
       if (err instanceof ApiError) {
