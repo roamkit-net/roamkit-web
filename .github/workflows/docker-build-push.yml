@@ -54,22 +54,42 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
 
-      - name: Resolve public URLs
+      - name: Resolve public URLs and Turnstile sitekey
         id: urls
+        env:
+          STAGING_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          PRODUCTION_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION }}
         run: |
+          set -euo pipefail
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "api_url=https://api.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "app_url=https://roamkit.net" >> "$GITHUB_OUTPUT"
             echo "environment=production" >> "$GITHUB_OUTPUT"
             echo "require_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
+            SITE_KEY="${PRODUCTION_SITE_KEY:-}"
+            # Fail closed if main would bake the staging sitekey.
+            if [ -n "${STAGING_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${STAGING_SITE_KEY}" ]; then
+              echo "ERROR: main must not bake staging Turnstile sitekey" >&2
+              exit 1
+            fi
+            if [ -n "${STAGING_SITE_KEY:-}" ] && [ -z "${SITE_KEY}" ]; then
+              # Empty production key is allowed for Turnstile-off code deploys.
+              echo "WARN: NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION empty on main (widget off bake)" >&2
+            fi
           else
             echo "api_url=https://api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "app_url=https://staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "environment=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
             echo "require_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
+            SITE_KEY="${STAGING_SITE_KEY:-}"
+            if [ -n "${PRODUCTION_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${PRODUCTION_SITE_KEY}" ]; then
+              echo "ERROR: develop/non-main must not bake production Turnstile sitekey" >&2
+              exit 1
+            fi
           fi
+          echo "turnstile_site_key=${SITE_KEY}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -82,14 +102,18 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
             NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
-            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ steps.urls.outputs.turnstile_site_key }}
             ROAMKIT_GIT_SHA=${{ github.sha }}
             ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
             ROAMKIT_IMAGE_TAG=${{ github.sha }}
             ROAMKIT_ENVIRONMENT=${{ steps.urls.outputs.environment }}
 
-      - name: Assert baked API host in image
+      - name: Assert baked API host and Turnstile sitekey in image
         if: github.event_name == 'push'
+        env:
+          STAGING_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          PRODUCTION_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION }}
+          BAKED_SITE_KEY: ${{ steps.urls.outputs.turnstile_site_key }}
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/roamkit-net/${{ inputs.image-name }}:${{ github.sha }}"
@@ -108,6 +132,36 @@ jobs:
             exit 1
           fi
           echo "Bake assert OK: require=${REQUIRE_HOST} forbid=${FORBID_HOST}"
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            if [ -n "${STAGING_SITE_KEY:-}" ] && [ -n "${BAKED_SITE_KEY}" ] && [ "${BAKED_SITE_KEY}" = "${STAGING_SITE_KEY}" ]; then
+              echo "ERROR: main image must not contain staging Turnstile sitekey" >&2
+              exit 1
+            fi
+            if [ -n "${STAGING_SITE_KEY:-}" ] && docker run --rm --entrypoint sh "$IMAGE" -c \
+              "grep -RF -- \"$STAGING_SITE_KEY\" .next/static >/dev/null"; then
+              echo "ERROR: staging Turnstile sitekey found in main image" >&2
+              exit 1
+            fi
+            if [ -n "${BAKED_SITE_KEY}" ]; then
+              if ! docker run --rm --entrypoint sh "$IMAGE" -c \
+                "grep -RF -- \"$BAKED_SITE_KEY\" .next/static >/dev/null"; then
+                echo "ERROR: expected production Turnstile sitekey missing from image" >&2
+                exit 1
+              fi
+            fi
+          else
+            if [ -n "${PRODUCTION_SITE_KEY:-}" ] && [ -n "${BAKED_SITE_KEY}" ] && [ "${BAKED_SITE_KEY}" = "${PRODUCTION_SITE_KEY}" ]; then
+              echo "ERROR: non-main image must not contain production Turnstile sitekey" >&2
+              exit 1
+            fi
+            if [ -n "${PRODUCTION_SITE_KEY:-}" ] && docker run --rm --entrypoint sh "$IMAGE" -c \
+              "grep -RF -- \"$PRODUCTION_SITE_KEY\" .next/static >/dev/null"; then
+              echo "ERROR: production Turnstile sitekey found in non-main image" >&2
+              exit 1
+            fi
+          fi
+          echo "Turnstile bake-key guard OK"
 
       - name: Trivy scan
         if: github.event_name == 'push'
