@@ -82,7 +82,7 @@ function LoginForm() {
       footer={
         <>
           No account yet?{" "}
-          <Link href="/register" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/register" className="font-medium">
             Create one
           </Link>
         </>
@@ -127,7 +127,7 @@ export default function LoginPage() {
           footer={
             <>
               No account yet?{" "}
-              <Link href="/register" className="font-medium text-sky-700 hover:text-sky-800">
+              <Link href="/register" className="font-medium">
                 Create one
               </Link>
             </>
