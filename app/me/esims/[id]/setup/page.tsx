@@ -24,6 +24,11 @@ import {
 } from "@/lib/esim/device";
 import { guideHasInstallAction } from "@/lib/esim/guideService";
 import {
+  buildAndroidInstallProbes,
+  type AndroidInstallProbe,
+  type AndroidInstallProbeId,
+} from "@/lib/esim/androidInstallProbes";
+import {
   canAttemptDeepLink,
   launchInstallAction,
   observeDeepLinkAttempt,
@@ -61,7 +66,10 @@ export default function EsimSetupWizardPage() {
   );
   const [showPhoneInstructions, setShowPhoneInstructions] = useState(false);
   const [deepLinkFailed, setDeepLinkFailed] = useState(false);
-  const [deepLinkBusy, setDeepLinkBusy] = useState(false);
+  const [deepLinkBusyId, setDeepLinkBusyId] =
+    useState<AndroidInstallProbeId | null>(null);
+  const [failedProbeId, setFailedProbeId] =
+    useState<AndroidInstallProbeId | null>(null);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -155,60 +163,63 @@ export default function EsimSetupWizardPage() {
   function selectAndroidGuide(id: AndroidGuideId) {
     setAndroidGuideId(id);
     setDeepLinkFailed(false);
+    setFailedProbeId(null);
+    setDeepLinkBusyId(null);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
       payload: { manufacturer: id },
     });
   }
 
-  async function attemptAndroidDeepLink() {
-    if (!esim || !androidGuideId || deepLinkBusy) {
+  async function attemptAndroidDeepLink(probe: AndroidInstallProbe) {
+    if (!esim || !androidGuideId || deepLinkBusyId) {
       return;
     }
-    const parsed = esim.lpa ? parseLpa(esim.lpa) : null;
-    const uri = resolveLpaUri({
-      lpa: esim.lpa,
-      smdpAddress: parsed?.smdpAddress,
-      activationCode: esim.matching_id || parsed?.activationCode,
-    });
-    if (!uri || !canAttemptDeepLink()) {
+    if (!probe.uri || !canAttemptDeepLink()) {
       setDeepLinkFailed(true);
+      setFailedProbeId(probe.id);
       telemetry.track("install.manual_install_clicked", {
         resumeStep: 1,
         payload: {
           manufacturer: androidGuideId,
           deep_link_attempted: false,
+          deep_link_probe: probe.id,
+          deep_link_scheme: probe.scheme,
           fallback_used: true,
         },
       });
       return;
     }
 
-    setDeepLinkBusy(true);
+    setDeepLinkBusyId(probe.id);
     setDeepLinkFailed(false);
+    setFailedProbeId(null);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
       payload: {
         manufacturer: androidGuideId,
         deep_link_attempted: true,
-        deep_link_scheme: "lpa",
+        deep_link_probe: probe.id,
+        deep_link_scheme: probe.scheme,
         fallback_used: false,
       },
     });
 
     const observation = observeDeepLinkAttempt(2500);
-    launchInstallAction({ type: "android-lpa", uri });
+    launchInstallAction({ type: probe.launchType, uri: probe.uri });
     const result = await observation;
-    setDeepLinkBusy(false);
+    setDeepLinkBusyId(null);
     if (result === "failure") {
       setDeepLinkFailed(true);
+      setFailedProbeId(probe.id);
       telemetry.track("install.manual_install_clicked", {
         resumeStep: 1,
-        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}`,
+        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}:${probe.id}`,
         payload: {
           manufacturer: androidGuideId,
           deep_link_attempted: true,
-          deep_link_scheme: "lpa",
+          deep_link_probe: probe.id,
+          deep_link_scheme: probe.scheme,
           fallback_used: true,
         },
       });
@@ -218,18 +229,23 @@ export default function EsimSetupWizardPage() {
   const showAndroidGuideFlow =
     device === "android" || (device === "desktop" && showPhoneInstructions);
 
+  const resolvedLpaUri = resolveLpaUri({
+    lpa: esim?.lpa,
+    activationCode: esim?.matching_id,
+    smdpAddress: esim?.lpa ? parseLpa(esim.lpa)?.smdpAddress : "",
+  });
+
+  const installProbes = useMemo(
+    () => (resolvedLpaUri ? buildAndroidInstallProbes(resolvedLpaUri) : []),
+    [resolvedLpaUri],
+  );
+
   const showDeepLinkCta =
     Boolean(androidGuideId) &&
     showAndroidGuideFlow &&
     canAttemptDeepLink() &&
     guideHasInstallAction(androidGuideId!, "deep-link") &&
-    Boolean(
-      resolveLpaUri({
-        lpa: esim?.lpa,
-        activationCode: esim?.matching_id,
-        smdpAddress: esim?.lpa ? parseLpa(esim.lpa)?.smdpAddress : "",
-      }),
-    );
+    installProbes.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -354,6 +370,8 @@ export default function EsimSetupWizardPage() {
                         onChangePhone={() => {
                           setAndroidGuideId(null);
                           setDeepLinkFailed(false);
+                          setFailedProbeId(null);
+                          setDeepLinkBusyId(null);
                         }}
                       />
                     ) : (
@@ -363,18 +381,36 @@ export default function EsimSetupWizardPage() {
 
                   {showDeepLinkCta ? (
                     <div className="space-y-2">
-                      <button
-                        type="button"
-                        disabled={deepLinkBusy}
-                        onClick={() => void attemptAndroidDeepLink()}
-                        className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
-                      >
-                        {deepLinkBusy ? "Opening…" : "Install eSIM"}
-                      </button>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Spike probes — tap each; keep the one that opens the
+                        installer
+                      </p>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                        {installProbes.map((probe) => {
+                          const busy = deepLinkBusyId === probe.id;
+                          const failed = failedProbeId === probe.id;
+                          return (
+                            <button
+                              key={probe.id}
+                              type="button"
+                              disabled={Boolean(deepLinkBusyId)}
+                              onClick={() => void attemptAndroidDeepLink(probe)}
+                              className={`inline-flex rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+                                failed
+                                  ? "border border-amber-300 bg-amber-50 text-amber-950"
+                                  : "bg-sky-700 text-white hover:bg-sky-800"
+                              }`}
+                            >
+                              {busy ? "Opening…" : probe.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                       {deepLinkFailed ? (
                         <p className="text-sm text-amber-900" role="status">
-                          Couldn&apos;t open your phone&apos;s eSIM installer.
-                          You can continue using the QR code below.
+                          Couldn&apos;t open your phone&apos;s eSIM installer
+                          {failedProbeId ? ` (${failedProbeId})` : ""}. Try
+                          another probe, or use the QR code below.
                         </p>
                       ) : null}
                     </div>
