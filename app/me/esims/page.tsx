@@ -16,6 +16,7 @@ import {
   fetchMyEsims,
   isAuthenticated,
 } from "@/lib/api";
+import { needsSetup } from "@/lib/esim/telemetry";
 
 function formatUsage(esim: Esim): string {
   if (esim.usage_is_unlimited) {
@@ -146,7 +147,11 @@ export default function MyEsimsPage() {
             {esims.map((esim) => (
               <li key={esim.id}>
                 <Link
-                  href={`/me/esims/${esim.id}`}
+                  href={
+                    needsSetup(esim)
+                      ? `/me/esims/${esim.id}/setup`
+                      : `/me/esims/${esim.id}`
+                  }
                   className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-300 hover:shadow-md"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -162,7 +167,7 @@ export default function MyEsimsPage() {
                       </p>
                     </div>
                     <span className="text-sm font-medium text-sky-700">
-                      View details →
+                      {needsSetup(esim) ? "Continue setup →" : "View details →"}
                     </span>
                   </div>
                 </Link>
