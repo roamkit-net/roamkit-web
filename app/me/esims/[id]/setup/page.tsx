@@ -382,8 +382,8 @@ export default function EsimSetupWizardPage() {
                   {showDeepLinkCta ? (
                     <div className="space-y-2">
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Spike probes — tap each; keep the one that opens the
-                        installer
+                        Spike probes — pass = eSIM installer only (Play Store /
+                        “not found” = fail)
                       </p>
                       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                         {installProbes.map((probe) => {
