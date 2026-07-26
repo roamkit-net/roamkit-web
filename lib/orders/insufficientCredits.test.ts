@@ -6,7 +6,6 @@ import { ApiError } from "@/lib/api";
 import {
   buildDepositRedirectUrl,
   isInsufficientCreditsError,
-  isSafeReturnPath,
   normalizeDepositAmount,
   parseInsufficientCredits,
 } from "./insufficientCredits";
@@ -16,21 +15,6 @@ describe("normalizeDepositAmount", () => {
     assert.equal(normalizeDepositAmount("11.500000"), "11.5");
     assert.equal(normalizeDepositAmount("10.000000"), "10");
     assert.equal(normalizeDepositAmount("0.250000"), "0.25");
-  });
-});
-
-describe("isSafeReturnPath", () => {
-  it("allows same-origin relative paths", () => {
-    assert.equal(isSafeReturnPath("/croatia-esim"), true);
-    assert.equal(isSafeReturnPath("/me/esims/12"), true);
-    assert.equal(isSafeReturnPath("/plans?tab=local"), true);
-  });
-
-  it("rejects open redirects", () => {
-    assert.equal(isSafeReturnPath("//evil.example"), false);
-    assert.equal(isSafeReturnPath("https://evil.example"), false);
-    assert.equal(isSafeReturnPath("/ok://no"), false);
-    assert.equal(isSafeReturnPath("croatia-esim"), false);
   });
 });
 

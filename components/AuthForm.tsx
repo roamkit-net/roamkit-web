@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { FormEvent, ReactNode } from "react";
 
+import { PasswordField } from "@/components/forms/PasswordField";
+
 type AuthShellProps = {
   title: string;
   subtitle: string;
@@ -37,6 +39,9 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 const fieldClassName =
   "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-sky-500 focus:border-sky-500 focus:ring-2";
 
+const submitButtonClassName =
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60";
+
 type SharedFormProps = {
   submitLabel: string;
   loadingLabel: string;
@@ -44,8 +49,56 @@ type SharedFormProps = {
   error: string | null;
 };
 
+function AuthError({ error }: { error: string | null }) {
+  if (!error) {
+    return null;
+  }
+  return (
+    <p
+      role="alert"
+      aria-live="polite"
+      aria-atomic="true"
+      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+    >
+      {error}
+    </p>
+  );
+}
+
+function SubmitSpinner() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+    />
+  );
+}
+
+function AuthSubmitButton({
+  isLoading,
+  submitLabel,
+  loadingLabel,
+}: {
+  isLoading: boolean;
+  submitLabel: string;
+  loadingLabel: string;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={isLoading}
+      aria-busy={isLoading}
+      className={submitButtonClassName}
+    >
+      {isLoading ? <SubmitSpinner /> : null}
+      {isLoading ? loadingLabel : submitLabel}
+    </button>
+  );
+}
+
 type AuthFormProps = SharedFormProps & {
   passwordAutoComplete?: "current-password" | "new-password";
+  passwordHint?: ReactNode;
   onSubmit: (email: string, password: string) => Promise<void> | void;
 };
 
@@ -55,10 +108,14 @@ export function AuthForm({
   isLoading,
   error,
   passwordAutoComplete = "current-password",
+  passwordHint,
   onSubmit,
 }: AuthFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
@@ -79,41 +136,26 @@ export function AuthForm({
           name="email"
           type="email"
           autoComplete="email"
+          autoFocus
           required
           className={fieldClassName}
         />
       </div>
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete={passwordAutoComplete}
-          required
-          minLength={8}
-          className={fieldClassName}
-        />
-      </div>
+      <PasswordField
+        id="password"
+        name="password"
+        label="Password"
+        hint={passwordHint}
+        autoComplete={passwordAutoComplete}
+      />
 
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      ) : null}
+      <AuthError error={error} />
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? loadingLabel : submitLabel}
-      </button>
+      <AuthSubmitButton
+        isLoading={isLoading}
+        submitLabel={submitLabel}
+        loadingLabel={loadingLabel}
+      />
     </form>
   );
 }
@@ -131,6 +173,9 @@ export function EmailOnlyForm({
 }: EmailOnlyFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     await onSubmit(email);
@@ -150,24 +195,19 @@ export function EmailOnlyForm({
           name="email"
           type="email"
           autoComplete="email"
+          autoFocus
           required
           className={fieldClassName}
         />
       </div>
 
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      ) : null}
+      <AuthError error={error} />
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? loadingLabel : submitLabel}
-      </button>
+      <AuthSubmitButton
+        isLoading={isLoading}
+        submitLabel={submitLabel}
+        loadingLabel={loadingLabel}
+      />
     </form>
   );
 }
@@ -185,6 +225,9 @@ export function PasswordPairForm({
 }: PasswordPairFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("password_confirm") ?? "");
@@ -193,54 +236,27 @@ export function PasswordPairForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          className={fieldClassName}
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="password_confirm"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Confirm password
-        </label>
-        <input
-          id="password_confirm"
-          name="password_confirm"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          className={fieldClassName}
-        />
-      </div>
+      <PasswordField
+        id="password"
+        name="password"
+        label="Password"
+        autoComplete="new-password"
+        autoFocus
+      />
+      <PasswordField
+        id="password_confirm"
+        name="password_confirm"
+        label="Confirm password"
+        autoComplete="new-password"
+      />
 
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      ) : null}
+      <AuthError error={error} />
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? loadingLabel : submitLabel}
-      </button>
+      <AuthSubmitButton
+        isLoading={isLoading}
+        submitLabel={submitLabel}
+        loadingLabel={loadingLabel}
+      />
     </form>
   );
 }
