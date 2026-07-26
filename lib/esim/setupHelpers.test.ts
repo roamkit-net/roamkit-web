@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { detectInstallDevice } from "@/lib/esim/device";
+import {
+  canUseAppleInstallLink,
+  detectInstallDevice,
+  getAvailableInstallActions,
+} from "@/lib/esim/device";
 import { parseLpa } from "@/lib/esim/lpa";
 import {
   activationPolicyMessage,
@@ -33,6 +37,18 @@ describe("esim setup helpers", () => {
       "iphone",
     );
     assert.equal(
+      detectInstallDevice(
+        "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)",
+      ),
+      "iphone",
+    );
+    assert.equal(
+      detectInstallDevice(
+        "Mozilla/5.0 (iPod touch; CPU iPhone OS 15_0 like Mac OS X)",
+      ),
+      "iphone",
+    );
+    assert.equal(
       detectInstallDevice("Mozilla/5.0 (Linux; Android 14; Pixel 8)"),
       "android",
     );
@@ -40,6 +56,58 @@ describe("esim setup helpers", () => {
       detectInstallDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
       "desktop",
     );
+    assert.equal(detectInstallDevice(""), "desktop");
+  });
+
+  it("canUseAppleInstallLink / getAvailableInstallActions by device", () => {
+    const cases: Array<{
+      label: string;
+      ua: string;
+      apple: boolean;
+    }> = [
+      {
+        label: "iphone",
+        ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        apple: true,
+      },
+      {
+        label: "ipad",
+        ua: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)",
+        apple: true,
+      },
+      {
+        label: "ipod",
+        ua: "Mozilla/5.0 (iPod touch; CPU iPhone OS 15_0 like Mac OS X)",
+        apple: true,
+      },
+      {
+        label: "android",
+        ua: "Mozilla/5.0 (Linux; Android 14; Pixel 8)",
+        apple: false,
+      },
+      {
+        label: "desktop",
+        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        apple: false,
+      },
+      { label: "unknown", ua: "", apple: false },
+    ];
+
+    for (const row of cases) {
+      const device = detectInstallDevice(row.ua);
+      assert.equal(
+        canUseAppleInstallLink(device),
+        row.apple,
+        `${row.label}: canUseAppleInstallLink`,
+      );
+      assert.equal(
+        getAvailableInstallActions(device).appleInstall,
+        row.apple,
+        `${row.label}: appleInstall`,
+      );
+      assert.equal(getAvailableInstallActions(device).qrInstall, true);
+      assert.equal(getAvailableInstallActions(device).manualInstall, true);
+    }
   });
 
   it("needsSetup respects completed and terminal statuses", () => {

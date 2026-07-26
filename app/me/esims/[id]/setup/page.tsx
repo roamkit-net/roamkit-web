@@ -14,7 +14,11 @@ import {
   fetchMyEsim,
   isAuthenticated,
 } from "@/lib/api";
-import { detectInstallDevice, type InstallDeviceClass } from "@/lib/esim/device";
+import {
+  canUseAppleInstallLink,
+  detectInstallDevice,
+  type InstallDeviceClass,
+} from "@/lib/esim/device";
 import {
   activationPolicyMessage,
   createEsimTelemetry,
@@ -204,7 +208,7 @@ export default function EsimSetupWizardPage() {
                         Scan this QR code with your phone to install the eSIM.
                       </p>
                     </>
-                  ) : device === "iphone" ? (
+                  ) : canUseAppleInstallLink(device) ? (
                     <>
                       <h2 className="text-lg font-semibold">Install on iPhone</h2>
                       <p className="text-sm text-slate-600">
