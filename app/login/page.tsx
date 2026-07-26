@@ -21,11 +21,15 @@ function LoginForm() {
     }
   }, [nextPath, router]);
 
-  async function handleSubmit(email: string, password: string) {
+  async function handleSubmit(
+    email: string,
+    password: string,
+    turnstileToken?: string,
+  ) {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, turnstileToken);
       router.push(nextPath);
     } catch (err) {
       if (err instanceof ApiError) {
