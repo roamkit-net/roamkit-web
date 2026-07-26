@@ -25,3 +25,35 @@ export function parseLpa(lpa: string): ParsedLpa | null {
     activationCode: parts[2]?.trim() ?? "",
   };
 }
+
+/** Build a GSMA LPA URI from SM-DP+ and Activation Code. */
+export function buildLpaUri(
+  smdpAddress: string,
+  activationCode: string,
+): string | null {
+  const smdp = smdpAddress.trim();
+  const code = activationCode.trim();
+  if (!smdp || !code) {
+    return null;
+  }
+  return `LPA:1$${smdp}$${code}`;
+}
+
+/**
+ * Prefer a valid existing LPA string; otherwise build from parts.
+ * Never log or send the returned URI to telemetry.
+ */
+export function resolveLpaUri(options: {
+  lpa?: string | null;
+  smdpAddress?: string | null;
+  activationCode?: string | null;
+}): string | null {
+  const existing = options.lpa?.trim() ?? "";
+  if (existing) {
+    const parsed = parseLpa(existing);
+    if (parsed?.smdpAddress && parsed.activationCode) {
+      return /^LPA:/i.test(existing) ? existing : `LPA:${existing}`;
+    }
+  }
+  return buildLpaUri(options.smdpAddress ?? "", options.activationCode ?? "");
+}
