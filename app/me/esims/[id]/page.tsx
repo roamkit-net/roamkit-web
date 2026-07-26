@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
@@ -21,7 +21,17 @@ import {
   fetchMyEsimUsage,
   isAuthenticated,
 } from "@/lib/api";
-import { activationPolicyMessage, needsSetup } from "@/lib/esim/telemetry";
+import {
+  canUseAppleInstallLink,
+  detectInstallDevice,
+  type InstallDeviceClass,
+} from "@/lib/esim/device";
+import {
+  activationPolicyMessage,
+  createEsimTelemetry,
+  createSetupSessionId,
+  needsSetup,
+} from "@/lib/esim/telemetry";
 import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
@@ -44,6 +54,16 @@ export default function MyEsimDetailPage() {
   const [usageError, setUsageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false);
+  const [device, setDevice] = useState<InstallDeviceClass>("desktop");
+  const installSessionId = useRef(createSetupSessionId());
+  const installTelemetry = useMemo(
+    () => createEsimTelemetry(esimId, installSessionId.current),
+    [esimId],
+  );
+
+  useEffect(() => {
+    setDevice(detectInstallDevice());
+  }, []);
 
   const {
     purchase,
@@ -300,13 +320,19 @@ export default function MyEsimDetailPage() {
                         </span>
                       </p>
                     ) : null}
-                    {esim.direct_apple_installation_url ? (
+                    {canUseAppleInstallLink(device) &&
+                    esim.direct_apple_installation_url ? (
                       <p>
                         <a
                           href={esim.direct_apple_installation_url}
                           className="font-medium text-sky-700 hover:text-sky-800"
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() =>
+                            installTelemetry.track(
+                              "install.apple_install_clicked",
+                            )
+                          }
                         >
                           Install on Apple device
                         </a>
