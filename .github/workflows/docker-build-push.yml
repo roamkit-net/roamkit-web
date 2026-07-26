@@ -54,6 +54,23 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=ref,event=branch
 
+      - name: Resolve public URLs
+        id: urls
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "api_url=https://api.roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "app_url=https://roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "require_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_url=https://api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "app_url=https://staging.roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "environment=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "require_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
+            echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -63,8 +80,33 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.staging.roamkit.net
-            NEXT_PUBLIC_APP_URL=https://staging.roamkit.net
+            NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
+            NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
+            ROAMKIT_GIT_SHA=${{ github.sha }}
+            ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
+            ROAMKIT_IMAGE_TAG=${{ github.sha }}
+            ROAMKIT_ENVIRONMENT=${{ steps.urls.outputs.environment }}
+
+      - name: Assert baked API host in image
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/roamkit-net/${{ inputs.image-name }}:${{ github.sha }}"
+          REQUIRE_HOST="${{ steps.urls.outputs.require_host }}"
+          FORBID_HOST="${{ steps.urls.outputs.forbid_host }}"
+          docker pull "$IMAGE"
+          # Standalone Next puts client chunks under /.next/static
+          if ! docker run --rm --entrypoint sh "$IMAGE" -c \
+            "grep -R -- \"$REQUIRE_HOST\" .next/static >/dev/null"; then
+            echo "ERROR: expected baked host missing: ${REQUIRE_HOST}" >&2
+            exit 1
+          fi
+          if docker run --rm --entrypoint sh "$IMAGE" -c \
+            "grep -R -- \"$FORBID_HOST\" .next/static >/dev/null"; then
+            echo "ERROR: forbidden host found in image: ${FORBID_HOST}" >&2
+            exit 1
+          fi
+          echo "Bake assert OK: require=${REQUIRE_HOST} forbid=${FORBID_HOST}"
 
       - name: Trivy scan
         if: github.event_name == 'push'
