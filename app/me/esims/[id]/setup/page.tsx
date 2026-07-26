@@ -19,6 +19,7 @@ import {
   createEsimTelemetry,
   createSetupSessionId,
 } from "@/lib/esim/telemetry";
+import { loginHref } from "@/lib/navigation/safePath";
 
 const STEPS = [
   "Install eSIM",
@@ -31,6 +32,7 @@ export default function EsimSetupWizardPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
+  const setupPath = `/me/esims/${esimId}/setup`;
 
   const [esim, setEsim] = useState<Esim | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export default function EsimSetupWizardPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace("/login");
+      router.replace(loginHref(setupPath));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function EsimSetupWizardPage() {
         }
         if (err instanceof ApiError && err.status === 401) {
           clearTokens();
-          router.replace("/login");
+          router.replace(loginHref(setupPath));
           return;
         }
         setError("Unable to load this eSIM right now.");
@@ -89,7 +91,7 @@ export default function EsimSetupWizardPage() {
     return () => {
       cancelled = true;
     };
-  }, [esimId, router]);
+  }, [esimId, router, setupPath]);
 
   useEffect(() => {
     if (!esim || opened.current) {

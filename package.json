@@ -12,11 +12,12 @@
     "test:eip681": "npx --yes tsx --test lib/eip681.test.ts",
     "test:billing": "npx --yes tsx --test lib/billing/*.test.ts",
     "test:orders": "npx --yes tsx --test lib/orders/*.test.ts",
-    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/CatalogPriceDisplay.test.tsx",
+    "test:navigation": "npx --yes tsx --test lib/navigation/*.test.ts",
+    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/CatalogPriceDisplay.test.tsx components/forms/PasswordField.test.tsx",
     "test:version": "npx --yes tsx --tsconfig tsconfig.test.json --test app/version/route.test.ts",
     "test:esim": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/esim/*.test.ts",
     "test:e2e": "playwright test",
-    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:components && npm run test:version && npm run test:esim"
+    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:navigation && npm run test:components && npm run test:version && npm run test:esim"
   },
   "dependencies": {
     "@reown/appkit": "^1.8.23",
@@ -41,11 +42,15 @@
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.21",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

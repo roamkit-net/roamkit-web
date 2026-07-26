@@ -21,6 +21,7 @@ import {
   isAuthenticated,
 } from "@/lib/api";
 import { activationPolicyMessage, needsSetup } from "@/lib/esim/telemetry";
+import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
   if (value == null) {
@@ -33,6 +34,7 @@ export default function MyEsimDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
+  const detailPath = `/me/esims/${esimId}`;
 
   const [esim, setEsim] = useState<Esim | null>(null);
   const [usage, setUsage] = useState<EsimUsage | null>(null);
@@ -54,7 +56,7 @@ export default function MyEsimDetailPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace("/login");
+      router.replace(loginHref(detailPath));
       return;
     }
 
@@ -91,7 +93,7 @@ export default function MyEsimDetailPage() {
         }
         if (err instanceof ApiError && err.status === 401) {
           clearTokens();
-          router.replace("/login");
+          router.replace(loginHref(detailPath));
           return;
         }
         if (err instanceof ApiError && err.status === 404) {
@@ -110,7 +112,7 @@ export default function MyEsimDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [esimId, router]);
+  }, [detailPath, esimId, router]);
 
   useEffect(() => {
     if (!successTopup) {
@@ -147,16 +149,16 @@ export default function MyEsimDetailPage() {
       const liveUsage = await fetchMyEsimUsage(esimId);
       setUsage(liveUsage);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        clearTokens();
-        router.replace("/login");
-        return;
+        if (err instanceof ApiError && err.status === 401) {
+          clearTokens();
+          router.replace(loginHref(detailPath));
+          return;
+        }
+        setUsageError("Could not refresh usage.");
+      } finally {
+        setIsRefreshingUsage(false);
       }
-      setUsageError("Could not refresh usage.");
-    } finally {
-      setIsRefreshingUsage(false);
     }
-  }
 
   const returnPath = `/me/esims/${esimId}`;
 
