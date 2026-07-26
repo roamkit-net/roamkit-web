@@ -41,10 +41,10 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 }
 
 const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-sky-500 focus:border-sky-500 focus:ring-2";
+  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
 
 const submitButtonClassName =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 type SharedFormProps = {
   submitLabel: string;
@@ -73,7 +73,7 @@ function SubmitSpinner() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950"
     />
   );
 }
@@ -215,7 +215,7 @@ export function AuthForm({
             type="checkbox"
             checked={rememberMe}
             onChange={(event) => onRememberMeChange?.(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-sky-700 outline-none ring-sky-500 focus-visible:ring-2"
+            className="h-4 w-4 rounded border-slate-300 text-cyan-600 outline-none ring-cyan-500 focus-visible:ring-2"
           />
           <label
             htmlFor="remember_me"
