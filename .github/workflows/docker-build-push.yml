@@ -82,6 +82,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
             NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             ROAMKIT_GIT_SHA=${{ github.sha }}
             ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
             ROAMKIT_IMAGE_TAG=${{ github.sha }}
