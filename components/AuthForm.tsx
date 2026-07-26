@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import type { FormEvent, ReactNode } from "react";
+import { useState } from "react";
 
+import {
+  TurnstileField,
+  isTurnstileConfigured,
+} from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
 
 type AuthShellProps = {
@@ -78,15 +83,18 @@ function AuthSubmitButton({
   isLoading,
   submitLabel,
   loadingLabel,
+  disabled,
 }: {
   isLoading: boolean;
   submitLabel: string;
   loadingLabel: string;
+  disabled?: boolean;
 }) {
+  const isDisabled = Boolean(disabled) || isLoading;
   return (
     <button
       type="submit"
-      disabled={isLoading}
+      disabled={isDisabled}
       aria-busy={isLoading}
       className={submitButtonClassName}
     >
@@ -96,10 +104,37 @@ function AuthSubmitButton({
   );
 }
 
+function useTurnstileGate() {
+  const turnstileRequired = isTurnstileConfigured();
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
+
+  const submitDisabled = turnstileRequired && !turnstileToken;
+
+  return {
+    turnstileRequired,
+    turnstileToken,
+    setTurnstileToken,
+    resetSignal,
+    submitDisabled,
+    consumeToken: () => {
+      if (!turnstileRequired) {
+        return;
+      }
+      setTurnstileToken(null);
+      setResetSignal((n) => n + 1);
+    },
+  };
+}
+
 type AuthFormProps = SharedFormProps & {
   passwordAutoComplete?: "current-password" | "new-password";
   passwordHint?: ReactNode;
-  onSubmit: (email: string, password: string) => Promise<void> | void;
+  onSubmit: (
+    email: string,
+    password: string,
+    turnstileToken?: string,
+  ) => Promise<void> | void;
 };
 
 export function AuthForm({
@@ -111,15 +146,27 @@ export function AuthForm({
   passwordHint,
   onSubmit,
 }: AuthFormProps) {
+  const {
+    turnstileToken,
+    setTurnstileToken,
+    resetSignal,
+    submitDisabled,
+    consumeToken,
+  } = useTurnstileGate();
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isLoading) {
+    if (isLoading || submitDisabled) {
       return;
     }
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    await onSubmit(email, password);
+    try {
+      await onSubmit(email, password, turnstileToken ?? undefined);
+    } finally {
+      consumeToken();
+    }
   }
 
   return (
@@ -149,19 +196,25 @@ export function AuthForm({
         autoComplete={passwordAutoComplete}
       />
 
+      <TurnstileField
+        onTokenChange={setTurnstileToken}
+        resetSignal={resetSignal}
+      />
+
       <AuthError error={error} />
 
       <AuthSubmitButton
         isLoading={isLoading}
         submitLabel={submitLabel}
         loadingLabel={loadingLabel}
+        disabled={submitDisabled}
       />
     </form>
   );
 }
 
 type EmailOnlyFormProps = SharedFormProps & {
-  onSubmit: (email: string) => Promise<void> | void;
+  onSubmit: (email: string, turnstileToken?: string) => Promise<void> | void;
 };
 
 export function EmailOnlyForm({
@@ -171,14 +224,26 @@ export function EmailOnlyForm({
   error,
   onSubmit,
 }: EmailOnlyFormProps) {
+  const {
+    turnstileToken,
+    setTurnstileToken,
+    resetSignal,
+    submitDisabled,
+    consumeToken,
+  } = useTurnstileGate();
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isLoading) {
+    if (isLoading || submitDisabled) {
       return;
     }
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
-    await onSubmit(email);
+    try {
+      await onSubmit(email, turnstileToken ?? undefined);
+    } finally {
+      consumeToken();
+    }
   }
 
   return (
@@ -201,12 +266,18 @@ export function EmailOnlyForm({
         />
       </div>
 
+      <TurnstileField
+        onTokenChange={setTurnstileToken}
+        resetSignal={resetSignal}
+      />
+
       <AuthError error={error} />
 
       <AuthSubmitButton
         isLoading={isLoading}
         submitLabel={submitLabel}
         loadingLabel={loadingLabel}
+        disabled={submitDisabled}
       />
     </form>
   );
