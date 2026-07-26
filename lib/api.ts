@@ -331,6 +331,12 @@ export type Esim = {
   qrcode_installation: string;
   installation_guide_url: string;
   status: string;
+  /** Present after Faza 5 Wave 1 API deploy; optional for older backends. */
+  activation_policy?: string | null;
+  setup_version?: string | null;
+  setup_resume_step?: number | null;
+  setup_completed_at?: string | null;
+  setup_skipped_at?: string | null;
   usage_remaining_mb: number | null;
   usage_total_mb: number | null;
   usage_status: string | null;
@@ -339,6 +345,17 @@ export type Esim = {
   usage_synced_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type EsimLifecycleEvent = {
+  id: string;
+  event_type: string;
+  source: string;
+  schema_version: number;
+  idempotency_key: string;
+  setup_session_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
 };
 
 export type EsimUsage = {
@@ -569,6 +586,37 @@ export async function fetchMyEsimTopups(
   id: number | string,
 ): Promise<{ results: TopupPackage[] }> {
   return fetchApi<{ results: TopupPackage[] }>(`/api/v1/me/esims/${id}/topups/`, {
+    auth: true,
+    cache: "no-store",
+  });
+}
+
+export type PostEsimEventInput = {
+  event_type: string;
+  idempotency_key: string;
+  setup_session_id?: string;
+  schema_version?: number;
+  payload?: Record<string, unknown>;
+  resume_step?: number;
+};
+
+export async function postMyEsimEvent(
+  id: number | string,
+  body: PostEsimEventInput,
+): Promise<EsimLifecycleEvent> {
+  return fetchApi<EsimLifecycleEvent>(`/api/v1/me/esims/${id}/events/`, {
+    method: "POST",
+    auth: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+}
+
+export async function fetchMyEsimEvents(
+  id: number | string,
+): Promise<EsimLifecycleEvent[]> {
+  return fetchApi<EsimLifecycleEvent[]>(`/api/v1/me/esims/${id}/events/`, {
     auth: true,
     cache: "no-store",
   });

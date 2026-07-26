@@ -14,8 +14,9 @@
     "test:orders": "npx --yes tsx --test lib/orders/*.test.ts",
     "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/CatalogPriceDisplay.test.tsx",
     "test:version": "npx --yes tsx --tsconfig tsconfig.test.json --test app/version/route.test.ts",
+    "test:esim": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/esim/*.test.ts",
     "test:e2e": "playwright test",
-    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:components && npm run test:version"
+    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:components && npm run test:version && npm run test:esim"
   },
   "dependencies": {
     "@reown/appkit": "^1.8.23",
