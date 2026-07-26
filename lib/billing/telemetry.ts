@@ -19,7 +19,10 @@ export type BillingTelemetryEvent =
   | "deposit_poll_stopped"
   | "deposit_poll_timed_out"
   | "spend_insufficient_credits"
-  | "spend_retry_after_deposit";
+  | "spend_retry_after_deposit"
+  | "purchase_confirm_opened"
+  | "purchase_confirm_cancelled"
+  | "purchase_confirm_confirmed";
 
 export type BillingTelemetry = {
   track(

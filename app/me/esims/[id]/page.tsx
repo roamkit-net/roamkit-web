@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
+import {
+  dataLabelFromPackage,
+  PurchaseConfirmDialog,
+  validityLabelFromDays,
+} from "@/components/orders/PurchaseConfirmDialog";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -20,7 +27,19 @@ import {
   fetchMyEsimUsage,
   isAuthenticated,
 } from "@/lib/api";
-import { activationPolicyMessage, needsSetup } from "@/lib/esim/telemetry";
+import {
+  canUseAppleInstallLink,
+  detectInstallDevice,
+  type InstallDeviceClass,
+} from "@/lib/esim/device";
+import {
+  activationPolicyMessage,
+  createEsimTelemetry,
+  createSetupSessionId,
+  needsSetup,
+} from "@/lib/esim/telemetry";
+import { billingTelemetry } from "@/lib/billing/telemetry";
+import { hasSufficientCredits } from "@/lib/orders/canAfford";
 import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
@@ -30,8 +49,19 @@ function formatMb(value: number | null | undefined): string {
   return `${value} MB`;
 }
 
+const INSUFFICIENT_CREDITS_TITLE =
+  "Not enough credits — deposit to buy this plan";
+
+function currentPathWithSearch(): string {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 export default function MyEsimDetailPage() {
   const router = useRouter();
+  const { balance } = useBilling();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
   const detailPath = `/me/esims/${esimId}`;
@@ -43,6 +73,16 @@ export default function MyEsimDetailPage() {
   const [usageError, setUsageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false);
+  const [device, setDevice] = useState<InstallDeviceClass>("desktop");
+  const installSessionId = useRef(createSetupSessionId());
+  const installTelemetry = useMemo(
+    () => createEsimTelemetry(esimId, installSessionId.current),
+    [esimId],
+  );
+
+  useEffect(() => {
+    setDevice(detectInstallDevice());
+  }, []);
 
   const {
     purchase,
@@ -53,6 +93,90 @@ export default function MyEsimDetailPage() {
     clearError: clearPurchaseError,
     clearSuccess,
   } = usePurchaseTopup(esimId);
+
+  const [pendingTopup, setPendingTopup] = useState<TopupPackage | null>(null);
+  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (!purchaseAttemptedRef.current) {
+      return;
+    }
+    if (busyPackageId !== null) {
+      return;
+    }
+    setPendingTopup(null);
+    purchaseAttemptedRef.current = false;
+  }, [busyPackageId]);
+
+  function topupBuyTitle(topup: TopupPackage): string | undefined {
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      return INSUFFICIENT_CREDITS_TITLE;
+    }
+    return undefined;
+  }
+
+  function topupBuyDisabled(topup: TopupPackage): boolean {
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      return true;
+    }
+    if (pendingTopup !== null) {
+      return true;
+    }
+    if (busyPackageId !== null) {
+      return true;
+    }
+    return false;
+  }
+
+  function handleTopupBuyClick(
+    topup: TopupPackage,
+    buyButton: HTMLButtonElement,
+  ) {
+    if (!isAuthenticated()) {
+      router.push(loginHref(currentPathWithSearch()));
+      return;
+    }
+    returnFocusRef.current = buyButton;
+    purchaseAttemptedRef.current = false;
+    billingTelemetry.track("purchase_confirm_opened", {
+      kind: "topup",
+      packageId: topup.id,
+      esimId: String(esimId),
+    });
+    setPendingTopup(topup);
+  }
+
+  function handleConfirmTopup() {
+    if (!pendingTopup) {
+      return;
+    }
+    if (purchaseAttemptedRef.current || busyPackageId !== null) {
+      return;
+    }
+    purchaseAttemptedRef.current = true;
+    billingTelemetry.track("purchase_confirm_confirmed", {
+      kind: "topup",
+      packageId: pendingTopup.id,
+      esimId: String(esimId),
+    });
+    void purchase(pendingTopup.id);
+  }
+
+  function handleCancelTopup() {
+    if (busyPackageId !== null) {
+      return;
+    }
+    if (pendingTopup) {
+      billingTelemetry.track("purchase_confirm_cancelled", {
+        kind: "topup",
+        packageId: pendingTopup.id,
+        esimId: String(esimId),
+      });
+    }
+    setPendingTopup(null);
+    purchaseAttemptedRef.current = false;
+  }
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -299,56 +423,59 @@ export default function MyEsimDetailPage() {
                         </span>
                       </p>
                     ) : null}
-                    {esim.direct_apple_installation_url ? (
+                    {canUseAppleInstallLink(device) &&
+                    esim.direct_apple_installation_url ? (
                       <p>
                         <a
                           href={esim.direct_apple_installation_url}
                           className="font-medium text-sky-700 hover:text-sky-800"
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() =>
+                            installTelemetry.track(
+                              "install.apple_install_clicked",
+                            )
+                          }
                         >
                           Install on Apple device
                         </a>
                       </p>
                     ) : null}
-                    {esim.installation_guide_url ? (
+                    {esimId ? (
                       <p>
-                        <a
-                          href={esim.installation_guide_url}
+                        <Link
+                          href={`/me/esims/${esimId}/setup`}
                           className="font-medium text-sky-700 hover:text-sky-800"
-                          target="_blank"
-                          rel="noreferrer"
                         >
-                          Installation guide
-                        </a>
+                          Open setup guide
+                        </Link>
                       </p>
                     ) : null}
                   </div>
                 </div>
               )}
-              {esim.qrcode_installation ? (
-                <div
-                  className="prose prose-sm mt-4 max-w-none text-slate-700"
-                  dangerouslySetInnerHTML={{ __html: esim.qrcode_installation }}
-                />
+              {!(esim.qrcode_url || esim.qrcode) && esimId ? (
+                <p className="mt-4 text-sm text-slate-600">
+                  <Link
+                    href={`/me/esims/${esimId}/setup`}
+                    className="font-medium text-sky-700 hover:text-sky-800"
+                  >
+                    Open setup guide
+                  </Link>
+                </p>
               ) : null}
-              {esim.manual_installation ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Manual installation
-                  </h3>
-                  <div
-                    className="prose prose-sm mt-2 max-w-none text-slate-700"
-                    dangerouslySetInnerHTML={{
-                      __html: esim.manual_installation,
-                    }}
-                  />
-                </div>
+              {esim.lpa || esim.matching_id ? (
+                <ManualInstallTips
+                  className="mt-4"
+                  lpa={esim.lpa}
+                  matchingId={esim.matching_id}
+                />
               ) : null}
               {!esim.qrcode_url &&
               !esim.qrcode &&
-              !esim.qrcode_installation &&
-              !esim.manual_installation ? (
+              !esim.lpa &&
+              !esim.matching_id &&
+              !esim.direct_apple_installation_url ? (
                 <p className="mt-3 text-sm text-slate-600">
                   No installation details available yet.
                 </p>
@@ -437,9 +564,13 @@ export default function MyEsimDetailPage() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => void purchase(topup.id)}
-                          disabled={busyPackageId !== null}
-                          className="rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={(event) =>
+                            handleTopupBuyClick(topup, event.currentTarget)
+                          }
+                          disabled={topupBuyDisabled(topup)}
+                          title={topupBuyTitle(topup)}
+                          aria-label={topupBuyTitle(topup)}
+                          className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyPackageId === topup.id ? "Buying…" : "Buy"}
                         </button>
@@ -450,6 +581,20 @@ export default function MyEsimDetailPage() {
               )}
             </section>
           </div>
+        ) : null}
+        {pendingTopup ? (
+          <PurchaseConfirmDialog
+            summary={{
+              title: pendingTopup.title,
+              dataLabel: dataLabelFromPackage(pendingTopup),
+              validityLabel: validityLabelFromDays(pendingTopup.validity_days),
+              priceUsd: pendingTopup.price_usd,
+            }}
+            isPurchasing={busyPackageId === pendingTopup.id}
+            onCancel={handleCancelTopup}
+            onConfirm={handleConfirmTopup}
+            returnFocusRef={returnFocusRef}
+          />
         ) : null}
       </main>
     </div>

@@ -1,18 +1,28 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { useBilling } from "@/components/billing/useBilling";
 import { CompatibilityButton } from "@/components/CompatibilityButton";
 import { CoveragesSummary } from "@/components/CoveragesModal";
 import { LocationCard } from "@/components/LocationCard";
+import {
+  dataLabelFromPackage,
+  PurchaseConfirmDialog,
+  validityLabelFromDays,
+} from "@/components/orders/PurchaseConfirmDialog";
 import { useBuyPackage } from "@/components/orders/useBuyPackage";
 import { PackageRow } from "@/components/PackageRow";
 import type { Location, Package } from "@/lib/api";
-import { locationImageSrc } from "@/lib/api";
+import { isAuthenticated, locationImageSrc } from "@/lib/api";
+import { billingTelemetry } from "@/lib/billing/telemetry";
+import { loginHref } from "@/lib/navigation/safePath";
+import { hasSufficientCredits } from "@/lib/orders/canAfford";
 import {
   filterPackagesByPlan,
   resolveActivePlanFilter,
@@ -58,6 +68,16 @@ function comparePackages(a: Package, b: Package): number {
   return Number.parseFloat(a.price_usd) - Number.parseFloat(b.price_usd);
 }
 
+const INSUFFICIENT_CREDITS_TITLE =
+  "Not enough credits — deposit to buy this plan";
+
+function currentPathWithSearch(): string {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 export function LocationDetail({
   location,
   packages,
@@ -65,6 +85,8 @@ export function LocationDetail({
   location: Location;
   packages: Package[];
 }) {
+  const router = useRouter();
+  const { balance } = useBilling();
   const imageSrc = locationImageSrc(location);
   const coverages = location.coverages ?? [];
   const broader = location.broader_locations ?? [];
@@ -84,6 +106,84 @@ export function LocationDetail({
     isRetrying,
     clearError,
   } = useBuyPackage();
+
+  const [pendingPackage, setPendingPackage] = useState<Package | null>(null);
+  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (!purchaseAttemptedRef.current) {
+      return;
+    }
+    if (busyPackageId !== null) {
+      return;
+    }
+    setPendingPackage(null);
+    purchaseAttemptedRef.current = false;
+  }, [busyPackageId]);
+
+  function buyTitleFor(plan: Package): string | undefined {
+    if (hasSufficientCredits(balance, plan.price_usd) === false) {
+      return INSUFFICIENT_CREDITS_TITLE;
+    }
+    return undefined;
+  }
+
+  function buyDisabledFor(plan: Package): boolean {
+    if (hasSufficientCredits(balance, plan.price_usd) === false) {
+      return true;
+    }
+    if (pendingPackage !== null) {
+      return true;
+    }
+    if (busyPackageId !== null) {
+      return true;
+    }
+    return false;
+  }
+
+  function handleBuyClick(plan: Package, buyButton: HTMLButtonElement) {
+    if (!isAuthenticated()) {
+      router.push(loginHref(currentPathWithSearch()));
+      return;
+    }
+    returnFocusRef.current = buyButton;
+    purchaseAttemptedRef.current = false;
+    billingTelemetry.track("purchase_confirm_opened", {
+      kind: "order",
+      packageId: plan.id,
+    });
+    setPendingPackage(plan);
+  }
+
+  function handleConfirmPurchase() {
+    if (!pendingPackage) {
+      return;
+    }
+    if (purchaseAttemptedRef.current || busyPackageId !== null) {
+      return;
+    }
+    purchaseAttemptedRef.current = true;
+    billingTelemetry.track("purchase_confirm_confirmed", {
+      kind: "order",
+      packageId: pendingPackage.id,
+    });
+    void buy(pendingPackage.id);
+  }
+
+  function handleCancelPurchase() {
+    if (busyPackageId !== null) {
+      return;
+    }
+    if (pendingPackage) {
+      billingTelemetry.track("purchase_confirm_cancelled", {
+        kind: "order",
+        packageId: pendingPackage.id,
+      });
+    }
+    setPendingPackage(null);
+    purchaseAttemptedRef.current = false;
+  }
 
   const servicePackages = useMemo(() => {
     if (!showServiceTabs) {
@@ -284,9 +384,10 @@ export function LocationDetail({
                   <PackageRow
                     plan={mostPopular}
                     showValidity
-                    onBuy={(pkg) => void buy(pkg.id)}
+                    onBuy={handleBuyClick}
                     isBuying={busyPackageId === mostPopular.id}
-                    buyDisabled={busyPackageId !== null}
+                    buyDisabled={buyDisabledFor(mostPopular)}
+                    buyTitle={buyTitleFor(mostPopular)}
                   />
                 </div>
               ) : null}
@@ -300,9 +401,10 @@ export function LocationDetail({
                       <li key={plan.id}>
                         <PackageRow
                           plan={plan}
-                          onBuy={(pkg) => void buy(pkg.id)}
+                          onBuy={handleBuyClick}
                           isBuying={busyPackageId === plan.id}
-                          buyDisabled={busyPackageId !== null}
+                          buyDisabled={buyDisabledFor(plan)}
+                          buyTitle={buyTitleFor(plan)}
                         />
                       </li>
                     ))}
@@ -329,6 +431,23 @@ export function LocationDetail({
               ))}
             </ul>
           </section>
+        ) : null}
+
+        {pendingPackage ? (
+          <PurchaseConfirmDialog
+            summary={{
+              title: pendingPackage.title,
+              dataLabel: dataLabelFromPackage(pendingPackage),
+              validityLabel: validityLabelFromDays(
+                pendingPackage.validity_days,
+              ),
+              priceUsd: pendingPackage.price_usd,
+            }}
+            isPurchasing={busyPackageId === pendingPackage.id}
+            onCancel={handleCancelPurchase}
+            onConfirm={handleConfirmPurchase}
+            returnFocusRef={returnFocusRef}
+          />
         ) : null}
 
       </main>

@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
+import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
+import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
+import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -13,7 +16,19 @@ import {
   fetchMyEsim,
   isAuthenticated,
 } from "@/lib/api";
-import { detectInstallDevice, type InstallDeviceClass } from "@/lib/esim/device";
+import type { AndroidGuideId } from "@/lib/esim/androidGuides";
+import {
+  canUseAppleInstallLink,
+  detectInstallDevice,
+  type InstallDeviceClass,
+} from "@/lib/esim/device";
+import { guideHasInstallAction } from "@/lib/esim/guideService";
+import {
+  canAttemptDeepLink,
+  launchInstallAction,
+  observeDeepLinkAttempt,
+} from "@/lib/esim/launchInstallAction";
+import { parseLpa, resolveLpaUri } from "@/lib/esim/lpa";
 import {
   activationPolicyMessage,
   createEsimTelemetry,
@@ -40,6 +55,13 @@ export default function EsimSetupWizardPage() {
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const [qrZoomed, setQrZoomed] = useState(false);
+  const [showManualTips, setShowManualTips] = useState(false);
+  const [androidGuideId, setAndroidGuideId] = useState<AndroidGuideId | null>(
+    null,
+  );
+  const [showPhoneInstructions, setShowPhoneInstructions] = useState(false);
+  const [deepLinkFailed, setDeepLinkFailed] = useState(false);
+  const [deepLinkBusy, setDeepLinkBusy] = useState(false);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -130,6 +152,85 @@ export default function EsimSetupWizardPage() {
     router.push(`/me/esims/${esimId}`);
   }
 
+  function selectAndroidGuide(id: AndroidGuideId) {
+    setAndroidGuideId(id);
+    setDeepLinkFailed(false);
+    telemetry.track("install.manual_install_clicked", {
+      resumeStep: 1,
+      payload: { manufacturer: id },
+    });
+  }
+
+  async function attemptAndroidDeepLink() {
+    if (!esim || !androidGuideId || deepLinkBusy) {
+      return;
+    }
+    const parsed = esim.lpa ? parseLpa(esim.lpa) : null;
+    const uri = resolveLpaUri({
+      lpa: esim.lpa,
+      smdpAddress: parsed?.smdpAddress,
+      activationCode: esim.matching_id || parsed?.activationCode,
+    });
+    if (!uri || !canAttemptDeepLink()) {
+      setDeepLinkFailed(true);
+      telemetry.track("install.manual_install_clicked", {
+        resumeStep: 1,
+        payload: {
+          manufacturer: androidGuideId,
+          deep_link_attempted: false,
+          fallback_used: true,
+        },
+      });
+      return;
+    }
+
+    setDeepLinkBusy(true);
+    setDeepLinkFailed(false);
+    telemetry.track("install.manual_install_clicked", {
+      resumeStep: 1,
+      payload: {
+        manufacturer: androidGuideId,
+        deep_link_attempted: true,
+        deep_link_scheme: "lpa",
+        fallback_used: false,
+      },
+    });
+
+    const observation = observeDeepLinkAttempt(2500);
+    launchInstallAction({ type: "android-lpa", uri });
+    const result = await observation;
+    setDeepLinkBusy(false);
+    if (result === "failure") {
+      setDeepLinkFailed(true);
+      telemetry.track("install.manual_install_clicked", {
+        resumeStep: 1,
+        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}`,
+        payload: {
+          manufacturer: androidGuideId,
+          deep_link_attempted: true,
+          deep_link_scheme: "lpa",
+          fallback_used: true,
+        },
+      });
+    }
+  }
+
+  const showAndroidGuideFlow =
+    device === "android" || (device === "desktop" && showPhoneInstructions);
+
+  const showDeepLinkCta =
+    Boolean(androidGuideId) &&
+    showAndroidGuideFlow &&
+    canAttemptDeepLink() &&
+    guideHasInstallAction(androidGuideId!, "deep-link") &&
+    Boolean(
+      resolveLpaUri({
+        lpa: esim?.lpa,
+        activationCode: esim?.matching_id,
+        smdpAddress: esim?.lpa ? parseLpa(esim.lpa)?.smdpAddress : "",
+      }),
+    );
+
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
       <main className="mx-auto w-full max-w-2xl">
@@ -201,8 +302,17 @@ export default function EsimSetupWizardPage() {
                       <p className="text-sm text-slate-600">
                         Scan this QR code with your phone to install the eSIM.
                       </p>
+                      {!showPhoneInstructions ? (
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                          onClick={() => setShowPhoneInstructions(true)}
+                        >
+                          Phone instructions
+                        </button>
+                      ) : null}
                     </>
-                  ) : device === "iphone" ? (
+                  ) : canUseAppleInstallLink(device) ? (
                     <>
                       <h2 className="text-lg font-semibold">Install on iPhone</h2>
                       <p className="text-sm text-slate-600">
@@ -231,11 +341,44 @@ export default function EsimSetupWizardPage() {
                         Install on Android
                       </h2>
                       <p className="text-sm text-slate-600">
-                        Scan the QR code or enter the SM-DP+ details manually in
-                        Settings → Network → SIMs.
+                        Choose your manufacturer, then scan the QR or enter
+                        SM-DP+ details.
                       </p>
                     </>
                   )}
+
+                  {showAndroidGuideFlow ? (
+                    androidGuideId ? (
+                      <AndroidInstallGuide
+                        guideId={androidGuideId}
+                        onChangePhone={() => {
+                          setAndroidGuideId(null);
+                          setDeepLinkFailed(false);
+                        }}
+                      />
+                    ) : (
+                      <AndroidManufacturerPicker onSelect={selectAndroidGuide} />
+                    )
+                  ) : null}
+
+                  {showDeepLinkCta ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        disabled={deepLinkBusy}
+                        onClick={() => void attemptAndroidDeepLink()}
+                        className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                      >
+                        {deepLinkBusy ? "Opening…" : "Install eSIM"}
+                      </button>
+                      {deepLinkFailed ? (
+                        <p className="text-sm text-amber-900" role="status">
+                          Couldn&apos;t open your phone&apos;s eSIM installer.
+                          You can continue using the QR code below.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {(esim.qrcode_url || esim.qrcode) && (
                     <button
@@ -265,24 +408,37 @@ export default function EsimSetupWizardPage() {
                     </p>
                   ) : null}
 
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-sky-700 hover:text-sky-800"
-                    onClick={() =>
-                      telemetry.track("install.manual_install_clicked", {
-                        resumeStep: 1,
-                      })
-                    }
-                  >
-                    Show manual install tips
-                  </button>
-                  {esim.manual_installation ? (
-                    <div
-                      className="prose prose-sm max-w-none text-slate-700"
-                      dangerouslySetInnerHTML={{
-                        __html: esim.manual_installation,
-                      }}
-                    />
+                  {esim.lpa || esim.matching_id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                        onClick={() => {
+                          setShowManualTips((open) => {
+                            const next = !open;
+                            if (next) {
+                              telemetry.track("install.manual_install_clicked", {
+                                resumeStep: 1,
+                                payload: androidGuideId
+                                  ? { manufacturer: androidGuideId }
+                                  : {},
+                              });
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        {showManualTips
+                          ? "Hide manual install tips"
+                          : "Show manual install tips"}
+                      </button>
+                      {showManualTips ? (
+                        <ManualInstallTips
+                          lpa={esim.lpa}
+                          matchingId={esim.matching_id}
+                        />
+                      ) : null}
+                    </>
                   ) : null}
 
                   <div className="flex flex-wrap gap-3 pt-2">
