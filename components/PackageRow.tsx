@@ -58,12 +58,14 @@ export function PackageRow({
   onBuy,
   isBuying = false,
   buyDisabled = false,
+  buyTitle,
 }: {
   plan: Package;
   showValidity?: boolean;
-  onBuy?: (plan: Package) => void;
+  onBuy?: (plan: Package, buyButton: HTMLButtonElement) => void;
   isBuying?: boolean;
   buyDisabled?: boolean;
+  buyTitle?: string;
 }) {
   return (
     <article className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
@@ -77,9 +79,11 @@ export function PackageRow({
         {onBuy ? (
           <button
             type="button"
-            onClick={() => onBuy(plan)}
+            onClick={(event) => onBuy(plan, event.currentTarget)}
             disabled={isBuying || buyDisabled}
-            className="rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            title={buyTitle}
+            aria-label={buyTitle}
+            className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isBuying ? "Buying…" : "Buy"}
           </button>

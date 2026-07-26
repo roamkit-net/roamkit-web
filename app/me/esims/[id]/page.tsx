@@ -6,8 +6,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
+import {
+  dataLabelFromPackage,
+  PurchaseConfirmDialog,
+  validityLabelFromDays,
+} from "@/components/orders/PurchaseConfirmDialog";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -32,6 +38,8 @@ import {
   createSetupSessionId,
   needsSetup,
 } from "@/lib/esim/telemetry";
+import { billingTelemetry } from "@/lib/billing/telemetry";
+import { hasSufficientCredits } from "@/lib/orders/canAfford";
 import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
@@ -41,8 +49,19 @@ function formatMb(value: number | null | undefined): string {
   return `${value} MB`;
 }
 
+const INSUFFICIENT_CREDITS_TITLE =
+  "Not enough credits — deposit to buy this plan";
+
+function currentPathWithSearch(): string {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 export default function MyEsimDetailPage() {
   const router = useRouter();
+  const { balance } = useBilling();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
   const detailPath = `/me/esims/${esimId}`;
@@ -74,6 +93,90 @@ export default function MyEsimDetailPage() {
     clearError: clearPurchaseError,
     clearSuccess,
   } = usePurchaseTopup(esimId);
+
+  const [pendingTopup, setPendingTopup] = useState<TopupPackage | null>(null);
+  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (!purchaseAttemptedRef.current) {
+      return;
+    }
+    if (busyPackageId !== null) {
+      return;
+    }
+    setPendingTopup(null);
+    purchaseAttemptedRef.current = false;
+  }, [busyPackageId]);
+
+  function topupBuyTitle(topup: TopupPackage): string | undefined {
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      return INSUFFICIENT_CREDITS_TITLE;
+    }
+    return undefined;
+  }
+
+  function topupBuyDisabled(topup: TopupPackage): boolean {
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      return true;
+    }
+    if (pendingTopup !== null) {
+      return true;
+    }
+    if (busyPackageId !== null) {
+      return true;
+    }
+    return false;
+  }
+
+  function handleTopupBuyClick(
+    topup: TopupPackage,
+    buyButton: HTMLButtonElement,
+  ) {
+    if (!isAuthenticated()) {
+      router.push(loginHref(currentPathWithSearch()));
+      return;
+    }
+    returnFocusRef.current = buyButton;
+    purchaseAttemptedRef.current = false;
+    billingTelemetry.track("purchase_confirm_opened", {
+      kind: "topup",
+      packageId: topup.id,
+      esimId: String(esimId),
+    });
+    setPendingTopup(topup);
+  }
+
+  function handleConfirmTopup() {
+    if (!pendingTopup) {
+      return;
+    }
+    if (purchaseAttemptedRef.current || busyPackageId !== null) {
+      return;
+    }
+    purchaseAttemptedRef.current = true;
+    billingTelemetry.track("purchase_confirm_confirmed", {
+      kind: "topup",
+      packageId: pendingTopup.id,
+      esimId: String(esimId),
+    });
+    void purchase(pendingTopup.id);
+  }
+
+  function handleCancelTopup() {
+    if (busyPackageId !== null) {
+      return;
+    }
+    if (pendingTopup) {
+      billingTelemetry.track("purchase_confirm_cancelled", {
+        kind: "topup",
+        packageId: pendingTopup.id,
+        esimId: String(esimId),
+      });
+    }
+    setPendingTopup(null);
+    purchaseAttemptedRef.current = false;
+  }
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -461,9 +564,13 @@ export default function MyEsimDetailPage() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => void purchase(topup.id)}
-                          disabled={busyPackageId !== null}
-                          className="rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={(event) =>
+                            handleTopupBuyClick(topup, event.currentTarget)
+                          }
+                          disabled={topupBuyDisabled(topup)}
+                          title={topupBuyTitle(topup)}
+                          aria-label={topupBuyTitle(topup)}
+                          className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyPackageId === topup.id ? "Buying…" : "Buy"}
                         </button>
@@ -474,6 +581,20 @@ export default function MyEsimDetailPage() {
               )}
             </section>
           </div>
+        ) : null}
+        {pendingTopup ? (
+          <PurchaseConfirmDialog
+            summary={{
+              title: pendingTopup.title,
+              dataLabel: dataLabelFromPackage(pendingTopup),
+              validityLabel: validityLabelFromDays(pendingTopup.validity_days),
+              priceUsd: pendingTopup.price_usd,
+            }}
+            isPurchasing={busyPackageId === pendingTopup.id}
+            onCancel={handleCancelTopup}
+            onConfirm={handleConfirmTopup}
+            returnFocusRef={returnFocusRef}
+          />
         ) : null}
       </main>
     </div>
