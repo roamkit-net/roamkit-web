@@ -14,6 +14,7 @@ import {
   isInsufficientCreditsError,
   parseInsufficientCredits,
 } from "@/lib/orders/insufficientCredits";
+import { loginHref } from "@/lib/navigation/safePath";
 import {
   clearPendingSpend,
   peekPendingSpend,
@@ -141,7 +142,7 @@ export function useBuyPackage(): BuyPackageState {
         }
         if (err instanceof ApiError && err.status === 401) {
           setError("You need to sign in to buy a plan.");
-          router.push("/login");
+          router.push(loginHref(currentPathWithSearch()));
           return;
         }
         setError(toBillingError(err, "Unable to complete purchase.").message);
@@ -160,7 +161,7 @@ export function useBuyPackage(): BuyPackageState {
         return;
       }
       if (!isAuthenticated()) {
-        router.push("/login");
+        router.push(loginHref(currentPathWithSearch()));
         return;
       }
       const key = newSpendIdempotencyKey("order");

@@ -13,6 +13,7 @@ import {
   isInsufficientCreditsError,
   parseInsufficientCredits,
 } from "@/lib/orders/insufficientCredits";
+import { loginHref } from "@/lib/navigation/safePath";
 import {
   clearPendingSpend,
   peekPendingSpend,
@@ -131,7 +132,7 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
         }
         if (err instanceof ApiError && err.status === 401) {
           setError("You need to sign in to purchase a top-up.");
-          router.push("/login");
+          router.push(loginHref(currentPathWithSearch()));
           return;
         }
         setError(toBillingError(err, "Unable to purchase top-up.").message);
@@ -150,7 +151,7 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
         return;
       }
       if (!isAuthenticated()) {
-        router.push("/login");
+        router.push(loginHref(currentPathWithSearch()));
         return;
       }
       const key = newSpendIdempotencyKey("topup");
