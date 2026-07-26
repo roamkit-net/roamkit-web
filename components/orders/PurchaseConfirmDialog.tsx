@@ -1,0 +1,215 @@
+"use client";
+
+import {
+  useEffect,
+  useId,
+  useRef,
+  type RefObject,
+} from "react";
+
+import { useBilling } from "@/components/billing/useBilling";
+import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { formatCredits } from "@/lib/billing/format";
+
+/**
+ * Generic purchase summary — not tied to eSIM packages.
+ * Reusable later for vouchers, subscriptions, add-ons, marketplace.
+ */
+export type PurchaseSummary = {
+  title: string;
+  dataLabel: string;
+  validityLabel: string;
+  priceUsd: string;
+};
+
+export type PurchaseConfirmDialogProps = {
+  summary: PurchaseSummary;
+  isPurchasing: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  /** Buy button that opened the dialog — focused when the dialog closes. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
+};
+
+function ConfirmSpinner() {
+  return (
+    <span
+      aria-hidden="true"
+      data-testid="purchase-confirm-spinner"
+      className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+    />
+  );
+}
+
+/**
+ * Confirm before prepaid spend (ledger debit). Displayed balance is
+ * informational only — CreditService re-checks funds on the API.
+ */
+export function PurchaseConfirmDialog({
+  summary,
+  isPurchasing,
+  onCancel,
+  onConfirm,
+  returnFocusRef,
+}: PurchaseConfirmDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const submittedRef = useRef(false);
+  const { balance, config } = useBilling();
+
+  useEffect(() => {
+    if (!isPurchasing) {
+      submittedRef.current = false;
+    }
+  }, [isPurchasing]);
+
+  useEffect(() => {
+    confirmRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTarget = returnFocusRef?.current ?? null;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      focusTarget?.focus?.();
+    };
+  }, [returnFocusRef]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !isPurchasing) {
+        onCancel();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isPurchasing, onCancel]);
+
+  function handleConfirm() {
+    if (isPurchasing || submittedRef.current) {
+      return;
+    }
+    submittedRef.current = true;
+    onConfirm();
+  }
+
+  function handleBackdropClick() {
+    if (isPurchasing) {
+      return;
+    }
+    onCancel();
+  }
+
+  const tokenSymbol = config?.tokenSymbol ?? "credits";
+  const balanceLabel =
+    balance != null ? `${formatCredits(balance)} ${tokenSymbol}` : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-slate-900/40"
+        onClick={handleBackdropClick}
+        disabled={isPurchasing}
+        tabIndex={isPurchasing ? -1 : 0}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="relative z-10 flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+      >
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+            Confirm purchase
+          </h2>
+        </div>
+
+        <div
+          id={descriptionId}
+          className="space-y-3 px-5 py-4 text-sm text-slate-700"
+        >
+          <p className="text-base font-semibold text-slate-900">
+            {summary.title}
+          </p>
+          <dl className="space-y-2">
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Data</dt>
+              <dd className="font-medium text-slate-900">{summary.dataLabel}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Validity</dt>
+              <dd className="font-medium text-slate-900">
+                {summary.validityLabel}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Price</dt>
+              <dd className="font-semibold text-slate-900">
+                <CatalogPriceDisplay amount={summary.priceUsd} />
+              </dd>
+            </div>
+            {balanceLabel ? (
+              <div className="flex justify-between gap-4 border-t border-slate-100 pt-2">
+                <dt className="text-slate-500">Your balance</dt>
+                <dd className="tabular-nums font-medium text-slate-900">
+                  {balanceLabel}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="text-xs leading-5 text-slate-500">
+            Balance is shown for reference. Available funds are checked again
+            when you confirm.
+          </p>
+        </div>
+
+        <div className="sticky bottom-0 flex gap-3 border-t border-slate-200 bg-white px-5 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPurchasing}
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPurchasing}
+            aria-busy={isPurchasing}
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPurchasing ? (
+              <>
+                <ConfirmSpinner />
+                Purchasing…
+              </>
+            ) : (
+              "Confirm purchase"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function validityLabelFromDays(days: number): string {
+  if (days === 1) {
+    return "1 day";
+  }
+  return `${days} days`;
+}
+
+export function dataLabelFromPackage(opts: {
+  is_unlimited: boolean;
+  data_allowance: string;
+}): string {
+  return opts.is_unlimited ? "Unlimited" : opts.data_allowance;
+}
