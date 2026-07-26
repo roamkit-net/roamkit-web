@@ -82,6 +82,29 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /data-testid="catalog-price-skeleton"/);
   });
 
+  it("architecture: without DisplayCurrencyProvider renders fallback, not skeleton", () => {
+    const html = render({ amount: "19.50" });
+    assert.doesNotMatch(html, /data-testid="catalog-price-skeleton"/);
+    assert.match(html, /data-testid="catalog-price-degraded"/);
+    assert.match(html, /19\.50 credits/);
+    assert.match(html, /Currency configuration unavailable/);
+  });
+
+  it("renders degraded credits when config errored and currency missing", () => {
+    const html = renderWithCurrency(
+      { amount: "8.00" },
+      displayCurrencyValue({
+        currency: null,
+        config: null,
+        isLoading: false,
+        error: new Error("Request failed: 404"),
+      }),
+    );
+    assert.doesNotMatch(html, /data-testid="catalog-price-skeleton"/);
+    assert.match(html, /data-testid="catalog-price-degraded"/);
+    assert.match(html, /8\.00 credits/);
+  });
+
   it("resolves amount from DisplayCurrency context", () => {
     const html = renderWithCurrency(
       { amount: "12.50" },
