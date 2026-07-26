@@ -60,14 +60,14 @@ function ResetPasswordForm() {
         title="Password updated"
         subtitle="Your password has been reset. You can sign in with your new password."
         footer={
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         }
       >
         <Link
           href="/login"
-          className="inline-flex w-full items-center justify-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
         >
           Continue to sign in
         </Link>
@@ -82,7 +82,7 @@ function ResetPasswordForm() {
       footer={
         <>
           Remembered your password?{" "}
-          <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link href="/login" className="font-medium">
             Sign in
           </Link>
         </>
@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
           title="Reset password"
           subtitle="Loading reset link…"
           footer={
-            <Link href="/login" className="font-medium text-sky-700 hover:text-sky-800">
+            <Link href="/login" className="font-medium">
               Sign in
             </Link>
           }

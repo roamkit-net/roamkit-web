@@ -69,3 +69,40 @@ body {
     );
   }
 }
+
+/* Auth shell: dark frame + soft radial mesh (no landing hero image). */
+.auth-page-bg {
+  background-color: #05070a;
+  background-image:
+    radial-gradient(
+      ellipse 55% 45% at 20% 15%,
+      color-mix(in srgb, var(--accent-cyan) 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 85% 75%,
+      color-mix(in srgb, var(--accent-purple) 7%, transparent),
+      transparent 70%
+    );
+}
+
+@keyframes auth-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-shell-enter {
+  animation: auth-shell-enter 0.45s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell-enter {
+    animation: none;
+  }
+}

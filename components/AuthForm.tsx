@@ -9,6 +9,7 @@ import {
   isTurnstileConfigured,
 } from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
+import { Logo } from "@/components/landing/Logo";
 
 type AuthShellProps = {
   title: string;
@@ -19,33 +20,31 @@ type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-md">
-        <Link
-          href="/"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
-        >
-          ← Back to home
+    <div className="auth-page-bg min-h-screen px-6 py-16 text-slate-100">
+      <main className="auth-shell-enter mx-auto w-full max-w-md">
+        <Link href="/" className="inline-flex" aria-label="RoamKit home">
+          <Logo />
         </Link>
-        <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-          RoamKit
-        </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">{subtitle}</p>
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">
+          {title}
+        </h1>
+        <p className="mt-3 text-base leading-7 text-slate-400">{subtitle}</p>
+        <div className="mt-8 rounded-3xl border border-white/10 bg-white/95 p-6 text-slate-900 backdrop-blur-sm">
           {children}
         </div>
-        <p className="mt-6 text-center text-sm text-slate-600">{footer}</p>
+        <p className="mt-6 text-center text-sm text-slate-400 [&_a]:font-medium [&_a]:text-cyan-400 [&_a]:hover:text-cyan-300">
+          {footer}
+        </p>
       </main>
     </div>
   );
 }
 
 const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-sky-500 focus:border-sky-500 focus:ring-2";
+  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
 
 const submitButtonClassName =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 type SharedFormProps = {
   submitLabel: string;
@@ -74,7 +73,7 @@ function SubmitSpinner() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950"
     />
   );
 }
@@ -216,7 +215,7 @@ export function AuthForm({
             type="checkbox"
             checked={rememberMe}
             onChange={(event) => onRememberMeChange?.(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-sky-700 outline-none ring-sky-500 focus-visible:ring-2"
+            className="h-4 w-4 rounded border-slate-300 text-cyan-600 outline-none ring-cyan-500 focus-visible:ring-2"
           />
           <label
             htmlFor="remember_me"
