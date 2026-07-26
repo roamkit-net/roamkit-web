@@ -6,27 +6,34 @@ import { cleanup, fireEvent, render, within } from "@testing-library/react";
 
 import { PasswordField } from "./PasswordField";
 
+function setGlobal(name: string, value: unknown) {
+  Object.defineProperty(globalThis, name, {
+    value,
+    configurable: true,
+    writable: true,
+  });
+}
+
 function installDom() {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "http://localhost/",
   });
   const { window } = dom;
 
-  // Assign onto global for Testing Library + React DOM.
+  setGlobal("window", window);
+  setGlobal("document", window.document);
+  setGlobal("HTMLElement", window.HTMLElement);
+  setGlobal("Node", window.Node);
+  setGlobal("navigator", window.navigator);
+  setGlobal("DocumentFragment", window.DocumentFragment);
+  setGlobal("MutationObserver", window.MutationObserver);
+  setGlobal("getComputedStyle", window.getComputedStyle.bind(window));
+  setGlobal("requestAnimationFrame", (cb: FrameRequestCallback) =>
+    setTimeout(() => cb(Date.now()), 0),
+  );
+  setGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const g = globalThis as any;
-  g.window = window;
-  g.document = window.document;
-  g.HTMLElement = window.HTMLElement;
-  g.Node = window.Node;
-  g.navigator = window.navigator;
-  g.DocumentFragment = window.DocumentFragment;
-  g.MutationObserver = window.MutationObserver;
-  g.getComputedStyle = window.getComputedStyle.bind(window);
-  g.requestAnimationFrame = (cb: FrameRequestCallback) =>
-    setTimeout(() => cb(Date.now()), 0);
-  g.cancelAnimationFrame = (id: number) => clearTimeout(id);
-  g.IS_REACT_ACT_ENVIRONMENT = true;
+  (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 }
 
 installDom();
