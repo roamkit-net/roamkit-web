@@ -399,10 +399,22 @@ export function VoucherRedeemForm({
           className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 outline-none"
           data-testid="voucher-redeem-success"
         >
-          <p className="font-semibold">Voucher redeemed</p>
-          <p className="mt-1 text-sm tabular-nums">
-            +{formatCredits(success.credited)} {tokenSymbol}
-          </p>
+          {success.replay ? (
+            <>
+              <p className="font-semibold">Already redeemed</p>
+              <p className="mt-1 text-sm">
+                You already redeemed this voucher. Your balance was not
+                changed.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold">Voucher redeemed</p>
+              <p className="mt-1 text-sm tabular-nums">
+                +{formatCredits(success.credited)} {tokenSymbol}
+              </p>
+            </>
+          )}
           <p className="mt-1 text-sm tabular-nums text-emerald-900/80">
             Current balance: {formatCredits(success.balance)} {tokenSymbol}
           </p>
