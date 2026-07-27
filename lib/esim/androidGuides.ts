@@ -16,7 +16,7 @@ export type GuideStep = {
   body: string;
 };
 
-export type InstallAction = "guide" | "deep-link" | "qr";
+export type InstallAction = "guide" | "qr";
 
 /** API-shaped DTO; keep stable for a future REST content registry. */
 export type AndroidGuide = {
@@ -25,7 +25,10 @@ export type AndroidGuide = {
   order: number;
   supportedBrands: string[];
   steps: GuideStep[];
-  /** Capability list — UI must not hard-code OEM behaviour. */
+  /**
+   * Guide content capabilities only (steps / QR copy).
+   * Deep-link install is Android platform-level — not listed here.
+   */
   installActions: InstallAction[];
   version?: number;
   updatedAt?: string;
@@ -37,9 +40,9 @@ export const ANDROID_GUIDES: readonly AndroidGuide[] = [
     title: "Samsung",
     order: 10,
     supportedBrands: ["Samsung", "Galaxy"],
-    installActions: ["guide", "qr", "deep-link"],
+    installActions: ["guide", "qr"],
     version: 1,
-    updatedAt: "2026-07-26",
+    updatedAt: "2026-07-27",
     steps: [
       {
         body: "Open Settings → Connections → SIM manager.",
@@ -65,7 +68,7 @@ export const ANDROID_GUIDES: readonly AndroidGuide[] = [
     supportedBrands: ["Google", "Pixel"],
     installActions: ["guide", "qr"],
     version: 1,
-    updatedAt: "2026-07-26",
+    updatedAt: "2026-07-27",
     steps: [
       {
         body: "Open Settings → Network & internet → SIMs.",
@@ -91,7 +94,7 @@ export const ANDROID_GUIDES: readonly AndroidGuide[] = [
     supportedBrands: ["Other", "Android"],
     installActions: ["guide", "qr"],
     version: 1,
-    updatedAt: "2026-07-26",
+    updatedAt: "2026-07-27",
     steps: [
       {
         body: "Open Settings → Network & internet (or Mobile network / Connections).",

@@ -17,17 +17,17 @@ import {
   isAuthenticated,
 } from "@/lib/api";
 import type { AndroidGuideId } from "@/lib/esim/androidGuides";
+import { GuideId } from "@/lib/esim/androidGuides";
 import {
+  buildAndroidInstallAction,
+  type AndroidInstallAction,
+} from "@/lib/esim/androidInstallProbes";
+import {
+  canUseAndroidDeepLink,
   canUseAppleInstallLink,
   detectInstallDevice,
   type InstallDeviceClass,
 } from "@/lib/esim/device";
-import { guideHasInstallAction } from "@/lib/esim/guideService";
-import {
-  buildAndroidInstallActions,
-  type AndroidInstallAction,
-  type AndroidInstallActionId,
-} from "@/lib/esim/androidInstallProbes";
 import {
   canAttemptDeepLink,
   launchInstallAction,
@@ -61,15 +61,12 @@ export default function EsimSetupWizardPage() {
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const [qrZoomed, setQrZoomed] = useState(false);
   const [showManualTips, setShowManualTips] = useState(false);
+  const [showOemHelp, setShowOemHelp] = useState(false);
   const [androidGuideId, setAndroidGuideId] = useState<AndroidGuideId | null>(
     null,
   );
   const [showPhoneInstructions, setShowPhoneInstructions] = useState(false);
-  const [deepLinkFailed, setDeepLinkFailed] = useState(false);
-  const [deepLinkBusyId, setDeepLinkBusyId] =
-    useState<AndroidInstallActionId | null>(null);
-  const [failedActionId, setFailedActionId] =
-    useState<AndroidInstallActionId | null>(null);
+  const [deepLinkBusy, setDeepLinkBusy] = useState(false);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -162,73 +159,42 @@ export default function EsimSetupWizardPage() {
 
   function selectAndroidGuide(id: AndroidGuideId) {
     setAndroidGuideId(id);
-    setDeepLinkFailed(false);
-    setFailedActionId(null);
-    setDeepLinkBusyId(null);
+    setShowOemHelp(true);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
       payload: { manufacturer: id },
     });
   }
 
-  async function attemptAndroidInstallAction(action: AndroidInstallAction) {
-    if (!esim || !androidGuideId || deepLinkBusyId) {
+  async function attemptAndroidInstall(action: AndroidInstallAction) {
+    if (!esim || deepLinkBusy) {
       return;
     }
     if (!action.uri || !canAttemptDeepLink()) {
-      setDeepLinkFailed(true);
-      setFailedActionId(action.id);
-      telemetry.track("install.manual_install_clicked", {
-        resumeStep: 1,
-        payload: {
-          manufacturer: androidGuideId,
-          deep_link_attempted: false,
-          deep_link_probe: action.id,
-          deep_link_scheme: action.scheme,
-          fallback_used: true,
-        },
-      });
       return;
     }
 
-    setDeepLinkBusyId(action.id);
-    setDeepLinkFailed(false);
-    setFailedActionId(null);
+    setDeepLinkBusy(true);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
       payload: {
-        manufacturer: androidGuideId,
         deep_link_attempted: true,
         deep_link_probe: action.id,
         deep_link_scheme: action.scheme,
         fallback_used: false,
+        ...(androidGuideId ? { manufacturer: androidGuideId } : {}),
       },
     });
 
     const observation = observeDeepLinkAttempt(2500);
     launchInstallAction({ type: action.launchType, uri: action.uri });
-    const result = await observation;
-    setDeepLinkBusyId(null);
+    await observation;
+    setDeepLinkBusy(false);
     // Universal HTTPS shows a system dialog over the page — visibility often
-    // stays "visible", so do not treat that as failure.
-    if (result === "failure" && action.scheme !== "https") {
-      setDeepLinkFailed(true);
-      setFailedActionId(action.id);
-      telemetry.track("install.manual_install_clicked", {
-        resumeStep: 1,
-        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}:${action.id}`,
-        payload: {
-          manufacturer: androidGuideId,
-          deep_link_attempted: true,
-          deep_link_probe: action.id,
-          deep_link_scheme: action.scheme,
-          fallback_used: true,
-        },
-      });
-    }
+    // stays "visible"; do not treat that as failure.
   }
 
-  const showAndroidGuideFlow =
+  const showAndroidHelpFlow =
     device === "android" || (device === "desktop" && showPhoneInstructions);
 
   const resolvedLpaUri = resolveLpaUri({
@@ -237,17 +203,17 @@ export default function EsimSetupWizardPage() {
     smdpAddress: esim?.lpa ? parseLpa(esim.lpa)?.smdpAddress : "",
   });
 
-  const installActions = useMemo(
-    () => (resolvedLpaUri ? buildAndroidInstallActions(resolvedLpaUri) : []),
+  const androidInstallAction = useMemo(
+    () => (resolvedLpaUri ? buildAndroidInstallAction(resolvedLpaUri) : null),
     [resolvedLpaUri],
   );
 
-  const showDeepLinkCta =
-    Boolean(androidGuideId) &&
-    showAndroidGuideFlow &&
+  const showAndroidInstallCta =
+    canUseAndroidDeepLink(device) &&
     canAttemptDeepLink() &&
-    guideHasInstallAction(androidGuideId!, "deep-link") &&
-    installActions.length > 0;
+    Boolean(androidInstallAction);
+
+  const helpGuideId = androidGuideId ?? GuideId.OTHER;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -359,69 +325,22 @@ export default function EsimSetupWizardPage() {
                         Install on Android
                       </h2>
                       <p className="text-sm text-slate-600">
-                        Choose your manufacturer, then scan the QR or enter
-                        SM-DP+ details.
+                        Tap Install eSIM, or use the QR / manual details below.
                       </p>
                     </>
                   )}
 
-                  {showAndroidGuideFlow ? (
-                    androidGuideId ? (
-                      <AndroidInstallGuide
-                        guideId={androidGuideId}
-                        onChangePhone={() => {
-                          setAndroidGuideId(null);
-                          setDeepLinkFailed(false);
-                          setFailedActionId(null);
-                          setDeepLinkBusyId(null);
-                        }}
-                      />
-                    ) : (
-                      <AndroidManufacturerPicker onSelect={selectAndroidGuide} />
-                    )
-                  ) : null}
-
-                  {showDeepLinkCta ? (
-                    <div className="space-y-2">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                        {installActions.map((action) => {
-                          const busy = deepLinkBusyId === action.id;
-                          const failed = failedActionId === action.id;
-                          const primary = action.id === "android-universal";
-                          return (
-                            <button
-                              key={action.id}
-                              type="button"
-                              disabled={Boolean(deepLinkBusyId)}
-                              onClick={() =>
-                                void attemptAndroidInstallAction(action)
-                              }
-                              className={
-                                primary
-                                  ? `inline-flex rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
-                                      failed
-                                        ? "border border-amber-300 bg-amber-50 text-amber-950"
-                                        : "bg-sky-700 text-white hover:bg-sky-800"
-                                    }`
-                                  : `inline-flex rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-60 ${
-                                      failed
-                                        ? "border-amber-300 bg-amber-50 text-amber-950"
-                                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                                    }`
-                              }
-                            >
-                              {busy ? "Opening…" : action.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {deepLinkFailed ? (
-                        <p className="text-sm text-amber-900" role="status">
-                          Couldn&apos;t open phone settings. You can continue
-                          using the QR code below.
-                        </p>
-                      ) : null}
-                    </div>
+                  {showAndroidInstallCta && androidInstallAction ? (
+                    <button
+                      type="button"
+                      disabled={deepLinkBusy}
+                      onClick={() =>
+                        void attemptAndroidInstall(androidInstallAction)
+                      }
+                      className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                    >
+                      {deepLinkBusy ? "Opening…" : androidInstallAction.label}
+                    </button>
                   ) : null}
 
                   {(esim.qrcode_url || esim.qrcode) && (
@@ -483,6 +402,40 @@ export default function EsimSetupWizardPage() {
                         />
                       ) : null}
                     </>
+                  ) : null}
+
+                  {showAndroidHelpFlow ? (
+                    <div className="space-y-3 border-t border-slate-100 pt-4">
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                        onClick={() => {
+                          setShowOemHelp((open) => {
+                            const next = !open;
+                            if (next && !androidGuideId) {
+                              setAndroidGuideId(GuideId.OTHER);
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        {showOemHelp ? "Hide help" : "Need help?"}
+                      </button>
+                      {showOemHelp ? (
+                        androidGuideId ? (
+                          <AndroidInstallGuide
+                            guideId={helpGuideId}
+                            onChangePhone={() => {
+                              setAndroidGuideId(null);
+                            }}
+                          />
+                        ) : (
+                          <AndroidManufacturerPicker
+                            onSelect={selectAndroidGuide}
+                          />
+                        )
+                      ) : null}
+                    </div>
                   ) : null}
 
                   <div className="flex flex-wrap gap-3 pt-2">

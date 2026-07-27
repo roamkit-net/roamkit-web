@@ -1,6 +1,9 @@
 /**
- * Sole UI entry for Android install guides.
+ * Sole UI entry for Android install **guides** (OEM help content).
  * Today: TypeScript registry. Later (PR F): may swap to REST (+ cache).
+ *
+ * Deep-link install capability lives on the Android platform
+ * (`canUseAndroidDeepLink` / `buildAndroidInstallAction`), not on guides.
  */
 
 import {

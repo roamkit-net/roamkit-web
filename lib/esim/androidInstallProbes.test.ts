@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  ANDROID_NETWORK_DASHBOARD_URI,
-  buildAndroidInstallActions,
+  buildAndroidInstallAction,
   buildAndroidUniversalLink,
 } from "@/lib/esim/androidInstallProbes";
 
@@ -18,21 +17,17 @@ describe("buildAndroidUniversalLink", () => {
   });
 });
 
-describe("buildAndroidInstallActions", () => {
-  it("returns empty for blank input", () => {
-    assert.deepEqual(buildAndroidInstallActions(""), []);
+describe("buildAndroidInstallAction", () => {
+  it("returns null for blank input", () => {
+    assert.equal(buildAndroidInstallAction(""), null);
   });
 
-  it("returns universal primary and Network dashboard secondary", () => {
-    const actions = buildAndroidInstallActions("LPA:1$host.example$CODE");
-    assert.deepEqual(
-      actions.map((a) => a.id),
-      ["android-universal", "settings-network-dashboard"],
-    );
-    assert.equal(actions[0]?.label, "Install eSIM");
-    assert.equal(actions[0]?.scheme, "https");
-    assert.ok(actions[0]?.uri.includes("esimsetup.android.com"));
-    assert.equal(actions[1]?.uri, ANDROID_NETWORK_DASHBOARD_URI);
-    assert.ok(actions[1]?.uri.includes("NetworkDashboardActivity"));
+  it("returns universal Install eSIM action only", () => {
+    const action = buildAndroidInstallAction("LPA:1$host.example$CODE");
+    assert.ok(action);
+    assert.equal(action?.id, "android-universal");
+    assert.equal(action?.label, "Install eSIM");
+    assert.equal(action?.scheme, "https");
+    assert.ok(action?.uri.includes("esimsetup.android.com"));
   });
 });
