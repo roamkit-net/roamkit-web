@@ -155,6 +155,39 @@ test.describe("voucher redeem on /me/deposit", () => {
     ).toBeVisible();
   });
 
+  test("idempotent replay shows already-redeemed copy", async ({ page }) => {
+    await seedAuth(page);
+    await mockCommonRoutes(page, "25.00");
+    await mockDepositInfo(page, true);
+
+    await page.route("**/api/v1/billing/vouchers/redeem/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          credited: "15.00",
+          balance: "25.00",
+          replay: true,
+        }),
+      });
+    });
+
+    await page.goto("/me/deposit", { waitUntil: "domcontentloaded" });
+    await page.getByTestId("voucher-code-input").fill("RK-REPLAY-1");
+    await page.getByTestId("voucher-redeem-submit").click();
+    const success = page.getByTestId("voucher-redeem-success");
+    await expect(success).toBeVisible();
+    await expect(success).toContainText("Already redeemed");
+    await expect(success).toContainText(
+      "You already redeemed this voucher. Your balance was not changed.",
+    );
+    await expect(success).not.toContainText("+15");
+    await expect(
+      success.getByText(/Current balance:\s*25\.00/),
+    ).toBeVisible();
+    await expect(success.getByRole("button", { name: "Redeem another" })).toBeVisible();
+  });
+
   test("maps invalid / expired / revoked errors", async ({ page }) => {
     await seedAuth(page);
     await mockCommonRoutes(page);

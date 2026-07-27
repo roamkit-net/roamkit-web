@@ -79,6 +79,8 @@ export type BillingFeatures = {
 export type VoucherRedeemResponse = {
   credited: string;
   balance: string;
+  /** True when this account already redeemed the voucher (idempotent replay). */
+  replay?: boolean;
 };
 
 export type DepositStatus = "pending" | "completed" | "failed";
