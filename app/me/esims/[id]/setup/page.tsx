@@ -24,9 +24,9 @@ import {
 } from "@/lib/esim/device";
 import { guideHasInstallAction } from "@/lib/esim/guideService";
 import {
-  buildAndroidInstallProbes,
-  type AndroidInstallProbe,
-  type AndroidInstallProbeId,
+  buildAndroidInstallActions,
+  type AndroidInstallAction,
+  type AndroidInstallActionId,
 } from "@/lib/esim/androidInstallProbes";
 import {
   canAttemptDeepLink,
@@ -67,9 +67,9 @@ export default function EsimSetupWizardPage() {
   const [showPhoneInstructions, setShowPhoneInstructions] = useState(false);
   const [deepLinkFailed, setDeepLinkFailed] = useState(false);
   const [deepLinkBusyId, setDeepLinkBusyId] =
-    useState<AndroidInstallProbeId | null>(null);
-  const [failedProbeId, setFailedProbeId] =
-    useState<AndroidInstallProbeId | null>(null);
+    useState<AndroidInstallActionId | null>(null);
+  const [failedActionId, setFailedActionId] =
+    useState<AndroidInstallActionId | null>(null);
   const sessionId = useRef(createSetupSessionId());
   const telemetry = useMemo(
     () => createEsimTelemetry(esimId, sessionId.current),
@@ -163,7 +163,7 @@ export default function EsimSetupWizardPage() {
   function selectAndroidGuide(id: AndroidGuideId) {
     setAndroidGuideId(id);
     setDeepLinkFailed(false);
-    setFailedProbeId(null);
+    setFailedActionId(null);
     setDeepLinkBusyId(null);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
@@ -171,55 +171,57 @@ export default function EsimSetupWizardPage() {
     });
   }
 
-  async function attemptAndroidDeepLink(probe: AndroidInstallProbe) {
+  async function attemptAndroidInstallAction(action: AndroidInstallAction) {
     if (!esim || !androidGuideId || deepLinkBusyId) {
       return;
     }
-    if (!probe.uri || !canAttemptDeepLink()) {
+    if (!action.uri || !canAttemptDeepLink()) {
       setDeepLinkFailed(true);
-      setFailedProbeId(probe.id);
+      setFailedActionId(action.id);
       telemetry.track("install.manual_install_clicked", {
         resumeStep: 1,
         payload: {
           manufacturer: androidGuideId,
           deep_link_attempted: false,
-          deep_link_probe: probe.id,
-          deep_link_scheme: probe.scheme,
+          deep_link_probe: action.id,
+          deep_link_scheme: action.scheme,
           fallback_used: true,
         },
       });
       return;
     }
 
-    setDeepLinkBusyId(probe.id);
+    setDeepLinkBusyId(action.id);
     setDeepLinkFailed(false);
-    setFailedProbeId(null);
+    setFailedActionId(null);
     telemetry.track("install.manual_install_clicked", {
       resumeStep: 1,
       payload: {
         manufacturer: androidGuideId,
         deep_link_attempted: true,
-        deep_link_probe: probe.id,
-        deep_link_scheme: probe.scheme,
+        deep_link_probe: action.id,
+        deep_link_scheme: action.scheme,
         fallback_used: false,
       },
     });
 
     const observation = observeDeepLinkAttempt(2500);
-    launchInstallAction({ type: probe.launchType, uri: probe.uri });
+    launchInstallAction({ type: action.launchType, uri: action.uri });
     const result = await observation;
     setDeepLinkBusyId(null);
-    if (result === "failure") {
+    // Universal HTTPS shows a system dialog over the page — visibility often
+    // stays "visible", so do not treat that as failure.
+    if (result === "failure" && action.scheme !== "https") {
       setDeepLinkFailed(true);
-      setFailedProbeId(probe.id);
+      setFailedActionId(action.id);
       telemetry.track("install.manual_install_clicked", {
         resumeStep: 1,
-        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}:${probe.id}`,
+        idempotencyKey: `${sessionId.current}:deep-link-fallback:${androidGuideId}:${action.id}`,
         payload: {
           manufacturer: androidGuideId,
           deep_link_attempted: true,
-          deep_link_probe: probe.id,
-          deep_link_scheme: probe.scheme,
+          deep_link_probe: action.id,
+          deep_link_scheme: action.scheme,
           fallback_used: true,
         },
       });
@@ -235,8 +237,8 @@ export default function EsimSetupWizardPage() {
     smdpAddress: esim?.lpa ? parseLpa(esim.lpa)?.smdpAddress : "",
   });
 
-  const installProbes = useMemo(
-    () => (resolvedLpaUri ? buildAndroidInstallProbes(resolvedLpaUri) : []),
+  const installActions = useMemo(
+    () => (resolvedLpaUri ? buildAndroidInstallActions(resolvedLpaUri) : []),
     [resolvedLpaUri],
   );
 
@@ -245,7 +247,7 @@ export default function EsimSetupWizardPage() {
     showAndroidGuideFlow &&
     canAttemptDeepLink() &&
     guideHasInstallAction(androidGuideId!, "deep-link") &&
-    installProbes.length > 0;
+    installActions.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
@@ -370,7 +372,7 @@ export default function EsimSetupWizardPage() {
                         onChangePhone={() => {
                           setAndroidGuideId(null);
                           setDeepLinkFailed(false);
-                          setFailedProbeId(null);
+                          setFailedActionId(null);
                           setDeepLinkBusyId(null);
                         }}
                       />
@@ -381,36 +383,42 @@ export default function EsimSetupWizardPage() {
 
                   {showDeepLinkCta ? (
                     <div className="space-y-2">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Spike round 3 — try Android universal first. Pass = eSIM
-                        installer only (Play Store = fail)
-                      </p>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                        {installProbes.map((probe) => {
-                          const busy = deepLinkBusyId === probe.id;
-                          const failed = failedProbeId === probe.id;
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                        {installActions.map((action) => {
+                          const busy = deepLinkBusyId === action.id;
+                          const failed = failedActionId === action.id;
+                          const primary = action.id === "android-universal";
                           return (
                             <button
-                              key={probe.id}
+                              key={action.id}
                               type="button"
                               disabled={Boolean(deepLinkBusyId)}
-                              onClick={() => void attemptAndroidDeepLink(probe)}
-                              className={`inline-flex rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
-                                failed
-                                  ? "border border-amber-300 bg-amber-50 text-amber-950"
-                                  : "bg-sky-700 text-white hover:bg-sky-800"
-                              }`}
+                              onClick={() =>
+                                void attemptAndroidInstallAction(action)
+                              }
+                              className={
+                                primary
+                                  ? `inline-flex rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+                                      failed
+                                        ? "border border-amber-300 bg-amber-50 text-amber-950"
+                                        : "bg-sky-700 text-white hover:bg-sky-800"
+                                    }`
+                                  : `inline-flex rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+                                      failed
+                                        ? "border-amber-300 bg-amber-50 text-amber-950"
+                                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                                    }`
+                              }
                             >
-                              {busy ? "Opening…" : probe.label}
+                              {busy ? "Opening…" : action.label}
                             </button>
                           );
                         })}
                       </div>
                       {deepLinkFailed ? (
                         <p className="text-sm text-amber-900" role="status">
-                          Couldn&apos;t open your phone&apos;s eSIM installer
-                          {failedProbeId ? ` (${failedProbeId})` : ""}. Try
-                          another probe, or use the QR code below.
+                          Couldn&apos;t open phone settings. You can continue
+                          using the QR code below.
                         </p>
                       ) : null}
                     </div>

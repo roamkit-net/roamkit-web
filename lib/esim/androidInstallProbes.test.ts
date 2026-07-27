@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  buildAndroidInstallProbes,
+  ANDROID_NETWORK_DASHBOARD_URI,
+  buildAndroidInstallActions,
   buildAndroidUniversalLink,
 } from "@/lib/esim/androidInstallProbes";
 
@@ -17,30 +18,21 @@ describe("buildAndroidUniversalLink", () => {
   });
 });
 
-describe("buildAndroidInstallProbes", () => {
+describe("buildAndroidInstallActions", () => {
   it("returns empty for blank input", () => {
-    assert.deepEqual(buildAndroidInstallProbes(""), []);
+    assert.deepEqual(buildAndroidInstallActions(""), []);
   });
 
-  it("prioritizes Android universal link and Settings bridges", () => {
-    const probes = buildAndroidInstallProbes("LPA:1$host.example$CODE");
+  it("returns universal primary and Network dashboard secondary", () => {
+    const actions = buildAndroidInstallActions("LPA:1$host.example$CODE");
     assert.deepEqual(
-      probes.map((p) => p.id),
-      [
-        "android-universal",
-        "android-universal-raw",
-        "settings-network",
-        "settings-network-dashboard",
-        "intent-manage-sims",
-        "lpa",
-      ],
+      actions.map((a) => a.id),
+      ["android-universal", "settings-network-dashboard"],
     );
-    assert.equal(probes[0]?.scheme, "https");
-    assert.ok(probes[0]?.uri.includes("esimsetup.android.com"));
-    assert.ok(probes[0]?.uri.includes("carddata="));
-    assert.ok(probes[1]?.uri.includes("carddata=LPA:1$host.example$CODE"));
-    assert.ok(
-      probes[2]?.uri.includes("android.settings.NETWORK_OPERATOR_SETTINGS"),
-    );
+    assert.equal(actions[0]?.label, "Install eSIM");
+    assert.equal(actions[0]?.scheme, "https");
+    assert.ok(actions[0]?.uri.includes("esimsetup.android.com"));
+    assert.equal(actions[1]?.uri, ANDROID_NETWORK_DASHBOARD_URI);
+    assert.ok(actions[1]?.uri.includes("NetworkDashboardActivity"));
   });
 });

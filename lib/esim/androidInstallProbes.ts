@@ -1,29 +1,26 @@
 /**
- * Spike-only Android install URI variants for A/B probing on device.
- * Keep behind NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK; remove losers after Decision Log.
+ * Android install deep links for RoamKit setup UX.
+ *
+ * Product choice (spike Decision Log, Z Fold 6 2026-07-27):
+ * - Primary: Google Android universal HTTPS link (esimsetup.android.com)
+ * - Secondary: Network dashboard Settings bridge (Connections → SIM manager)
+ *
+ * Losers removed: bare LPA:, intent:// packages, Play Store package targets,
+ * universal-raw duplicate, NETWORK_OPERATOR_SETTINGS, Manage SIMs.
  *
  * Security: never log or telemetrize full URIs, SM-DP+, or Activation Codes.
- *
- * Pass = system eSIM / Add eSIM UI. Play Store / “item not found” = fail
- * (even if the browser backgrounds).
  */
 
 import type { InstallActionType } from "@/lib/esim/launchInstallAction";
 
-export type AndroidInstallProbeId =
+export type AndroidInstallActionId =
   | "android-universal"
-  | "android-universal-raw"
-  | "settings-network"
-  | "settings-network-dashboard"
-  | "intent-manage-sims"
-  | "lpa";
+  | "settings-network-dashboard";
 
-export type AndroidInstallProbe = {
-  id: AndroidInstallProbeId;
-  /** Short button label shown in spike UI */
+export type AndroidInstallAction = {
+  id: AndroidInstallActionId;
   label: string;
-  /** Safe telemetry / matrix scheme token (no secrets) */
-  scheme: "lpa" | "intent" | "https";
+  scheme: "https" | "intent";
   launchType: InstallActionType;
   uri: string;
 };
@@ -42,7 +39,7 @@ function canonicalLpa(lpaUri: string): string {
 
 /**
  * Google Android universal link (mirror of Apple esimsetup.apple.com).
- * @see https://esimsetup.android.com/esim_qrcode_provisioning?carddata=…
+ * Opens native “Set up eSIM” when GMS / SIM Manager supports it.
  */
 export function buildAndroidUniversalLink(lpaUri: string): string | null {
   const canonical = canonicalLpa(lpaUri);
@@ -52,21 +49,18 @@ export function buildAndroidUniversalLink(lpaUri: string): string | null {
   return `https://esimsetup.android.com/esim_qrcode_provisioning?carddata=${encodeURIComponent(canonical)}`;
 }
 
+/** Opens Samsung/Android Connections (Veze) — SIM manager is one tap away. */
+export const ANDROID_NETWORK_DASHBOARD_URI =
+  "intent:#Intent;action=android.intent.action.MAIN;component=com.android.settings/.Settings$NetworkDashboardActivity;end";
+
 /**
- * Build probe URIs from a resolved GSMA LPA string (`LPA:1$SM-DP+$code`).
- * Returns [] when input is empty.
- *
- * Round 3: Google universal HTTPS link + Samsung Settings bridges.
- * (Round 1–2: LPA:/intent packages → fail or Play Store miss.)
+ * Product install actions for guides with `deep-link` capability.
+ * Primary first; Settings bridge second.
  */
-export function buildAndroidInstallProbes(
+export function buildAndroidInstallActions(
   lpaUri: string,
-): AndroidInstallProbe[] {
-  const canonical = canonicalLpa(lpaUri);
-  if (!canonical) {
-    return [];
-  }
-  const universal = buildAndroidUniversalLink(canonical);
+): AndroidInstallAction[] {
+  const universal = buildAndroidUniversalLink(lpaUri);
   if (!universal) {
     return [];
   }
@@ -74,46 +68,17 @@ export function buildAndroidInstallProbes(
   return [
     {
       id: "android-universal",
-      label: "Install (Android universal)",
+      label: "Install eSIM",
       scheme: "https",
       launchType: "android-https",
       uri: universal,
     },
     {
-      id: "android-universal-raw",
-      label: "Install (Android universal raw)",
-      scheme: "https",
-      launchType: "android-https",
-      // Unencoded $ — some handlers expect QR-identical carddata.
-      uri: `https://esimsetup.android.com/esim_qrcode_provisioning?carddata=${canonical}`,
-    },
-    {
-      id: "settings-network",
-      label: "Open (Network settings)",
-      scheme: "intent",
-      launchType: "android-intent",
-      uri: "intent:#Intent;action=android.settings.NETWORK_OPERATOR_SETTINGS;package=com.android.settings;end",
-    },
-    {
       id: "settings-network-dashboard",
-      label: "Open (Network dashboard)",
+      label: "Open Connections settings",
       scheme: "intent",
       launchType: "android-intent",
-      uri: "intent:#Intent;action=android.intent.action.MAIN;component=com.android.settings/.Settings$NetworkDashboardActivity;end",
-    },
-    {
-      id: "intent-manage-sims",
-      label: "Open (Manage SIMs)",
-      scheme: "intent",
-      launchType: "android-intent",
-      uri: "intent:#Intent;action=android.settings.MANAGE_ALL_SIM_PROFILES_SETTINGS;end",
-    },
-    {
-      id: "lpa",
-      label: "Install (LPA: baseline)",
-      scheme: "lpa",
-      launchType: "android-lpa",
-      uri: canonical,
+      uri: ANDROID_NETWORK_DASHBOARD_URI,
     },
   ];
 }
