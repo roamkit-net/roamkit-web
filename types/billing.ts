@@ -54,6 +54,8 @@ export type DepositInfo = {
   eip681_uri: string;
   walletconnect_enabled: boolean;
   subscriptions_enabled: boolean;
+  /** Present once API companion lands; treat missing as false. */
+  vouchers_enabled?: boolean;
 };
 
 /** Mapped deposit-info for UI — never hardcode these values. */
@@ -71,6 +73,12 @@ export type BillingFeatures = {
   billingEnabled: boolean;
   walletConnect: boolean;
   subscriptions: boolean;
+  vouchers: boolean;
+};
+
+export type VoucherRedeemResponse = {
+  credited: string;
+  balance: string;
 };
 
 export type DepositStatus = "pending" | "completed" | "failed";

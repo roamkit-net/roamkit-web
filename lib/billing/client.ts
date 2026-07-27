@@ -5,6 +5,7 @@ import type {
   DepositInfo,
   DepositRequest,
   VerifyDepositPayload,
+  VoucherRedeemResponse,
 } from "@/types/billing";
 
 function formatBillingError(body: unknown, fallback: string): string {
@@ -125,4 +126,36 @@ export async function verifyWallet(
     "Unable to verify wallet deposit.",
     { signal },
   );
+}
+
+/** POST /api/v1/billing/vouchers/redeem/ */
+export async function redeemVoucher(
+  code: string,
+  options?: BillingRequestOptions,
+): Promise<VoucherRedeemResponse> {
+  const requestId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `voucher-${Date.now()}`;
+  try {
+    return await fetchApi<VoucherRedeemResponse>(
+      "/api/v1/billing/vouchers/redeem/",
+      {
+        method: "POST",
+        auth: true,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+        },
+        body: JSON.stringify({ code }),
+        cache: "no-store",
+        signal: options?.signal,
+      },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw error;
+  }
 }
