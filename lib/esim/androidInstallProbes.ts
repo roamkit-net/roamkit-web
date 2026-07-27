@@ -11,19 +11,19 @@
 import type { InstallActionType } from "@/lib/esim/launchInstallAction";
 
 export type AndroidInstallProbeId =
-  | "lpa"
-  | "intent"
-  | "intent-samsung"
-  | "intent-euicc"
-  | "intent-euicc-activate"
-  | "intent-manage-sims";
+  | "android-universal"
+  | "android-universal-raw"
+  | "settings-network"
+  | "settings-network-dashboard"
+  | "intent-manage-sims"
+  | "lpa";
 
 export type AndroidInstallProbe = {
   id: AndroidInstallProbeId;
   /** Short button label shown in spike UI */
   label: string;
   /** Safe telemetry / matrix scheme token (no secrets) */
-  scheme: "lpa" | "intent";
+  scheme: "lpa" | "intent" | "https";
   launchType: InstallActionType;
   uri: string;
 };
@@ -40,16 +40,24 @@ function canonicalLpa(lpaUri: string): string {
   return `LPA:${body}`;
 }
 
-function intentLpa(body: string, packageName: string): string {
-  return `intent://${body}#Intent;scheme=lpa;package=${packageName};action=android.intent.action.VIEW;end`;
+/**
+ * Google Android universal link (mirror of Apple esimsetup.apple.com).
+ * @see https://esimsetup.android.com/esim_qrcode_provisioning?carddata=…
+ */
+export function buildAndroidUniversalLink(lpaUri: string): string | null {
+  const canonical = canonicalLpa(lpaUri);
+  if (!canonical) {
+    return null;
+  }
+  return `https://esimsetup.android.com/esim_qrcode_provisioning?carddata=${encodeURIComponent(canonical)}`;
 }
 
 /**
  * Build probe URIs from a resolved GSMA LPA string (`LPA:1$SM-DP+$code`).
  * Returns [] when input is empty.
  *
- * Round 2 (after LPA: / bare intent:// failed; intent+phone → Play Store miss):
- * try OEM eUICC / SIM packages and activation settings actions.
+ * Round 3: Google universal HTTPS link + Samsung Settings bridges.
+ * (Round 1–2: LPA:/intent packages → fail or Play Store miss.)
  */
 export function buildAndroidInstallProbes(
   lpaUri: string,
@@ -58,50 +66,54 @@ export function buildAndroidInstallProbes(
   if (!canonical) {
     return [];
   }
-  const body = lpaBody(canonical);
+  const universal = buildAndroidUniversalLink(canonical);
+  if (!universal) {
+    return [];
+  }
 
   return [
     {
-      id: "lpa",
-      label: "Install (LPA:)",
-      scheme: "lpa",
-      launchType: "android-lpa",
-      uri: canonical,
+      id: "android-universal",
+      label: "Install (Android universal)",
+      scheme: "https",
+      launchType: "android-https",
+      uri: universal,
     },
     {
-      id: "intent",
-      label: "Install (intent://)",
-      scheme: "intent",
-      launchType: "android-intent",
-      uri: `intent://${body}#Intent;scheme=lpa;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`,
+      id: "android-universal-raw",
+      label: "Install (Android universal raw)",
+      scheme: "https",
+      launchType: "android-https",
+      // Unencoded $ — some handlers expect QR-identical carddata.
+      uri: `https://esimsetup.android.com/esim_qrcode_provisioning?carddata=${canonical}`,
     },
     {
-      id: "intent-samsung",
-      label: "Install (Samsung SIM UI)",
+      id: "settings-network",
+      label: "Open (Network settings)",
       scheme: "intent",
       launchType: "android-intent",
-      uri: intentLpa(body, "com.samsung.android.app.telephonyui"),
+      uri: "intent:#Intent;action=android.settings.NETWORK_OPERATOR_SETTINGS;package=com.android.settings;end",
     },
     {
-      id: "intent-euicc",
-      label: "Install (Google eUICC)",
+      id: "settings-network-dashboard",
+      label: "Open (Network dashboard)",
       scheme: "intent",
       launchType: "android-intent",
-      uri: intentLpa(body, "com.google.android.euicc"),
-    },
-    {
-      id: "intent-euicc-activate",
-      label: "Install (eUICC activate)",
-      scheme: "intent",
-      launchType: "android-intent",
-      uri: "intent:#Intent;action=android.telephony.euicc.action.START_EUICC_ACTIVATION;end",
+      uri: "intent:#Intent;action=android.intent.action.MAIN;component=com.android.settings/.Settings$NetworkDashboardActivity;end",
     },
     {
       id: "intent-manage-sims",
-      label: "Install (Manage SIMs)",
+      label: "Open (Manage SIMs)",
       scheme: "intent",
       launchType: "android-intent",
       uri: "intent:#Intent;action=android.settings.MANAGE_ALL_SIM_PROFILES_SETTINGS;end",
+    },
+    {
+      id: "lpa",
+      label: "Install (LPA: baseline)",
+      scheme: "lpa",
+      launchType: "android-lpa",
+      uri: canonical,
     },
   ];
 }

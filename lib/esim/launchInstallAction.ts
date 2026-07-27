@@ -5,7 +5,11 @@
  * Security: never log or telemetrize full LPA URIs, SM-DP+, or Activation Codes.
  */
 
-export type InstallActionType = "apple" | "android-lpa" | "android-intent";
+export type InstallActionType =
+  | "apple"
+  | "android-lpa"
+  | "android-intent"
+  | "android-https";
 
 export type LaunchInstallActionInput = {
   type: InstallActionType;
