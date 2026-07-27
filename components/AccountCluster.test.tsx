@@ -79,6 +79,7 @@ describe("account cluster", () => {
           billingEnabled: true,
           walletConnect: false,
           subscriptions: false,
+          vouchers: false,
         },
       }),
     );
@@ -103,6 +104,7 @@ describe("account cluster", () => {
           billingEnabled: false,
           walletConnect: false,
           subscriptions: false,
+          vouchers: false,
         },
       }),
     );

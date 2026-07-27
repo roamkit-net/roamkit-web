@@ -22,7 +22,12 @@ export type BillingTelemetryEvent =
   | "spend_retry_after_deposit"
   | "purchase_confirm_opened"
   | "purchase_confirm_cancelled"
-  | "purchase_confirm_confirmed";
+  | "purchase_confirm_confirmed"
+  | "voucher_scan_started"
+  | "voucher_scan_success"
+  | "voucher_scan_failed"
+  | "voucher_redeem_success"
+  | "voucher_redeem_failed";
 
 export type BillingTelemetry = {
   track(
