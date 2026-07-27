@@ -10,6 +10,8 @@ import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
+import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemErrorBoundary";
+import { VoucherRedeemForm } from "@/components/deposit/VoucherRedeemForm";
 import { isWalletConnectConfigured } from "@/config/appkit";
 import {
   ApiError,
@@ -26,6 +28,7 @@ import {
 } from "@/lib/orders/insufficientCredits";
 import { isSafeReturnPath, loginHref } from "@/lib/navigation/safePath";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
+import { normalizeVoucherCode } from "@/lib/billing/voucherCode";
 
 const WalletDepositWithAppKit = dynamic(
   () =>
@@ -78,6 +81,11 @@ function DepositPageContent() {
 
   const amountParam = searchParams.get("amount");
   const returnParam = searchParams.get("return");
+  const codeParam = searchParams.get("code");
+  /** Capture once — URL `code` is stripped before deposit-info finishes loading. */
+  const [voucherPrefill] = useState(() =>
+    codeParam ? normalizeVoucherCode(codeParam) : undefined,
+  );
   const returnPath =
     returnParam && isSafeReturnPath(returnParam) ? returnParam : null;
   const returnLabel = returnPath
@@ -103,6 +111,20 @@ function DepositPageContent() {
       setAmount(normalizeDepositAmount(amountParam));
     }
   }, [amountParam]);
+
+  useEffect(() => {
+    if (!codeParam) {
+      return;
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("code");
+    const qs = params.toString();
+    const href = qs ? `/me/deposit?${qs}` : "/me/deposit";
+    // Prefer history API so the query is stripped even if App Router
+    // soft-navigation is delayed; prefill is already captured in state.
+    window.history.replaceState(window.history.state, "", href);
+    router.replace(href, { scroll: false });
+  }, [codeParam, router, searchParams]);
 
   useEffect(() => {
     const depositNext = `/me/deposit${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
@@ -297,6 +319,17 @@ function DepositPageContent() {
                 </p>
               </label>
             </section>
+
+            {features.vouchers ? (
+              <VoucherRedeemErrorBoundary>
+                <VoucherRedeemForm
+                  enabled
+                  initialCode={voucherPrefill}
+                  tokenSymbol={config.tokenSymbol}
+                  refreshBalance={refreshBalance}
+                />
+              </VoucherRedeemErrorBoundary>
+            ) : null}
 
             <Eip681QrPanel config={config} amount={amount} />
 

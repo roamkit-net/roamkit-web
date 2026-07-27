@@ -67,9 +67,17 @@ describe("android guides registry", () => {
     assert.equal(resolveAndroidGuideId(""), GuideId.OTHER);
   });
 
-  it("guideHasInstallAction reflects registry capabilities", () => {
-    assert.equal(guideHasInstallAction(GuideId.SAMSUNG, "deep-link"), true);
-    assert.equal(guideHasInstallAction(GuideId.PIXEL, "deep-link"), false);
+  it("guideHasInstallAction is guide/qr content only (not deep-link)", () => {
+    assert.equal(guideHasInstallAction(GuideId.SAMSUNG, "guide"), true);
+    assert.equal(guideHasInstallAction(GuideId.SAMSUNG, "qr"), true);
+    assert.equal(guideHasInstallAction(GuideId.PIXEL, "guide"), true);
     assert.equal(guideHasInstallAction(GuideId.OTHER, "guide"), true);
+    for (const guide of ANDROID_GUIDES) {
+      assert.equal(
+        guide.installActions.includes("deep-link" as never),
+        false,
+        `${guide.id} must not own deep-link capability`,
+      );
+    }
   });
 });

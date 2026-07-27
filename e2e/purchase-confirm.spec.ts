@@ -23,6 +23,7 @@ const mockDepositInfo = {
   eip681_uri: "ethereum:0xtoken@80002/transfer?address=0x1",
   walletconnect_enabled: false,
   subscriptions_enabled: false,
+  vouchers_enabled: false,
 };
 
 const mockEsim = {

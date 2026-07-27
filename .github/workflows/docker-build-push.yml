@@ -61,6 +61,7 @@ jobs:
           PRODUCTION_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION }}
           STAGING_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
           PRODUCTION_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID_PRODUCTION }}
+          ANDROID_LPA_DEEP_LINK: ${{ vars.NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK }}
         run: |
           set -euo pipefail
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
@@ -71,6 +72,8 @@ jobs:
             echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${PRODUCTION_SITE_KEY:-}"
             GOOGLE_CLIENT_ID="${PRODUCTION_GOOGLE_CLIENT_ID:-}"
+            # Never bake Android LPA deep link into production images.
+            ANDROID_LPA=""
             # Fail closed if main would bake the staging sitekey.
             if [ -n "${STAGING_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${STAGING_SITE_KEY}" ]; then
               echo "ERROR: main must not bake staging Turnstile sitekey" >&2
@@ -92,6 +95,7 @@ jobs:
             echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${STAGING_SITE_KEY:-}"
             GOOGLE_CLIENT_ID="${STAGING_GOOGLE_CLIENT_ID:-}"
+            ANDROID_LPA="${ANDROID_LPA_DEEP_LINK:-}"
             if [ -n "${PRODUCTION_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${PRODUCTION_SITE_KEY}" ]; then
               echo "ERROR: develop/non-main must not bake production Turnstile sitekey" >&2
               exit 1
@@ -103,6 +107,7 @@ jobs:
           fi
           echo "turnstile_site_key=${SITE_KEY}" >> "$GITHUB_OUTPUT"
           echo "google_client_id=${GOOGLE_CLIENT_ID}" >> "$GITHUB_OUTPUT"
+          echo "android_lpa_deep_link=${ANDROID_LPA}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -117,6 +122,7 @@ jobs:
             NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ steps.urls.outputs.turnstile_site_key }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ steps.urls.outputs.google_client_id }}
+            NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK=${{ steps.urls.outputs.android_lpa_deep_link }}
             ROAMKIT_GIT_SHA=${{ github.sha }}
             ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
             ROAMKIT_IMAGE_TAG=${{ github.sha }}

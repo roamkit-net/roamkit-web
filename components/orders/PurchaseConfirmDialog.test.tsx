@@ -74,6 +74,7 @@ function billingValue(
       billingEnabled: true,
       walletConnect: false,
       subscriptions: false,
+      vouchers: false,
     },
     isLoading: false,
     isFetching: false,

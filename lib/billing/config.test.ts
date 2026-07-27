@@ -19,6 +19,7 @@ const sampleInfo: DepositInfo = {
   eip681_uri: "ethereum:0xdef@80002/transfer?address=0xabc",
   walletconnect_enabled: true,
   subscriptions_enabled: false,
+  vouchers_enabled: true,
 };
 
 /** Empty / zeroed payload — mapper must not invent chain/token defaults. */
@@ -32,6 +33,7 @@ const minimalInfo: DepositInfo = {
   eip681_uri: "",
   walletconnect_enabled: false,
   subscriptions_enabled: false,
+  vouchers_enabled: false,
 };
 
 const sampleDisplayConfig: BillingConfigResponse = {
@@ -125,6 +127,7 @@ describe("toBillingFeatures", () => {
       billingEnabled: true,
       walletConnect: true,
       subscriptions: false,
+      vouchers: true,
     });
   });
 
@@ -134,6 +137,7 @@ describe("toBillingFeatures", () => {
       billingEnabled: false,
       walletConnect: false,
       subscriptions: false,
+      vouchers: false,
     });
   });
 
@@ -143,6 +147,7 @@ describe("toBillingFeatures", () => {
       billingEnabled: true,
       walletConnect: false,
       subscriptions: false,
+      vouchers: false,
     });
   });
 });

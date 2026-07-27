@@ -18,7 +18,7 @@ export function AndroidManufacturerPicker({
         Choose your phone
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        Select your manufacturer for step-by-step install instructions.
+        Optional manufacturer steps if the Install button or QR did not work.
       </p>
       <ul className="mt-4 space-y-2">
         {guides.map((guide) => (

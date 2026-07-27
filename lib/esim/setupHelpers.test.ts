@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  canUseAndroidDeepLink,
   canUseAppleInstallLink,
   detectInstallDevice,
   getAvailableInstallActions,
@@ -64,33 +65,39 @@ describe("esim setup helpers", () => {
       label: string;
       ua: string;
       apple: boolean;
+      androidDeepLink: boolean;
     }> = [
       {
         label: "iphone",
         ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
         apple: true,
+        androidDeepLink: false,
       },
       {
         label: "ipad",
         ua: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)",
         apple: true,
+        androidDeepLink: false,
       },
       {
         label: "ipod",
         ua: "Mozilla/5.0 (iPod touch; CPU iPhone OS 15_0 like Mac OS X)",
         apple: true,
+        androidDeepLink: false,
       },
       {
         label: "android",
         ua: "Mozilla/5.0 (Linux; Android 14; Pixel 8)",
         apple: false,
+        androidDeepLink: true,
       },
       {
         label: "desktop",
         ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         apple: false,
+        androidDeepLink: false,
       },
-      { label: "unknown", ua: "", apple: false },
+      { label: "unknown", ua: "", apple: false, androidDeepLink: false },
     ];
 
     for (const row of cases) {
@@ -101,9 +108,19 @@ describe("esim setup helpers", () => {
         `${row.label}: canUseAppleInstallLink`,
       );
       assert.equal(
+        canUseAndroidDeepLink(device),
+        row.androidDeepLink,
+        `${row.label}: canUseAndroidDeepLink`,
+      );
+      assert.equal(
         getAvailableInstallActions(device).appleInstall,
         row.apple,
         `${row.label}: appleInstall`,
+      );
+      assert.equal(
+        getAvailableInstallActions(device).androidDeepLink,
+        row.androidDeepLink,
+        `${row.label}: androidDeepLink`,
       );
       assert.equal(getAvailableInstallActions(device).qrInstall, true);
       assert.equal(getAvailableInstallActions(device).manualInstall, true);

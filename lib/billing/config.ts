@@ -60,5 +60,6 @@ export function toBillingFeatures(
     billingEnabled: options.billingEnabled,
     walletConnect: info?.walletconnect_enabled ?? false,
     subscriptions: info?.subscriptions_enabled ?? false,
+    vouchers: info?.vouchers_enabled ?? false,
   };
 }
