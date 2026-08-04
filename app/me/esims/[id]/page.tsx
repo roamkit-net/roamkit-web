@@ -33,6 +33,11 @@ import {
   type InstallDeviceClass,
 } from "@/lib/esim/device";
 import {
+  esimDestinationLabel,
+  formatEsimDateTime,
+  formatEsimStatus,
+} from "@/lib/esim/display";
+import {
   activationPolicyMessage,
   createEsimTelemetry,
   createSetupSessionId,
@@ -309,14 +314,14 @@ export default function MyEsimDetailPage() {
           <div className="mt-8 space-y-6">
             <header>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-                {esim.status || "eSIM"}
+                {formatEsimStatus(esim.status)}
               </p>
-              <h1 className="mt-3 font-mono text-2xl font-bold tracking-tight sm:text-3xl">
-                {esim.iccid}
+              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                {esimDestinationLabel(esim)}
               </h1>
-              {esim.lpa ? (
-                <p className="mt-3 break-all text-sm text-slate-600">
-                  LPA: {esim.lpa}
+              {esim.location_title?.trim() && esim.package_title?.trim() ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  {esim.package_title}
                 </p>
               ) : null}
               {needsSetup(esim) ? (
@@ -333,6 +338,66 @@ export default function MyEsimDetailPage() {
                 {activationPolicyMessage(esim.activation_policy)}
               </p>
             </header>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">
+                eSIM details
+              </h2>
+              <dl className="mt-4 space-y-3 text-sm">
+                {esim.data_allowance ? (
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt className="text-slate-500">Data</dt>
+                    <dd className="font-medium text-slate-900">
+                      {esim.data_allowance}
+                    </dd>
+                  </div>
+                ) : null}
+                {esim.validity_days != null ? (
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt className="text-slate-500">Validity</dt>
+                    <dd className="font-medium text-slate-900">
+                      {esim.validity_days === 1
+                        ? "1 day"
+                        : `${esim.validity_days} days`}
+                    </dd>
+                  </div>
+                ) : null}
+                {esim.paid_usd != null && esim.paid_usd !== "" ? (
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt className="text-slate-500">Paid</dt>
+                    <dd className="font-medium text-slate-900">
+                      <CatalogPriceDisplay amount={esim.paid_usd} />
+                    </dd>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-500">Issued at</dt>
+                  <dd className="font-medium text-slate-900">
+                    {formatEsimDateTime(esim.issued_at ?? esim.created_at)}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-500">Activated at</dt>
+                  <dd className="font-medium text-slate-900">
+                    {formatEsimDateTime(esim.activated_at)}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-500">ICCID</dt>
+                  <dd className="font-mono font-medium text-slate-900">
+                    {esim.iccid}
+                  </dd>
+                </div>
+                {esim.lpa ? (
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt className="text-slate-500">LPA</dt>
+                    <dd className="max-w-[70%] break-all text-right font-medium text-slate-900">
+                      {esim.lpa}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
