@@ -7,7 +7,7 @@ import { rankPopularLocations } from "./ranking";
 
 /**
  * Golden snapshot for HR geo ranking.
- * Update deliberately when neighbor-map or ranking rules change.
+ * Update deliberately when recommended-markets or ranking rules change.
  */
 function loc(
   partial: Partial<Location> &
@@ -83,21 +83,21 @@ const goldenCatalog: Location[] = [
     is_popular: true,
   }),
   loc({
-    slug: "slovenia",
-    title: "Slovenia",
-    country_code: "SI",
-    coverage_type: "local",
-  }),
-  loc({
-    slug: "austria",
-    title: "Austria",
-    country_code: "AT",
-    coverage_type: "local",
-  }),
-  loc({
     slug: "bosnia",
     title: "Bosnia",
     country_code: "BA",
+    coverage_type: "local",
+  }),
+  loc({
+    slug: "montenegro",
+    title: "Montenegro",
+    country_code: "ME",
+    coverage_type: "local",
+  }),
+  loc({
+    slug: "serbia",
+    title: "Serbia",
+    country_code: "RS",
     coverage_type: "local",
   }),
   loc({
@@ -116,7 +116,7 @@ const goldenCatalog: Location[] = [
     slug: "europe",
     title: "Europe",
     coverage_type: "regional",
-    covered_country_codes: ["HR", "IT", "SI", "AT", "DE", "FR", "ES"],
+    covered_country_codes: ["HR", "IT", "SI", "AT", "DE", "FR", "ES", "BA"],
     is_popular: true,
   }),
   loc({
@@ -130,17 +130,17 @@ const goldenCatalog: Location[] = [
 
 const EXPECTED_HR_ORDER = [
   "croatia",
-  "italy",
-  "slovenia",
-  "austria",
+  "bosnia",
+  "montenegro",
+  "serbia",
   "europe",
   "global",
   "united-states",
   "japan",
   "united-kingdom",
+  "italy",
   "canada",
   "france",
-  "spain",
 ] as const;
 
 describe("rankPopularLocations golden HR", () => {

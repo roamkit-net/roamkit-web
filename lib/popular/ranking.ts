@@ -1,6 +1,6 @@
 import type { Location } from "@/lib/api";
 
-import { neighborsFor } from "./neighbor-map";
+import { recommendedMarketsFor } from "./recommended-markets";
 
 /** Hard cap for geo-ranked Popular results. */
 export const POPULAR_HARD_CAP = 12;
@@ -67,14 +67,14 @@ export function rankPopularLocations({
   // 1. Local (prefer 1)
   tryAdd(localByCountry.get(viewerCountry));
 
-  // 2. Neighbors (prefer up to 3), map order
-  let neighborsTaken = 0;
-  for (const code of neighborsFor(viewerCountry)) {
-    if (neighborsTaken >= POPULAR_SOFT.neighbors) {
+  // 2. Recommended markets (prefer up to 3), map order
+  let recommendedTaken = 0;
+  for (const code of recommendedMarketsFor(viewerCountry)) {
+    if (recommendedTaken >= POPULAR_SOFT.neighbors) {
       break;
     }
     if (tryAdd(localByCountry.get(code))) {
-      neighborsTaken += 1;
+      recommendedTaken += 1;
     }
   }
 
