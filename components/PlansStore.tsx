@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppPageHeader } from "@/components/AppPageHeader";
@@ -12,6 +12,8 @@ import {
   matchLocations,
 } from "@/components/LocationSearch";
 import type { Location, LocationListType } from "@/lib/api";
+import { selectPopularLocations } from "@/lib/popular/ranking";
+import { recordPopularRankingMeta } from "@/lib/popular/telemetry";
 
 const TABS: { id: LocationListType; label: string }[] = [
   { id: "popular", label: "Popular" },
@@ -64,9 +66,6 @@ function filterLocations(
   if (tab === "all") {
     return locations;
   }
-  if (tab === "popular") {
-    return locations.filter((location) => location.is_popular);
-  }
   return locations.filter((location) => location.coverage_type === tab);
 }
 
@@ -74,10 +73,14 @@ export function PlansStore({
   locations,
   errorMessage,
   initialTab,
+  viewerCountry = null,
+  geoRankingEnabled = true,
 }: {
   locations: Location[];
   errorMessage: string | null;
   initialTab: LocationListType;
+  viewerCountry?: string | null;
+  geoRankingEnabled?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,12 +94,39 @@ export function PlansStore({
     () => (isSearching ? matchLocations(locations, trimmedQuery) : null),
     [locations, isSearching, trimmedQuery],
   );
+  const popularSelection = useMemo(
+    () =>
+      selectPopularLocations({
+        locations,
+        viewerCountry,
+        geoRankingEnabled,
+      }),
+    [locations, viewerCountry, geoRankingEnabled],
+  );
   const visibleLocations = useMemo(() => {
     if (searchResults) {
       return [...searchResults.primary, ...searchResults.broader];
     }
+    if (activeTab === "popular") {
+      return popularSelection.locations;
+    }
     return filterLocations(locations, activeTab);
-  }, [locations, activeTab, searchResults]);
+  }, [locations, activeTab, searchResults, popularSelection]);
+
+  useEffect(() => {
+    if (activeTab !== "popular" || isSearching) {
+      return;
+    }
+    recordPopularRankingMeta({
+      ranking_source: popularSelection.ranking_source,
+      viewer_country: viewerCountry,
+    });
+  }, [
+    activeTab,
+    isSearching,
+    popularSelection.ranking_source,
+    viewerCountry,
+  ]);
 
   function selectTab(tab: LocationListType) {
     const params = new URLSearchParams(searchParams.toString());
