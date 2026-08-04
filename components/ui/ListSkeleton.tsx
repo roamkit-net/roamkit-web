@@ -41,7 +41,7 @@ export function ListSkeleton({
 export function DetailSkeleton({ label = "Loading…" }: { label?: string }) {
   return (
     <div
-      className="mt-8 space-y-6"
+      className="space-y-6"
       role="status"
       aria-live="polite"
       aria-busy="true"

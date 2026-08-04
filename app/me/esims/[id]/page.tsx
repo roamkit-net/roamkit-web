@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
@@ -294,26 +294,25 @@ export default function MyEsimDetailPage() {
   const returnPath = `/me/esims/${esimId}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-3xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <Link
-            href="/me/esims"
-            className="text-sm font-medium text-sky-700 hover:text-sky-800"
-          >
-            ← Back to My eSIMs
-          </Link>
-          <AuthNav />
-        </div>
-
+    <AppShell
+      maxWidth="3xl"
+      nav={
+        <Link
+          href="/me/esims"
+          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+        >
+          ← Back to My eSIMs
+        </Link>
+      }
+    >
         {isLoading ? (
           <DetailSkeleton label="Loading eSIM…" />
         ) : error ? (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
             <p className="font-medium">{error}</p>
           </div>
         ) : esim ? (
-          <div className="mt-8 space-y-6">
+          <div className="space-y-6">
             <header>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
                 {formatEsimStatus(esim.status)}
@@ -676,7 +675,6 @@ export default function MyEsimDetailPage() {
             returnFocusRef={returnFocusRef}
           />
         ) : null}
-      </main>
-    </div>
+    </AppShell>
   );
 }
