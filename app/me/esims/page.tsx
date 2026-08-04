@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppPageHeader } from "@/components/AppPageHeader";
+import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import {
@@ -90,37 +91,44 @@ export default function MyEsimsPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-4xl">
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
+    <AppShell
+      nav={
+        <Link
+          href="/plans"
+          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+        >
+          ← Browse plans
+        </Link>
+      }
+    >
+      <AppPageHeader
+        eyebrow={
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            RoamKit
+          </p>
+        }
+        title={
+          <h1 className="text-3xl font-bold tracking-tight">My eSIMs</h1>
+        }
+        description={
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
+            {user
+              ? `Signed in as ${user.email}. Manage your plans and installation.`
+              : "Manage your plans and installation."}
+          </p>
+        }
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <DepositCta returnPath="/me/esims">Deposit credits</DepositCta>
             <Link
               href="/plans"
-              className="text-sm font-medium text-sky-700 hover:text-sky-800"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
-              ← Browse plans
+              Browse plans
             </Link>
-            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-              RoamKit
-            </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">My eSIMs</h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-              {user
-                ? `Signed in as ${user.email}. Manage your plans and installation.`
-                : "Manage your plans and installation."}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <DepositCta returnPath="/me/esims">Deposit credits</DepositCta>
-              <Link
-                href="/plans"
-                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              >
-                Browse plans
-              </Link>
-            </div>
           </div>
-          <AuthNav />
-        </div>
+        }
+      />
 
         {isLoading ? (
           <ListSkeleton rows={3} label="Loading your eSIMs…" />
@@ -218,7 +226,6 @@ export default function MyEsimsPage() {
             })}
           </ul>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

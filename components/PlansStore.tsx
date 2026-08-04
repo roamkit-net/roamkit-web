@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppPageHeader } from "@/components/AppPageHeader";
+import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { LocationCard } from "@/components/LocationCard";
 import {
@@ -109,27 +110,27 @@ export function PlansStore({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-4xl">
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-              RoamKit Store
-            </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">
-              {copy.title}
-            </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-              {copy.description}
-            </p>
-            <div className="mt-4">
-              <DepositCta returnPath="/plans" variant="link">
-                Need credits? Deposit →
-              </DepositCta>
-            </div>
-          </div>
-          <AuthNav />
-        </div>
+    <AppShell>
+      <AppPageHeader
+        eyebrow={
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            RoamKit Store
+          </p>
+        }
+        title={
+          <h1 className="text-3xl font-bold tracking-tight">{copy.title}</h1>
+        }
+        description={
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
+            {copy.description}
+          </p>
+        }
+        actions={
+          <DepositCta returnPath="/plans" variant="link">
+            Need credits? Deposit →
+          </DepositCta>
+        }
+      />
 
         <LocationSearch
           locations={locations}
@@ -228,7 +229,6 @@ export function PlansStore({
             ))}
           </ul>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

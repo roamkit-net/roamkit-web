@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CompatibilityButton } from "@/components/CompatibilityButton";
@@ -242,27 +242,25 @@ export function LocationDetail({
       : "Data";
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-4xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <nav className="text-sm text-slate-500">
-            <Link href="/plans" className="font-medium text-sky-700 hover:text-sky-800">
-              Store
-            </Link>
-            <span className="mx-2">/</span>
-            <Link
-              href={`/plans?tab=${location.coverage_type}`}
-              className="font-medium text-sky-700 hover:text-sky-800"
-            >
-              {coverageLabel(location.coverage_type)}
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-slate-700">{location.title}</span>
-          </nav>
-          <AuthNav />
-        </div>
-
-        <header className="mt-8 flex flex-wrap items-start gap-5">
+    <AppShell
+      nav={
+        <nav className="text-sm text-slate-500">
+          <Link href="/plans" className="font-medium text-sky-700 hover:text-sky-800">
+            Store
+          </Link>
+          <span className="mx-2">/</span>
+          <Link
+            href={`/plans?tab=${location.coverage_type}`}
+            className="font-medium text-sky-700 hover:text-sky-800"
+          >
+            {coverageLabel(location.coverage_type)}
+          </Link>
+          <span className="mx-2">/</span>
+          <span className="text-slate-700">{location.title}</span>
+        </nav>
+      }
+    >
+        <header className="flex flex-wrap items-start gap-5">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100">
             {imageSrc ? (
               <Image
@@ -450,8 +448,7 @@ export function LocationDetail({
           />
         ) : null}
 
-      </main>
-    </div>
+    </AppShell>
   );
 }
 

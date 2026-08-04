@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, Suspense } from "react";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppPageHeader } from "@/components/AppPageHeader";
+import { AppShell } from "@/components/AppShell";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
@@ -54,11 +55,9 @@ export default function DepositPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-          <main className="mx-auto w-full max-w-4xl">
-            <DepositSkeleton />
-          </main>
-        </div>
+        <AppShell>
+          <DepositSkeleton />
+        </AppShell>
       }
     >
       <DepositPageContent />
@@ -185,47 +184,51 @@ function DepositPageContent() {
     !billingLoading && billingFetching && balance != null;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-4xl">
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Link
-              href={returnPath ?? "/me/esims"}
-              onClick={() => clearPendingSpend()}
-              className="text-sm font-medium text-sky-700 hover:text-sky-800"
-            >
-              ← {returnPath ? `Back to ${returnLabel}` : "My eSIMs"}
-            </Link>
-            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-              RoamKit
+    <AppShell
+      nav={
+        <Link
+          href={returnPath ?? "/me/esims"}
+          onClick={() => clearPendingSpend()}
+          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+        >
+          ← {returnPath ? `Back to ${returnLabel}` : "My eSIMs"}
+        </Link>
+      }
+    >
+      <AppPageHeader
+        eyebrow={
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            RoamKit
+          </p>
+        }
+        title={<h1 className="text-3xl font-bold tracking-tight">Deposit</h1>}
+        description={
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
+            Add prepaid credits. Send on-chain via QR
+            {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
+            withdrawal TXID.
+          </p>
+        }
+      >
+        {returnPath && returnLabel ? (
+          <div className="flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-900">
+            <p>
+              {returning
+                ? `Deposit confirmed — returning to ${returnLabel}…`
+                : `After a successful deposit you will return to ${returnLabel}.`}
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">Deposit</h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-              Add prepaid credits. Send on-chain via QR
-              {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
-              withdrawal TXID.
-            </p>
-            {returnPath && returnLabel ? (
-              <div className="mt-4 flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-900">
-                <p>
-                  {returning
-                    ? `Deposit confirmed — returning to ${returnLabel}…`
-                    : `After a successful deposit you will return to ${returnLabel}.`}
-                </p>
-                {!returning ? (
-                  <Link
-                    href={returnPath}
-                    onClick={() => clearPendingSpend()}
-                    className="shrink-0 font-semibold text-sky-800 underline hover:text-sky-950"
-                  >
-                    Continue without depositing
-                  </Link>
-                ) : null}
-              </div>
+            {!returning ? (
+              <Link
+                href={returnPath}
+                onClick={() => clearPendingSpend()}
+                className="shrink-0 font-semibold text-sky-800 underline hover:text-sky-950"
+              >
+                Continue without depositing
+              </Link>
             ) : null}
           </div>
-          <AuthNav />
-        </div>
+        ) : null}
+      </AppPageHeader>
 
         {returning ? (
           <div
@@ -362,7 +365,6 @@ function DepositPageContent() {
             />
           </div>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }
