@@ -22,6 +22,7 @@ import {
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
+  truncateNote,
 } from "@/lib/esim/display";
 import { needsSetup } from "@/lib/esim/telemetry";
 import { loginHref } from "@/lib/navigation/safePath";
@@ -156,6 +157,7 @@ export default function MyEsimsPage() {
               const destination = esimDestinationLabel(esim);
               const validity = esimValidityLabel(esim);
               const statusLabel = formatEsimStatus(esim.status);
+              const notePreview = truncateNote(esim.note);
               const flagSrc = esim.country_code
                 ? flagImageUrl(esim.country_code)
                 : null;
@@ -201,6 +203,11 @@ export default function MyEsimsPage() {
                           ? `${esim.data_allowance} · ${formatUsage(esim)}`
                           : formatUsage(esim)}
                       </p>
+                      {notePreview ? (
+                        <p className="mt-0.5 truncate text-sm text-slate-500">
+                          {notePreview}
+                        </p>
+                      ) : null}
                     </div>
                     <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                       {statusLabel}

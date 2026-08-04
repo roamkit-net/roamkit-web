@@ -550,6 +550,8 @@ export type Esim = {
   currency?: string;
   issued_at?: string;
   activated_at?: string | null;
+  /** User-local metadata; optional during API rollout. Never synced to Airalo. */
+  note?: string;
   created_at: string;
   updated_at: string;
 };
@@ -841,6 +843,19 @@ export async function fetchMyEsims(): Promise<PaginatedResponse<Esim>> {
 export async function fetchMyEsim(id: number | string): Promise<Esim> {
   return fetchApi<Esim>(`/api/v1/me/esims/${id}/`, {
     auth: true,
+    cache: "no-store",
+  });
+}
+
+export async function patchMyEsim(
+  id: number | string,
+  body: { note: string },
+): Promise<Esim> {
+  return fetchApi<Esim>(`/api/v1/me/esims/${id}/`, {
+    method: "PATCH",
+    auth: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 }
