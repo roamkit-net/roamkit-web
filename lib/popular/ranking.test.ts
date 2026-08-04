@@ -82,6 +82,20 @@ const catalog: Location[] = [
     is_popular: false,
   }),
   loc({
+    slug: "montenegro",
+    title: "Montenegro",
+    country_code: "ME",
+    coverage_type: "local",
+    is_popular: false,
+  }),
+  loc({
+    slug: "serbia",
+    title: "Serbia",
+    country_code: "RS",
+    coverage_type: "local",
+    is_popular: false,
+  }),
+  loc({
     slug: "croatia",
     title: "Croatia",
     country_code: "HR",
@@ -183,21 +197,21 @@ describe("rankPopularLocations", () => {
     assert.equal(catalog.length, copy.length);
   });
 
-  it("keeps neighbor order from the map (stability)", () => {
+  it("keeps recommended-market order from the map (stability)", () => {
     const result = rankPopularLocations({
       locations: catalog,
       viewerCountry: "HR",
     });
-    const neighborSlugs = result
+    const recommendedSlugs = result
       .map((l) => l.slug)
       .filter((slug) =>
-        ["italy", "slovenia", "austria", "germany", "bosnia"].includes(slug),
+        ["bosnia", "montenegro", "serbia", "italy", "slovenia"].includes(slug),
       );
-    // Soft max 3: IT, SI, AT only in neighbor layer; DE may appear later via curated
-    assert.deepEqual(neighborSlugs.slice(0, 3), [
-      "italy",
-      "slovenia",
-      "austria",
+    // Soft max 3: BA, ME, RS in recommended layer
+    assert.deepEqual(recommendedSlugs.slice(0, 3), [
+      "bosnia",
+      "montenegro",
+      "serbia",
     ]);
   });
 
@@ -207,12 +221,12 @@ describe("rankPopularLocations", () => {
       viewerCountry: "HR",
     });
     const slugs = result.map((l) => l.slug);
-    // Soft layers: local + 3 neighbors + europe/global — no regionals here
+    // Soft layers: local + 3 recommended + europe/global — no regionals here
     assert.deepEqual(slugs.slice(0, 6), [
       "croatia",
-      "italy",
-      "slovenia",
-      "austria",
+      "bosnia",
+      "montenegro",
+      "serbia",
       "europe",
       "global",
     ]);
