@@ -6,6 +6,7 @@ import {
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
+  truncateNote,
 } from "@/lib/esim/display";
 
 function baseEsim(overrides: Partial<Esim> = {}): Esim {
@@ -57,5 +58,20 @@ describe("esim display helpers", () => {
     assert.equal(esimValidityLabel(baseEsim({ validity_days: 7 })), "7 days");
     assert.equal(esimValidityLabel(baseEsim({ validity_days: 1 })), "1 day");
     assert.equal(esimValidityLabel(baseEsim({ validity_days: null })), null);
+  });
+
+  it("truncates notes for list preview", () => {
+    assert.equal(truncateNote(""), "");
+    assert.equal(truncateNote("   "), "");
+    assert.equal(truncateNote("Japan trip"), "Japan trip");
+    assert.equal(
+      truncateNote("x".repeat(48)),
+      "x".repeat(48),
+    );
+    assert.equal(
+      truncateNote("x".repeat(49)),
+      `${"x".repeat(48)}…`,
+    );
+    assert.equal(truncateNote("  short  "), "short");
   });
 });

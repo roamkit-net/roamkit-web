@@ -8,6 +8,7 @@ import { AuthNav } from "@/components/AuthNav";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { EsimNoteForm } from "@/components/esim/EsimNoteForm";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import {
   dataLabelFromPackage,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/esim/device";
 import {
   esimDestinationLabel,
+  esimNote,
   formatEsimDateTime,
   formatEsimStatus,
 } from "@/lib/esim/display";
@@ -398,6 +400,16 @@ export default function MyEsimDetailPage() {
                 ) : null}
               </dl>
             </section>
+
+            <EsimNoteForm
+              esimId={esimId}
+              savedNote={esimNote(esim)}
+              onSaved={(note) =>
+                setEsim((current) =>
+                  current ? { ...current, note } : current,
+                )
+              }
+            />
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
