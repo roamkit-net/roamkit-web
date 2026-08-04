@@ -44,3 +44,20 @@ export function esimValidityLabel(esim: Esim): string | null {
   const days = esim.validity_days;
   return days === 1 ? "1 day" : `${days} days`;
 }
+
+/** Normalized note value (missing/undefined → empty string). */
+export function esimNote(esim: Pick<Esim, "note"> | null | undefined): string {
+  return esim?.note ?? "";
+}
+
+/** Truncate for list preview; empty input yields empty string. */
+export function truncateNote(note: string | null | undefined, max = 48): string {
+  const value = (note ?? "").trim();
+  if (!value) {
+    return "";
+  }
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, max)}…`;
+}
