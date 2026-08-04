@@ -18,6 +18,7 @@ const CATALOG_SCAN_GLOBS = [
   "components/PlanCard.tsx",
   "components/PlansStore.tsx",
   "components/CatalogPriceDisplay.tsx",
+  "components/landing/FeaturedPlans.tsx",
   "app/plans/page.tsx",
   "app/[location]/page.tsx",
   "app/me/esims/[id]/page.tsx",

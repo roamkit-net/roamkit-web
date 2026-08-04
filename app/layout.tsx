@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppProviders } from "@/components/AppProviders";
+import { siteOrigin } from "@/lib/routes";
 
 import "./globals.css";
 
@@ -15,10 +16,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = siteOrigin();
+
+const title = "RoamKit – Global eSIM Plans & Prepaid Connectivity";
+const description =
+  "Buy eSIM data plans worldwide. Top up prepaid credits, activate instantly, and stay connected wherever you travel.";
+
 export const metadata: Metadata = {
-  title: "RoamKit — Stay Connected. Anywhere.",
-  description:
-    "RoamKit provides seamless global connectivity with eSIM technology for travelers and digital nomads. One eSIM. Every destination.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: "RoamKit",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
   icons: {
     icon: [
       { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
