@@ -402,11 +402,14 @@ export default function MyEsimDetailPage() {
             </section>
 
             <EsimNoteForm
+              key={esimId}
               esimId={esimId}
               savedNote={esimNote(esim)}
-              onSaved={(note) =>
+              onSaved={(id, note) =>
                 setEsim((current) =>
-                  current ? { ...current, note } : current,
+                  current && String(current.id) === String(id)
+                    ? { ...current, note }
+                    : current,
                 )
               }
             />

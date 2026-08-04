@@ -10,7 +10,8 @@ const SAVED_BANNER_MS = 2000;
 type EsimNoteFormProps = {
   esimId: number | string;
   savedNote: string;
-  onSaved: (note: string) => void;
+  /** Called with the eSIM id the note belongs to so parents can ignore stale saves. */
+  onSaved: (esimId: number | string, note: string) => void;
 };
 
 export function EsimNoteForm({
@@ -24,29 +25,48 @@ export function EsimNoteForm({
   const [error, setError] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeEsimIdRef = useRef(esimId);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    setDraft(savedNote);
-  }, [savedNote]);
-
-  useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (savedTimerRef.current) {
         clearTimeout(savedTimerRef.current);
       }
     };
   }, []);
 
+  // Reset local state only when switching eSIMs. Syncing on every savedNote
+  // change would clobber the draft after an optimistic rollback on save failure.
+  useEffect(() => {
+    activeEsimIdRef.current = esimId;
+    setDraft(savedNote);
+    setError(null);
+    setShowSaved(false);
+    setIsSaving(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- savedNote only on id change
+  }, [esimId]);
+
   const strippedDraft = draft.trim();
   const strippedSaved = savedNote.trim();
   const dirty = strippedDraft !== strippedSaved;
   const canSave = dirty && !isSaving;
+
+  function isStaleSave(saveEsimId: number | string): boolean {
+    return (
+      !mountedRef.current ||
+      String(activeEsimIdRef.current) !== String(saveEsimId)
+    );
+  }
 
   async function handleSave() {
     if (!canSave) {
       return;
     }
 
+    const saveEsimId = esimId;
     const previous = savedNote;
     const draftBeforeSave = draft;
     const next = strippedDraft;
@@ -56,12 +76,15 @@ export function EsimNoteForm({
     setError(null);
     setIsSaving(true);
     // Optimistic: treat draft as saved so Save disables immediately.
-    onSaved(next);
+    onSaved(saveEsimId, next);
     setDraft(next);
 
     try {
-      const updated = await patchMyEsim(esimId, { note: next });
-      onSaved(updated.note ?? next);
+      const updated = await patchMyEsim(saveEsimId, { note: next });
+      if (isStaleSave(saveEsimId)) {
+        return;
+      }
+      onSaved(saveEsimId, updated.note ?? next);
       setDraft(updated.note ?? next);
       setShowSaved(true);
       if (savedTimerRef.current) {
@@ -72,7 +95,10 @@ export function EsimNoteForm({
         savedTimerRef.current = null;
       }, SAVED_BANNER_MS);
     } catch (err) {
-      onSaved(previous);
+      if (isStaleSave(saveEsimId)) {
+        return;
+      }
+      onSaved(saveEsimId, previous);
       setDraft(draftBeforeSave);
       setError(
         err instanceof ApiError
@@ -80,9 +106,11 @@ export function EsimNoteForm({
           : "Something went wrong while saving the note.",
       );
     } finally {
-      setIsSaving(false);
-      if (scrollY != null && typeof window !== "undefined") {
-        window.scrollTo({ top: scrollY });
+      if (!isStaleSave(saveEsimId)) {
+        setIsSaving(false);
+        if (scrollY != null && typeof window !== "undefined") {
+          window.scrollTo({ top: scrollY });
+        }
       }
     }
   }
