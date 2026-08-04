@@ -539,6 +539,17 @@ export type Esim = {
   usage_is_unlimited: boolean | null;
   usage_expired_at: string | null;
   usage_synced_at: string | null;
+  /** Purchase-time Order snapshot (PR2+); optional during API rollout. */
+  package_title?: string;
+  location_title?: string;
+  country_code?: string;
+  data_allowance?: string;
+  validity_days?: number | null;
+  /** What the customer paid (credits); never wholesale. */
+  paid_usd?: string | null;
+  currency?: string;
+  issued_at?: string;
+  activated_at?: string | null;
   created_at: string;
   updated_at: string;
 };
