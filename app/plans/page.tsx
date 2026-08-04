@@ -1,7 +1,10 @@
+import { cookies, headers } from "next/headers";
 import { Suspense } from "react";
 
 import { PlansStore } from "@/components/PlansStore";
 import { ApiError, fetchAllLocations, type LocationListType } from "@/lib/api";
+import { isPopularGeoRankingEnabled } from "@/lib/popular/flags";
+import { getViewerCountry } from "@/lib/popular/viewer-country";
 
 function parseTab(value: string | string[] | undefined): LocationListType {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -38,12 +41,25 @@ export default async function PlansPage({
     }
   }
 
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const geoRankingEnabled = isPopularGeoRankingEnabled();
+  const viewerCountry = geoRankingEnabled
+    ? getViewerCountry({
+        cookieCountry: cookieStore.get("rk_viewer_country")?.value,
+        profileCountry: null,
+        headerCountry: headerStore.get("cf-ipcountry"),
+      })
+    : null;
+
   return (
     <Suspense fallback={null}>
       <PlansStore
         locations={locations}
         errorMessage={errorMessage}
         initialTab={tab}
+        viewerCountry={viewerCountry}
+        geoRankingEnabled={geoRankingEnabled}
       />
     </Suspense>
   );
