@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AuthNav } from "@/components/AuthNav";
+import { AppShell } from "@/components/AppShell";
 import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
 import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
@@ -216,26 +216,25 @@ export default function EsimSetupWizardPage() {
   const helpGuideId = androidGuideId ?? GuideId.OTHER;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
-      <main className="mx-auto w-full max-w-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <Link
-            href={`/me/esims/${esimId}`}
-            className="text-sm font-medium text-sky-700 hover:text-sky-800"
-          >
-            ← Skip to eSIM details
-          </Link>
-          <AuthNav />
-        </div>
-
+    <AppShell
+      maxWidth="2xl"
+      nav={
+        <Link
+          href={`/me/esims/${esimId}`}
+          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+        >
+          ← Skip to eSIM details
+        </Link>
+      }
+    >
         {isLoading ? (
           <DetailSkeleton label="Loading setup…" />
         ) : error ? (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
             <p className="font-medium">{error}</p>
           </div>
         ) : esim ? (
-          <div className="mt-8 space-y-6">
+          <div className="space-y-6">
             <header>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
                 Purchase complete
@@ -532,7 +531,6 @@ export default function EsimSetupWizardPage() {
             </section>
           </div>
         ) : null}
-      </main>
-    </div>
+    </AppShell>
   );
 }
