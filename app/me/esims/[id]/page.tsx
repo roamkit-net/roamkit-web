@@ -319,8 +319,10 @@ export default function MyEsimDetailPage() {
               <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
                 {esimDestinationLabel(esim)}
               </h1>
-              {esim.package_title ? (
-                <p className="mt-2 text-sm text-slate-600">{esim.package_title}</p>
+              {esim.location_title?.trim() && esim.package_title?.trim() ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  {esim.package_title}
+                </p>
               ) : null}
               {needsSetup(esim) ? (
                 <p className="mt-4">
