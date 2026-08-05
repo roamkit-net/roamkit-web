@@ -15,6 +15,7 @@ import {
 } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
 import { verifyWallet } from "@/lib/billing/client";
 import {
   formatDepositPendingMessage,
@@ -39,6 +40,8 @@ type WalletDepositPanelProps = {
   onVerified: (deposit: DepositRequest) => void;
 };
 
+type ExplorerStatus = "pending" | "completed" | "failed";
+
 export function WalletDepositPanel({
   config,
   amount,
@@ -53,6 +56,9 @@ export function WalletDepositPanel({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [activeTxHash, setActiveTxHash] = useState<string | null>(null);
+  const [explorerStatus, setExplorerStatus] =
+    useState<ExplorerStatus>("pending");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -69,6 +75,8 @@ export function WalletDepositPanel({
 
       setIsVerifying(true);
       setError(null);
+      setActiveTxHash(hash);
+      setExplorerStatus("pending");
       billingTelemetry.track("deposit_verify_clicked", { method: "wallet" });
 
       try {
@@ -84,6 +92,7 @@ export function WalletDepositPanel({
             onUpdate: (current) => {
               const status = current.status?.trim().toLowerCase();
               if (!status || status === "pending") {
+                setExplorerStatus("pending");
                 setStatusMessage(
                   formatDepositPendingMessage(current, config.confirmations),
                 );
@@ -96,8 +105,9 @@ export function WalletDepositPanel({
           billingTelemetry.track("deposit_verify_succeeded", {
             method: "wallet",
           });
+          setExplorerStatus("completed");
           onVerified(deposit);
-          setStatusMessage("Deposit verified. Credits added to your balance.");
+          setStatusMessage(depositCopy.walletVerified);
           return;
         }
 
@@ -106,12 +116,14 @@ export function WalletDepositPanel({
             method: "wallet",
             code: "FAILED",
           });
+          setExplorerStatus("failed");
           setError(
-            deposit.failure_reason || "Wallet deposit could not be verified.",
+            deposit.failure_reason || depositCopy.walletFailedFallback,
           );
           return;
         }
 
+        setExplorerStatus("pending");
         setStatusMessage(
           formatDepositPendingMessage(deposit, config.confirmations),
         );
@@ -125,6 +137,9 @@ export function WalletDepositPanel({
           code: mapped.code,
           category: mapped.category,
         });
+        setExplorerStatus(
+          mapped.category === "pending" ? "pending" : "failed",
+        );
         setError(mapped.message);
       } finally {
         setIsVerifying(false);
@@ -169,6 +184,8 @@ export function WalletDepositPanel({
       const tx = await token.getFunction("transfer")(config.wallet, value);
       const hash = typeof tx.hash === "string" ? tx.hash : String(tx.hash);
 
+      setActiveTxHash(hash);
+      setExplorerStatus("pending");
       setStatusMessage(`Transaction sent (${hash.slice(0, 10)}…). Verifying…`);
       await tx.wait();
       await verifyHash(hash, idempotencyKey);
@@ -190,6 +207,7 @@ export function WalletDepositPanel({
   }
 
   const busy = isSending || isVerifying;
+  const showExplorer = Boolean(activeTxHash) && (error || statusMessage);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -221,14 +239,41 @@ export function WalletDepositPanel({
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {error}
-        </p>
+        <div className="mt-4 space-y-2">
+          <p
+            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="alert"
+          >
+            {error}
+          </p>
+          {showExplorer && activeTxHash ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status={explorerStatus}
+            />
+          ) : null}
+        </div>
       ) : null}
       {statusMessage ? (
-        <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-          {statusMessage}
-        </p>
+        <div className="mt-4 space-y-2">
+          <p
+            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+            role="status"
+            aria-live="polite"
+          >
+            {statusMessage}
+          </p>
+          {showExplorer && activeTxHash && !error ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status={explorerStatus}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <button

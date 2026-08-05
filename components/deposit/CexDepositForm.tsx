@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
 import { verifyCex } from "@/lib/billing/client";
 import {
   formatDepositPendingMessage,
@@ -21,6 +22,8 @@ type CexDepositFormProps = {
   amount: string;
   onVerified: (deposit: DepositRequest) => void;
 };
+
+type ExplorerStatus = "pending" | "completed" | "failed";
 
 function normalizeTxHash(value: string): string {
   const trimmed = value.trim();
@@ -43,6 +46,9 @@ export function CexDepositForm({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+  const [activeTxHash, setActiveTxHash] = useState<string | null>(null);
+  const [explorerStatus, setExplorerStatus] =
+    useState<ExplorerStatus>("pending");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -80,6 +86,8 @@ export function CexDepositForm({
     };
 
     setIsSubmitting(true);
+    setActiveTxHash(normalizedHash);
+    setExplorerStatus("pending");
     billingTelemetry.track("deposit_verify_clicked", { method: "cex" });
 
     try {
@@ -90,6 +98,7 @@ export function CexDepositForm({
           signal: controller.signal,
           onUpdate: (current) => {
             if (shouldShowPending(current)) {
+              setExplorerStatus("pending");
               setStatusMessage(
                 formatDepositPendingMessage(current, config.confirmations),
               );
@@ -100,10 +109,9 @@ export function CexDepositForm({
 
       if (isDepositVerified(deposit)) {
         billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
+        setExplorerStatus("completed");
         onVerified(deposit);
-        setStatusMessage(
-          "Deposit verified. Credits will appear in your balance.",
-        );
+        setStatusMessage(depositCopy.cexVerified);
         setIdempotencyKey(newIdempotencyKey());
         setTxHash("");
         return;
@@ -114,14 +122,13 @@ export function CexDepositForm({
           method: "cex",
           code: "FAILED",
         });
-        setError(
-          deposit.failure_reason ||
-            "Deposit could not be verified. Check the TXID and network.",
-        );
+        setExplorerStatus("failed");
+        setError(deposit.failure_reason || depositCopy.cexFailedFallback);
         setIdempotencyKey(newIdempotencyKey());
         return;
       }
 
+      setExplorerStatus("pending");
       setStatusMessage(
         formatDepositPendingMessage(deposit, config.confirmations),
       );
@@ -135,6 +142,9 @@ export function CexDepositForm({
         code: mapped.code,
         category: mapped.category,
       });
+      setExplorerStatus(
+        mapped.category === "pending" ? "pending" : "failed",
+      );
       setError(mapped.message);
       if (mapped.category !== "pending") {
         setIdempotencyKey(newIdempotencyKey());
@@ -143,6 +153,8 @@ export function CexDepositForm({
       setIsSubmitting(false);
     }
   }
+
+  const showExplorer = Boolean(activeTxHash) && (error || statusMessage);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -174,21 +186,41 @@ export function CexDepositForm({
         </label>
 
         {error ? (
-          <p
-            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-            role="alert"
-          >
-            {error}
-          </p>
+          <div className="space-y-2">
+            <p
+              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              role="alert"
+            >
+              {error}
+            </p>
+            {showExplorer && activeTxHash ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="cex"
+                status={explorerStatus}
+              />
+            ) : null}
+          </div>
         ) : null}
         {statusMessage ? (
-          <p
-            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
-            role="status"
-            aria-live="polite"
-          >
-            {statusMessage}
-          </p>
+          <div className="space-y-2">
+            <p
+              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+              role="status"
+              aria-live="polite"
+            >
+              {statusMessage}
+            </p>
+            {showExplorer && activeTxHash && !error ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="cex"
+                status={explorerStatus}
+              />
+            ) : null}
+          </div>
         ) : null}
 
         <button
