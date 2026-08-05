@@ -10,6 +10,7 @@ import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturer
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { Alert } from "@/components/ui/Alert";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
+import { Card, CardSection } from "@/components/ui/Card";
 import {
   ApiError,
   Esim,
@@ -228,52 +229,53 @@ export default function EsimSetupWizardPage() {
         </Link>
       }
     >
-        {isLoading ? (
-          <DetailSkeleton label="Loading setup…" />
-        ) : error ? (
-          <Alert variant="warning" title={error} />
-        ) : esim ? (
-          <div className="space-y-6">
-            <header>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-                Purchase complete
-              </p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight">
-                Set up your eSIM
-              </h1>
-              <p className="mt-3 text-slate-600">
-                Step {step} of {STEPS.length}: {STEPS[step - 1]}
-              </p>
-              <ol className="mt-4 flex flex-wrap gap-2">
-                {STEPS.map((label, index) => {
-                  const n = index + 1;
-                  const active = n === step;
-                  return (
-                    <li
-                      key={label}
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        active
-                          ? "bg-sky-700 text-white"
-                          : n < step
-                            ? "bg-sky-100 text-sky-800"
-                            : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {n}. {label}
-                    </li>
-                  );
-                })}
-              </ol>
-            </header>
+      {isLoading ? (
+        <DetailSkeleton label="Loading setup…" />
+      ) : error ? (
+        <Alert variant="warning" title={error} />
+      ) : esim ? (
+        <div className="space-y-6">
+          <header>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+              Purchase complete
+            </p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight">
+              Set up your eSIM
+            </h1>
+            <p className="mt-3 text-slate-600">
+              Step {step} of {STEPS.length}: {STEPS[step - 1]}
+            </p>
+            <ol className="mt-4 flex flex-wrap gap-2">
+              {STEPS.map((label, index) => {
+                const n = index + 1;
+                const active = n === step;
+                return (
+                  <li
+                    key={label}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      active
+                        ? "bg-sky-700 text-white"
+                        : n < step
+                          ? "bg-sky-100 text-sky-800"
+                          : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {n}. {label}
+                  </li>
+                );
+              })}
+            </ol>
+          </header>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Activation</p>
-              <p className="mt-1">
-                {activationPolicyMessage(esim.activation_policy)}
-              </p>
-            </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Activation</p>
+            <p className="mt-1">
+              {activationPolicyMessage(esim.activation_policy)}
+            </p>
+          </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               {step === 1 ? (
                 <div className="space-y-4">
                   {device === "desktop" ? (
@@ -296,7 +298,9 @@ export default function EsimSetupWizardPage() {
                     </>
                   ) : canUseAppleInstallLink(device) ? (
                     <>
-                      <h2 className="text-lg font-semibold">Install on iPhone</h2>
+                      <h2 className="text-lg font-semibold">
+                        Install on iPhone
+                      </h2>
                       <p className="text-sm text-slate-600">
                         Use the Apple install link, or scan the QR from another
                         device.
@@ -378,12 +382,15 @@ export default function EsimSetupWizardPage() {
                           setShowManualTips((open) => {
                             const next = !open;
                             if (next) {
-                              telemetry.track("install.manual_install_clicked", {
-                                resumeStep: 1,
-                                payload: androidGuideId
-                                  ? { manufacturer: androidGuideId }
-                                  : {},
-                              });
+                              telemetry.track(
+                                "install.manual_install_clicked",
+                                {
+                                  resumeStep: 1,
+                                  payload: androidGuideId
+                                    ? { manufacturer: androidGuideId }
+                                    : {},
+                                },
+                              );
                             }
                             return next;
                           });
@@ -475,7 +482,9 @@ export default function EsimSetupWizardPage() {
 
               {step === 3 ? (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold">Turn on Data Roaming</h2>
+                  <h2 className="text-lg font-semibold">
+                    Turn on Data Roaming
+                  </h2>
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
                     <li>
                       <span className="font-medium">Data roaming</span> — ON for
@@ -527,9 +536,10 @@ export default function EsimSetupWizardPage() {
                   </div>
                 </div>
               ) : null}
-            </section>
-          </div>
-        ) : null}
+            </CardSection>
+          </Card>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

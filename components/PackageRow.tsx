@@ -1,5 +1,6 @@
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import { Button } from "@/components/ui/Button";
+import { ListRow } from "@/components/ui/ListRow";
 import type { Package } from "@/lib/api";
 
 function formatValidity(days: number): string {
@@ -9,9 +10,10 @@ function formatValidity(days: number): string {
   return `${days} days`;
 }
 
-function parseAllowanceFromTitle(
-  title: string,
-): { voiceMinutes: number | null; textSms: number | null } {
+function parseAllowanceFromTitle(title: string): {
+  voiceMinutes: number | null;
+  textSms: number | null;
+} {
   const voiceMatch = title.match(/(\d+)\s*mins?\b/i);
   const textMatch = title.match(/(\d+)\s*sms\b/i);
   return {
@@ -69,29 +71,33 @@ export function PackageRow({
   buyTitle?: string;
 }) {
   return (
-    <article className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-      <p className="min-w-0 text-base font-medium text-slate-900">
+    <ListRow
+      as="article"
+      trailing={
+        <>
+          <p className="text-base font-bold text-slate-900">
+            <CatalogPriceDisplay amount={plan.price_usd} />
+          </p>
+          {onBuy ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              onClick={(event) => onBuy(plan, event.currentTarget)}
+              disabled={isBuying || buyDisabled}
+              title={buyTitle}
+              aria-label={buyTitle}
+              className="min-h-11"
+            >
+              {isBuying ? "Buying…" : "Buy"}
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <p className="text-base font-medium text-slate-900">
         {formatLeftLabel(plan, showValidity)}
       </p>
-      <div className="flex shrink-0 items-center gap-3">
-        <p className="text-base font-bold text-slate-900">
-          <CatalogPriceDisplay amount={plan.price_usd} />
-        </p>
-        {onBuy ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="primary"
-            onClick={(event) => onBuy(plan, event.currentTarget)}
-            disabled={isBuying || buyDisabled}
-            title={buyTitle}
-            aria-label={buyTitle}
-            className="min-h-11"
-          >
-            {isBuying ? "Buying…" : "Buy"}
-          </Button>
-        ) : null}
-      </div>
-    </article>
+    </ListRow>
   );
 }

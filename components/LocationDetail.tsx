@@ -18,6 +18,7 @@ import {
 } from "@/components/orders/PurchaseConfirmDialog";
 import { useBuyPackage } from "@/components/orders/useBuyPackage";
 import { PackageRow } from "@/components/PackageRow";
+import { Card, CardSection } from "@/components/ui/Card";
 import type { Location, Package } from "@/lib/api";
 import { isAuthenticated, locationImageSrc } from "@/lib/api";
 import { billingTelemetry } from "@/lib/billing/telemetry";
@@ -212,7 +213,10 @@ export function LocationDetail({
   const { mostPopular, dayGroups } = useMemo(() => {
     const sorted = [...filteredPackages].sort(comparePackages);
     if (sorted.length === 0) {
-      return { mostPopular: null as Package | null, dayGroups: [] as { days: number; packages: Package[] }[] };
+      return {
+        mostPopular: null as Package | null,
+        dayGroups: [] as { days: number; packages: Package[] }[],
+      };
     }
 
     const popular = sorted.reduce((cheapest, pkg) =>
@@ -245,7 +249,10 @@ export function LocationDetail({
     <AppShell
       nav={
         <nav className="text-sm text-slate-500">
-          <Link href="/plans" className="font-medium text-sky-700 hover:text-sky-800">
+          <Link
+            href="/plans"
+            className="font-medium text-sky-700 hover:text-sky-800"
+          >
             Store
           </Link>
           <span className="mx-2">/</span>
@@ -260,194 +267,195 @@ export function LocationDetail({
         </nav>
       }
     >
-        <header className="flex flex-wrap items-start gap-5">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100">
-            {imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase text-slate-400">
-                {location.title.slice(0, 2)}
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-              RoamKit
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">
-              {location.title} eSIMs
-            </h1>
-            <CoveragesSummary
-              coverages={coverages}
-              coverageType={location.coverage_type}
+      <header className="flex flex-wrap items-start gap-5">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100">
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="64px"
             />
-            <CompatibilityButton />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase text-slate-400">
+              {location.title.slice(0, 2)}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            RoamKit
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">
+            {location.title} eSIMs
+          </h1>
+          <CoveragesSummary
+            coverages={coverages}
+            coverageType={location.coverage_type}
+          />
+          <CompatibilityButton />
+        </div>
+      </header>
+
+      <section className="mt-10">
+        <div className="flex flex-col gap-4">
+          {showServiceTabs ? (
+            <div
+              className="flex gap-8 border-b border-slate-200"
+              role="tablist"
+              aria-label="Service type"
+            >
+              <ServiceTab
+                active={serviceType === "data"}
+                onClick={() => setServiceType("data")}
+              >
+                Data
+              </ServiceTab>
+              <ServiceTab
+                active={serviceType === "data_calls_texts"}
+                onClick={() => setServiceType("data_calls_texts")}
+              >
+                Data / Calls / Texts
+              </ServiceTab>
+            </div>
+          ) : (
+            <h2 className="border-b border-slate-200 pb-3 text-xl font-semibold text-slate-900">
+              {plansHeading}
+            </h2>
+          )}
+
+          {showPlanFilter ? (
+            <div
+              className="inline-flex w-fit rounded-full bg-slate-200/90 p-1"
+              role="group"
+              aria-label="Data amount"
+            >
+              <SegmentButton
+                active={activeFilter === "unlimited"}
+                onClick={() => setFilter("unlimited")}
+              >
+                Unlimited
+              </SegmentButton>
+              <SegmentButton
+                active={activeFilter === "standard"}
+                onClick={() => setFilter("standard")}
+              >
+                Standard
+              </SegmentButton>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-slate-700">
+              Choose your package
+            </p>
+            <DepositCta variant="link">Need credits? Deposit →</DepositCta>
           </div>
-        </header>
+        </div>
 
-        <section className="mt-10">
-          <div className="flex flex-col gap-4">
-            {showServiceTabs ? (
-              <div
-                className="flex gap-8 border-b border-slate-200"
-                role="tablist"
-                aria-label="Service type"
-              >
-                <ServiceTab
-                  active={serviceType === "data"}
-                  onClick={() => setServiceType("data")}
-                >
-                  Data
-                </ServiceTab>
-                <ServiceTab
-                  active={serviceType === "data_calls_texts"}
-                  onClick={() => setServiceType("data_calls_texts")}
-                >
-                  Data / Calls / Texts
-                </ServiceTab>
-              </div>
-            ) : (
-              <h2 className="border-b border-slate-200 pb-3 text-xl font-semibold text-slate-900">
-                {plansHeading}
-              </h2>
-            )}
+        {isRetrying ? (
+          <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            Completing your purchase after deposit…
+          </div>
+        ) : null}
+        {buyError ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p>{buyError}</p>
+            <button
+              type="button"
+              onClick={clearError}
+              className="font-medium text-amber-950 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
-            {showPlanFilter ? (
-              <div
-                className="inline-flex w-fit rounded-full bg-slate-200/90 p-1"
-                role="group"
-                aria-label="Data amount"
-              >
-                <SegmentButton
-                  active={activeFilter === "unlimited"}
-                  onClick={() => setFilter("unlimited")}
-                >
-                  Unlimited
-                </SegmentButton>
-                <SegmentButton
-                  active={activeFilter === "standard"}
-                  onClick={() => setFilter("standard")}
-                >
-                  Standard
-                </SegmentButton>
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-medium text-slate-700">
-                Choose your package
+        {filteredPackages.length === 0 ? (
+          <Card className="mt-4">
+            <CardSection padding="lg" className="text-center">
+              <p className="font-medium text-slate-900">
+                No plans in this filter
               </p>
-              <DepositCta variant="link">Need credits? Deposit →</DepositCta>
-            </div>
-          </div>
-
-          {isRetrying ? (
-            <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-              Completing your purchase after deposit…
-            </div>
-          ) : null}
-          {buyError ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <p>{buyError}</p>
-              <button
-                type="button"
-                onClick={clearError}
-                className="font-medium text-amber-950 underline"
-              >
-                Dismiss
-              </button>
-            </div>
-          ) : null}
-
-          {filteredPackages.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="font-medium text-slate-900">No plans in this filter</p>
               <p className="mt-2 text-sm text-slate-600">
                 Try another plan type or browse a different destination.
               </p>
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col gap-6">
-              {mostPopular ? (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
-                    Most Popular
-                  </h3>
-                  <PackageRow
-                    plan={mostPopular}
-                    showValidity
-                    onBuy={handleBuyClick}
-                    isBuying={busyPackageId === mostPopular.id}
-                    buyDisabled={buyDisabledFor(mostPopular)}
-                    buyTitle={buyTitleFor(mostPopular)}
-                  />
-                </div>
-              ) : null}
-              {dayGroups.map((group) => (
-                <div key={group.days}>
-                  <h3 className="mb-2 text-sm font-semibold text-slate-700">
-                    {formatValidityHeading(group.days)}
-                  </h3>
-                  <ul className="flex flex-col gap-3">
-                    {group.packages.map((plan) => (
-                      <li key={plan.id}>
-                        <PackageRow
-                          plan={plan}
-                          onBuy={handleBuyClick}
-                          isBuying={busyPackageId === plan.id}
-                          buyDisabled={buyDisabledFor(plan)}
-                          buyTitle={buyTitleFor(plan)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
+            </CardSection>
+          </Card>
+        ) : (
+          <div className="mt-4 flex flex-col gap-6">
+            {mostPopular ? (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                  Most Popular
+                </h3>
+                <PackageRow
+                  plan={mostPopular}
+                  showValidity
+                  onBuy={handleBuyClick}
+                  isBuying={busyPackageId === mostPopular.id}
+                  buyDisabled={buyDisabledFor(mostPopular)}
+                  buyTitle={buyTitleFor(mostPopular)}
+                />
+              </div>
+            ) : null}
+            {dayGroups.map((group) => (
+              <div key={group.days}>
+                <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                  {formatValidityHeading(group.days)}
+                </h3>
+                <ul className="flex flex-col gap-3">
+                  {group.packages.map((plan) => (
+                    <li key={plan.id}>
+                      <PackageRow
+                        plan={plan}
+                        onBuy={handleBuyClick}
+                        isBuying={busyPackageId === plan.id}
+                        buyDisabled={buyDisabledFor(plan)}
+                        buyTitle={buyTitleFor(plan)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {broader.length > 0 ? (
+        <section className="mt-14">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Need broader coverage?
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Regional and global plans that include {location.title}.
+          </p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {broader.map((item) => (
+              <li key={item.slug}>
+                <LocationCard location={item} />
+              </li>
+            ))}
+          </ul>
         </section>
+      ) : null}
 
-        {broader.length > 0 ? (
-          <section className="mt-14">
-            <h2 className="text-xl font-semibold text-slate-900">
-              Need broader coverage?
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Regional and global plans that include {location.title}.
-            </p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {broader.map((item) => (
-                <li key={item.slug}>
-                  <LocationCard location={item} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {pendingPackage ? (
-          <PurchaseConfirmDialog
-            summary={{
-              title: pendingPackage.title,
-              dataLabel: dataLabelFromPackage(pendingPackage),
-              validityLabel: validityLabelFromDays(
-                pendingPackage.validity_days,
-              ),
-              priceUsd: pendingPackage.price_usd,
-            }}
-            isPurchasing={busyPackageId === pendingPackage.id}
-            onCancel={handleCancelPurchase}
-            onConfirm={handleConfirmPurchase}
-            returnFocusRef={returnFocusRef}
-          />
-        ) : null}
-
+      {pendingPackage ? (
+        <PurchaseConfirmDialog
+          summary={{
+            title: pendingPackage.title,
+            dataLabel: dataLabelFromPackage(pendingPackage),
+            validityLabel: validityLabelFromDays(pendingPackage.validity_days),
+            priceUsd: pendingPackage.price_usd,
+          }}
+          isPurchasing={busyPackageId === pendingPackage.id}
+          onCancel={handleCancelPurchase}
+          onConfirm={handleConfirmPurchase}
+          returnFocusRef={returnFocusRef}
+        />
+      ) : null}
     </AppShell>
   );
 }

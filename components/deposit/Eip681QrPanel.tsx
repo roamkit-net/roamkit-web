@@ -7,6 +7,7 @@ import { depositCopy } from "@/lib/billing/depositCopy";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { eip681UriWithAmount, isValidDepositAmount } from "@/lib/eip681";
 import type { BillingConfig } from "@/types/billing";
+import { Card, CardSection } from "@/components/ui/Card";
 
 type Eip681QrPanelProps = {
   config: BillingConfig;
@@ -41,61 +42,65 @@ export function Eip681QrPanel({ config, amount }: Eip681QrPanelProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">
-        {depositCopy.qrHeading}
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        {depositCopy.qrDescription(config.tokenSymbol, config.chainId)}
-      </p>
+    <Card as="section">
+      <CardSection>
+        <h2 className="text-lg font-semibold text-slate-900">
+          {depositCopy.qrHeading}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {depositCopy.qrDescription(config.tokenSymbol, config.chainId)}
+        </p>
 
-      <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div className="rounded-xl border border-slate-100 bg-white p-3">
-          {uri ? (
-            <QRCodeSVG value={uri} size={180} level="M" includeMargin />
-          ) : (
-            <div className="flex h-[180px] w-[180px] items-center justify-center text-sm text-slate-500">
-              {depositCopy.qrUnavailable}
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-              {depositCopy.qrPlatformWalletLabel}
-            </p>
-            <p className="mt-1 break-all font-mono text-sm text-slate-900">
-              {config.wallet || "—"}
-            </p>
-            {config.wallet ? (
-              <button
-                type="button"
-                className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
-                onClick={() => void copy(config.wallet, "wallet")}
-              >
-                {copied === "wallet" ? depositCopy.copied : depositCopy.copyAddress}
-              </button>
-            ) : null}
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-              {depositCopy.qrPaymentUriLabel}
-            </p>
-            <p className="mt-1 break-all font-mono text-xs text-slate-600">
-              {uri || "—"}
-            </p>
+        <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <div className="rounded-xl border border-slate-100 bg-white p-3">
             {uri ? (
-              <button
-                type="button"
-                className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
-                onClick={() => void copy(uri, "uri")}
-              >
-                {copied === "uri" ? depositCopy.copied : depositCopy.copyUri}
-              </button>
-            ) : null}
+              <QRCodeSVG value={uri} size={180} level="M" includeMargin />
+            ) : (
+              <div className="flex h-[180px] w-[180px] items-center justify-center text-sm text-slate-500">
+                {depositCopy.qrUnavailable}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
+                {depositCopy.qrPlatformWalletLabel}
+              </p>
+              <p className="mt-1 break-all font-mono text-sm text-slate-900">
+                {config.wallet || "—"}
+              </p>
+              {config.wallet ? (
+                <button
+                  type="button"
+                  className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
+                  onClick={() => void copy(config.wallet, "wallet")}
+                >
+                  {copied === "wallet"
+                    ? depositCopy.copied
+                    : depositCopy.copyAddress}
+                </button>
+              ) : null}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
+                {depositCopy.qrPaymentUriLabel}
+              </p>
+              <p className="mt-1 break-all font-mono text-xs text-slate-600">
+                {uri || "—"}
+              </p>
+              {uri ? (
+                <button
+                  type="button"
+                  className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
+                  onClick={() => void copy(uri, "uri")}
+                >
+                  {copied === "uri" ? depositCopy.copied : depositCopy.copyUri}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </CardSection>
+    </Card>
   );
 }

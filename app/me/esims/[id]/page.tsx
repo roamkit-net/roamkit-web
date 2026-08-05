@@ -18,6 +18,7 @@ import {
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { Alert } from "@/components/ui/Alert";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
+import { Card, CardSection } from "@/components/ui/Card";
 import {
   ApiError,
   Esim,
@@ -281,16 +282,16 @@ export default function MyEsimDetailPage() {
       const liveUsage = await fetchMyEsimUsage(esimId);
       setUsage(liveUsage);
     } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
-          clearTokens();
-          router.replace(loginHref(detailPath));
-          return;
-        }
-        setUsageError("Could not refresh usage.");
-      } finally {
-        setIsRefreshingUsage(false);
+      if (err instanceof ApiError && err.status === 401) {
+        clearTokens();
+        router.replace(loginHref(detailPath));
+        return;
       }
+      setUsageError("Could not refresh usage.");
+    } finally {
+      setIsRefreshingUsage(false);
     }
+  }
 
   const returnPath = `/me/esims/${esimId}`;
 
@@ -306,40 +307,41 @@ export default function MyEsimDetailPage() {
         </Link>
       }
     >
-        {isLoading ? (
-          <DetailSkeleton label="Loading eSIM…" />
-        ) : error ? (
-          <Alert variant="warning" title={error} />
-        ) : esim ? (
-          <div className="space-y-6">
-            <header>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-                {formatEsimStatus(esim.status)}
+      {isLoading ? (
+        <DetailSkeleton label="Loading eSIM…" />
+      ) : error ? (
+        <Alert variant="warning" title={error} />
+      ) : esim ? (
+        <div className="space-y-6">
+          <header>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+              {formatEsimStatus(esim.status)}
+            </p>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+              {esimDestinationLabel(esim)}
+            </h1>
+            {esim.location_title?.trim() && esim.package_title?.trim() ? (
+              <p className="mt-2 text-sm text-slate-600">
+                {esim.package_title}
               </p>
-              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-                {esimDestinationLabel(esim)}
-              </h1>
-              {esim.location_title?.trim() && esim.package_title?.trim() ? (
-                <p className="mt-2 text-sm text-slate-600">
-                  {esim.package_title}
-                </p>
-              ) : null}
-              {needsSetup(esim) ? (
-                <p className="mt-4">
-                  <Link
-                    href={`/me/esims/${esimId}/setup`}
-                    className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
-                  >
-                    Continue setup
-                  </Link>
-                </p>
-              ) : null}
-              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {activationPolicyMessage(esim.activation_policy)}
+            ) : null}
+            {needsSetup(esim) ? (
+              <p className="mt-4">
+                <Link
+                  href={`/me/esims/${esimId}/setup`}
+                  className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                >
+                  Continue setup
+                </Link>
               </p>
-            </header>
+            ) : null}
+            <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              {activationPolicyMessage(esim.activation_policy)}
+            </p>
+          </header>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <h2 className="text-lg font-semibold text-slate-900">
                 eSIM details
               </h2>
@@ -397,22 +399,24 @@ export default function MyEsimDetailPage() {
                   </div>
                 ) : null}
               </dl>
-            </section>
+            </CardSection>
+          </Card>
 
-            <EsimNoteForm
-              key={esimId}
-              esimId={esimId}
-              savedNote={esimNote(esim)}
-              onSaved={(id, note) =>
-                setEsim((current) =>
-                  current && String(current.id) === String(id)
-                    ? { ...current, note }
-                    : current,
-                )
-              }
-            />
+          <EsimNoteForm
+            key={esimId}
+            esimId={esimId}
+            savedNote={esimNote(esim)}
+            onSaved={(id, note) =>
+              setEsim((current) =>
+                current && String(current.id) === String(id)
+                  ? { ...current, note }
+                  : current,
+              )
+            }
+          />
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">Usage</h2>
                 <button
@@ -431,7 +435,9 @@ export default function MyEsimDetailPage() {
                 <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                   <div>
                     <dt className="text-slate-500">Status</dt>
-                    <dd className="font-medium text-slate-900">{usage.status}</dd>
+                    <dd className="font-medium text-slate-900">
+                      {usage.status}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">Remaining</dt>
@@ -476,9 +482,11 @@ export default function MyEsimDetailPage() {
                   </div>
                 </dl>
               )}
-            </section>
+            </CardSection>
+          </Card>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <h2 className="text-lg font-semibold text-slate-900">
                 Installation
               </h2>
@@ -558,9 +566,11 @@ export default function MyEsimDetailPage() {
                   No installation details available yet.
                 </p>
               ) : null}
-            </section>
+            </CardSection>
+          </Card>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">
@@ -657,23 +667,24 @@ export default function MyEsimDetailPage() {
                   ))}
                 </ul>
               )}
-            </section>
-          </div>
-        ) : null}
-        {pendingTopup ? (
-          <PurchaseConfirmDialog
-            summary={{
-              title: pendingTopup.title,
-              dataLabel: dataLabelFromPackage(pendingTopup),
-              validityLabel: validityLabelFromDays(pendingTopup.validity_days),
-              priceUsd: pendingTopup.price_usd,
-            }}
-            isPurchasing={busyPackageId === pendingTopup.id}
-            onCancel={handleCancelTopup}
-            onConfirm={handleConfirmTopup}
-            returnFocusRef={returnFocusRef}
-          />
-        ) : null}
+            </CardSection>
+          </Card>
+        </div>
+      ) : null}
+      {pendingTopup ? (
+        <PurchaseConfirmDialog
+          summary={{
+            title: pendingTopup.title,
+            dataLabel: dataLabelFromPackage(pendingTopup),
+            validityLabel: validityLabelFromDays(pendingTopup.validity_days),
+            priceUsd: pendingTopup.price_usd,
+          }}
+          isPurchasing={busyPackageId === pendingTopup.id}
+          onCancel={handleCancelTopup}
+          onConfirm={handleConfirmTopup}
+          returnFocusRef={returnFocusRef}
+        />
+      ) : null}
     </AppShell>
   );
 }

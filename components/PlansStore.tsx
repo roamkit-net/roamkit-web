@@ -7,11 +7,9 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { LocationCard } from "@/components/LocationCard";
-import {
-  LocationSearch,
-  matchLocations,
-} from "@/components/LocationSearch";
+import { LocationSearch, matchLocations } from "@/components/LocationSearch";
 import { Alert } from "@/components/ui/Alert";
+import { Card, CardSection } from "@/components/ui/Card";
 import type { Location, LocationListType } from "@/lib/api";
 import { selectPopularLocations } from "@/lib/popular/ranking";
 import { recordPopularRankingMeta } from "@/lib/popular/telemetry";
@@ -122,12 +120,7 @@ export function PlansStore({
       ranking_source: popularSelection.ranking_source,
       viewer_country: viewerCountry,
     });
-  }, [
-    activeTab,
-    isSearching,
-    popularSelection.ranking_source,
-    viewerCountry,
-  ]);
+  }, [activeTab, isSearching, popularSelection.ranking_source, viewerCountry]);
 
   function selectTab(tab: LocationListType) {
     const params = new URLSearchParams(searchParams.toString());
@@ -163,45 +156,46 @@ export function PlansStore({
         }
       />
 
-        <LocationSearch
-          locations={locations}
-          onDebouncedQueryChange={setDebouncedQuery}
-        />
+      <LocationSearch
+        locations={locations}
+        onDebouncedQueryChange={setDebouncedQuery}
+      />
 
-        <div
-          className="mb-8 flex flex-wrap gap-2 border-b border-slate-200 pb-4"
-          role="tablist"
-          aria-label="Destination types"
-        >
-          {TABS.map((tab) => {
-            const isActive = tab.id === activeTab;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => selectTab(tab.id)}
-                className={
-                  isActive
-                    ? "rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
-                    : "rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
-                }
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+      <div
+        className="mb-8 flex flex-wrap gap-2 border-b border-slate-200 pb-4"
+        role="tablist"
+        aria-label="Destination types"
+      >
+        {TABS.map((tab) => {
+          const isActive = tab.id === activeTab;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => selectTab(tab.id)}
+              className={
+                isActive
+                  ? "rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
+                  : "rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+              }
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-        {errorMessage ? (
-          <Alert variant="warning" title={errorMessage}>
-            <p className="mt-2">
-              Ensure the API is running and packages have been synced.
-            </p>
-          </Alert>
-        ) : visibleLocations.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      {errorMessage ? (
+        <Alert variant="warning" title={errorMessage}>
+          <p className="mt-2">
+            Ensure the API is running and packages have been synced.
+          </p>
+        </Alert>
+      ) : visibleLocations.length === 0 ? (
+        <Card>
+          <CardSection padding="lg" className="text-center">
             {isSearching ? (
               <>
                 <p className="text-lg font-medium text-slate-900">
@@ -221,44 +215,45 @@ export function PlansStore({
                 </p>
               </>
             )}
-          </div>
-        ) : searchResults ? (
-          <div className="space-y-8">
-            {searchResults.primary.length > 0 ? (
+          </CardSection>
+        </Card>
+      ) : searchResults ? (
+        <div className="space-y-8">
+          {searchResults.primary.length > 0 ? (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {searchResults.primary.map((location) => (
+                <li key={location.slug}>
+                  <LocationCard location={location} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {searchResults.broader.length > 0 ? (
+            <div>
+              {searchResults.primary.length > 0 ? (
+                <p className="mb-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                  Also available in…
+                </p>
+              ) : null}
               <ul className="grid gap-3 sm:grid-cols-2">
-                {searchResults.primary.map((location) => (
+                {searchResults.broader.map((location) => (
                   <li key={location.slug}>
                     <LocationCard location={location} />
                   </li>
                 ))}
               </ul>
-            ) : null}
-            {searchResults.broader.length > 0 ? (
-              <div>
-                {searchResults.primary.length > 0 ? (
-                  <p className="mb-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                    Also available in…
-                  </p>
-                ) : null}
-                <ul className="grid gap-3 sm:grid-cols-2">
-                  {searchResults.broader.map((location) => (
-                    <li key={location.slug}>
-                      <LocationCard location={location} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {visibleLocations.map((location) => (
-              <li key={location.slug}>
-                <LocationCard location={location} />
-              </li>
-            ))}
-          </ul>
-        )}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {visibleLocations.map((location) => (
+            <li key={location.slug}>
+              <LocationCard location={location} />
+            </li>
+          ))}
+        </ul>
+      )}
     </AppShell>
   );
 }

@@ -26,12 +26,9 @@ import {
   type VoucherUiError,
 } from "@/lib/billing/voucherErrors";
 import type { BillingBalance, VoucherRedeemResponse } from "@/types/billing";
+import { Card, CardSection } from "@/components/ui/Card";
 
-export type VoucherRedeemStatus =
-  | "idle"
-  | "redeeming"
-  | "success"
-  | "error";
+export type VoucherRedeemStatus = "idle" | "redeeming" | "success" | "error";
 
 /** Allowed transitions — document + enforce in setStatus helpers. */
 const ALLOWED: Record<VoucherRedeemStatus, readonly VoucherRedeemStatus[]> = {
@@ -118,9 +115,7 @@ export function VoucherRedeemForm({
         return "redeeming";
       }
       if (!ALLOWED[current].includes("redeeming")) {
-        console.warn(
-          `Invalid voucher status transition ${prev} → redeeming`,
-        );
+        console.warn(`Invalid voucher status transition ${prev} → redeeming`);
         return prev;
       }
       return "redeeming";
@@ -202,7 +197,9 @@ export function VoucherRedeemForm({
         try {
           await refreshBalance();
         } catch {
-          await queryClient.invalidateQueries({ queryKey: billingKeys.balance });
+          await queryClient.invalidateQueries({
+            queryKey: billingKeys.balance,
+          });
           try {
             await refreshBalance();
           } catch {
@@ -382,170 +379,172 @@ export function VoucherRedeemForm({
   const busy = status === "redeeming";
 
   return (
-    <section
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-      data-testid="voucher-redeem-section"
-    >
-      <h2 className="text-lg font-semibold text-slate-900">Redeem voucher</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        Enter a gift or promo code, or scan a QR code to add credits.
-      </p>
+    <Card as="section" data-testid="voucher-redeem-section">
+      <CardSection>
+        <h2 className="text-lg font-semibold text-slate-900">Redeem voucher</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Enter a gift or promo code, or scan a QR code to add credits.
+        </p>
 
-      {status === "success" && success ? (
-        <div
-          ref={successRef}
-          tabIndex={-1}
-          role="status"
-          className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 outline-none"
-          data-testid="voucher-redeem-success"
-        >
-          {success.replay ? (
-            <>
-              <p className="font-semibold">Already redeemed</p>
-              <p className="mt-1 text-sm">
-                You already redeemed this voucher. Your balance was not
-                changed.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="font-semibold">Voucher redeemed</p>
-              <p className="mt-1 text-sm tabular-nums">
-                +{formatCredits(success.credited)} {tokenSymbol}
-              </p>
-            </>
-          )}
-          <p className="mt-1 text-sm tabular-nums text-emerald-900/80">
-            Current balance: {formatCredits(success.balance)} {tokenSymbol}
-          </p>
-          <button
-            type="button"
-            className="mt-3 text-sm font-medium text-emerald-900 underline"
-            onClick={() => {
-              setSuccess(null);
-              setStatus("idle");
-              inputRef.current?.focus();
-            }}
+        {status === "success" && success ? (
+          <div
+            ref={successRef}
+            tabIndex={-1}
+            role="status"
+            className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 outline-none"
+            data-testid="voucher-redeem-success"
           >
-            Redeem another
-          </button>
-        </div>
-      ) : null}
-
-      <form
-        className="mt-4 flex flex-col gap-3 md:flex-row md:items-end"
-        onSubmit={(event) => void handleSubmit(event)}
-      >
-        <label className="block min-w-0 flex-1" htmlFor={inputId}>
-          <span className="text-sm font-medium text-slate-700">
-            Voucher code
-          </span>
-          <input
-            ref={inputRef}
-            id={inputId}
-            data-testid="voucher-code-input"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            value={code}
-            disabled={busy}
-            onChange={(event) => {
-              setCode(event.target.value);
-              setError(null);
-              if (status === "success") {
+            {success.replay ? (
+              <>
+                <p className="font-semibold">Already redeemed</p>
+                <p className="mt-1 text-sm">
+                  You already redeemed this voucher. Your balance was not
+                  changed.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Voucher redeemed</p>
+                <p className="mt-1 text-sm tabular-nums">
+                  +{formatCredits(success.credited)} {tokenSymbol}
+                </p>
+              </>
+            )}
+            <p className="mt-1 text-sm tabular-nums text-emerald-900/80">
+              Current balance: {formatCredits(success.balance)} {tokenSymbol}
+            </p>
+            <button
+              type="button"
+              className="mt-3 text-sm font-medium text-emerald-900 underline"
+              onClick={() => {
                 setSuccess(null);
                 setStatus("idle");
-              }
-            }}
-            className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-sky-600 focus:ring-2 disabled:opacity-60"
-          />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            data-testid="voucher-redeem-submit"
-            disabled={busy || !code.trim()}
-            className="rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {busy ? "Redeeming…" : "Redeem"}
-          </button>
-          {pasteAvailable ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handlePaste()}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50"
+                inputRef.current?.focus();
+              }}
             >
-              Paste
+              Redeem another
             </button>
-          ) : null}
-          {scanCapable ? (
-            <button
-              type="button"
-              disabled={busy}
-              data-testid="voucher-scan-button"
-              onClick={() => void handleOpenScanner()}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50"
-            >
-              Scan QR
-            </button>
-          ) : (
-            <p className="self-center text-xs text-slate-500">
-              Camera scan unavailable in this browser.
-            </p>
-          )}
-        </div>
-      </form>
+          </div>
+        ) : null}
 
-      {error ? (
-        <div
-          role="alert"
-          className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950"
-          data-testid="voucher-redeem-error"
+        <form
+          className="mt-4 flex flex-col gap-3 md:flex-row md:items-end"
+          onSubmit={(event) => void handleSubmit(event)}
         >
-          <p>{error.message}</p>
-          {error.retryable ? (
-            <button
-              type="button"
-              className="mt-2 font-medium underline"
+          <label className="block min-w-0 flex-1" htmlFor={inputId}>
+            <span className="text-sm font-medium text-slate-700">
+              Voucher code
+            </span>
+            <input
+              ref={inputRef}
+              id={inputId}
+              data-testid="voucher-code-input"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              value={code}
               disabled={busy}
-              onClick={() => void runRedeem(code)}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setError(null);
+                if (status === "success") {
+                  setSuccess(null);
+                  setStatus("idle");
+                }
+              }}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-sky-600 focus:ring-2 disabled:opacity-60"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              data-testid="voucher-redeem-submit"
+              disabled={busy || !code.trim()}
+              className="rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Try again
+              {busy ? "Redeeming…" : "Redeem"}
             </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {scannerNote ? (
-        <p className="mt-2 text-sm text-slate-600" role="status">
-          {scannerNote}
-        </p>
-      ) : null}
-
-      {scannerOpen ? (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4 md:static md:z-auto md:mt-4 md:bg-transparent md:p-0"
-          data-testid="voucher-scanner"
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-lg md:max-w-none md:border md:border-slate-200 md:shadow-none">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-slate-800">
-                Point your camera at the voucher QR
-              </p>
+            {pasteAvailable ? (
               <button
                 type="button"
-                className="text-sm font-medium text-slate-700 underline"
-                onClick={() => void closeScanner()}
+                disabled={busy}
+                onClick={() => void handlePaste()}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50"
               >
-                Close
+                Paste
               </button>
-            </div>
-            <div ref={scannerHostRef} className="overflow-hidden rounded-xl" />
+            ) : null}
+            {scanCapable ? (
+              <button
+                type="button"
+                disabled={busy}
+                data-testid="voucher-scan-button"
+                onClick={() => void handleOpenScanner()}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50"
+              >
+                Scan QR
+              </button>
+            ) : (
+              <p className="self-center text-xs text-slate-500">
+                Camera scan unavailable in this browser.
+              </p>
+            )}
           </div>
-        </div>
-      ) : null}
-    </section>
+        </form>
+
+        {error ? (
+          <div
+            role="alert"
+            className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950"
+            data-testid="voucher-redeem-error"
+          >
+            <p>{error.message}</p>
+            {error.retryable ? (
+              <button
+                type="button"
+                className="mt-2 font-medium underline"
+                disabled={busy}
+                onClick={() => void runRedeem(code)}
+              >
+                Try again
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {scannerNote ? (
+          <p className="mt-2 text-sm text-slate-600" role="status">
+            {scannerNote}
+          </p>
+        ) : null}
+
+        {scannerOpen ? (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4 md:static md:z-auto md:mt-4 md:bg-transparent md:p-0"
+            data-testid="voucher-scanner"
+          >
+            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-lg md:max-w-none md:border md:border-slate-200 md:shadow-none">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-slate-800">
+                  Point your camera at the voucher QR
+                </p>
+                <button
+                  type="button"
+                  className="text-sm font-medium text-slate-700 underline"
+                  onClick={() => void closeScanner()}
+                >
+                  Close
+                </button>
+              </div>
+              <div
+                ref={scannerHostRef}
+                className="overflow-hidden rounded-xl"
+              />
+            </div>
+          </div>
+        ) : null}
+      </CardSection>
+    </Card>
   );
 }
