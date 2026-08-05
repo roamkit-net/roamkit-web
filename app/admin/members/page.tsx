@@ -17,6 +17,15 @@ import { adminMemberPath, routes } from "@/lib/routes";
 
 const PAGE_SIZE = 20;
 
+type SortKey = "email" | "balance" | "last_login" | "flags";
+
+const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "email", label: "Email" },
+  { key: "balance", label: "Balance" },
+  { key: "last_login", label: "Last login" },
+  { key: "flags", label: "Flags" },
+];
+
 function badgeVariant(
   badge: string,
 ): "primary" | "success" | "warning" | "danger" | "neutral" {
@@ -27,10 +36,16 @@ function badgeVariant(
   return "warning";
 }
 
+function toOrdering(key: SortKey, dir: "asc" | "desc"): string {
+  return dir === "desc" ? `-${key}` : key;
+}
+
 export default function AdminMembersPage() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [members, setMembers] = useState<OpsUserListItem[]>([]);
   const [count, setCount] = useState(0);
   const [hasNext, setHasNext] = useState(false);
@@ -47,6 +62,7 @@ export default function AdminMembersPage() {
         const data = await fetchOpsUsers({
           q: q.trim() || undefined,
           page: page > 1 ? page : undefined,
+          ordering: sortKey ? toOrdering(sortKey, sortDir) : undefined,
         });
         if (cancelled) return;
         setMembers(data.results);
@@ -73,7 +89,17 @@ export default function AdminMembersPage() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [q, page, router]);
+  }, [q, page, sortKey, sortDir, router]);
+
+  function onSort(key: SortKey) {
+    setPage(1);
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("asc");
+  }
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const from = count === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -114,10 +140,37 @@ export default function AdminMembersPage() {
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Balance</th>
-                  <th className="px-4 py-3 font-medium">Last login</th>
-                  <th className="px-4 py-3 font-medium">Flags</th>
+                  {SORT_COLUMNS.map(({ key, label }) => {
+                    const active = sortKey === key;
+                    const indicator = !active
+                      ? ""
+                      : sortDir === "asc"
+                        ? " ↑"
+                        : " ↓";
+                    return (
+                      <th key={key} className="px-4 py-3 font-medium">
+                        <button
+                          type="button"
+                          onClick={() => onSort(key)}
+                          className={
+                            active
+                              ? "text-slate-900 hover:underline"
+                              : "hover:text-slate-800 hover:underline"
+                          }
+                          aria-sort={
+                            active
+                              ? sortDir === "asc"
+                                ? "ascending"
+                                : "descending"
+                              : "none"
+                          }
+                        >
+                          {label}
+                          {indicator}
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
