@@ -9,6 +9,7 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
+import { DepositNetworkWarning } from "@/components/deposit/DepositNetworkWarning";
 import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
 import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemErrorBoundary";
@@ -20,6 +21,7 @@ import {
   fetchMe,
   isAuthenticated,
 } from "@/lib/api";
+import { depositCopy } from "@/lib/billing/depositCopy";
 import { formatCredits } from "@/lib/billing/format";
 import { returnDestinationLabel } from "@/lib/billing/returnLabel";
 import { billingTelemetry } from "@/lib/billing/telemetry";
@@ -201,12 +203,16 @@ function DepositPageContent() {
             RoamKit
           </p>
         }
-        title={<h1 className="text-3xl font-bold tracking-tight">Deposit</h1>}
+        title={
+          <h1 className="text-3xl font-bold tracking-tight">
+            {depositCopy.pageTitle}
+          </h1>
+        }
         description={
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Add prepaid credits. Send on-chain via QR
-            {features.walletConnect ? " / WalletConnect" : ""}, or paste a CEX
-            withdrawal TXID.
+            {features.walletConnect
+              ? depositCopy.pageDescriptionWithWallet
+              : depositCopy.pageDescriptionWithoutWallet}
           </p>
         }
       >
@@ -269,29 +275,26 @@ function DepositPageContent() {
           </div>
         ) : (
           <div className={`space-y-6 ${returning ? "opacity-60" : ""}`}>
+            <DepositNetworkWarning
+              tokenSymbol={config.tokenSymbol}
+              chainId={config.chainId}
+            />
+
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-                    Credit balance
-                    {balanceRefreshing ? (
-                      <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
-                        Updating…
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
-                    {balance != null ? formatCredits(balance) : "—"}{" "}
-                    <span className="text-lg font-semibold text-slate-500">
-                      {config.tokenSymbol}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
+                  Credit balance
+                  {balanceRefreshing ? (
+                    <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+                      Updating…
                     </span>
-                  </p>
-                </div>
-                <p className="max-w-sm text-sm leading-6 text-amber-800">
-                  <strong>
-                    {config.tokenSymbol} on the configured network only.
-                  </strong>{" "}
-                  Other networks or tokens will not be credited.
+                  ) : null}
+                </p>
+                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+                  {balance != null ? formatCredits(balance) : "—"}{" "}
+                  <span className="text-lg font-semibold text-slate-500">
+                    {config.tokenSymbol}
+                  </span>
                 </p>
               </div>
 
@@ -317,7 +320,7 @@ function DepositPageContent() {
                   className="mt-1.5 text-xs text-slate-500"
                 >
                   Up to {config.decimals} decimal places. Used for QR
-                  {features.walletConnect ? ", wallet pay," : ""} and CEX
+                  {features.walletConnect ? ", wallet pay," : ""} and exchange
                   verification.
                 </p>
               </label>
@@ -345,15 +348,10 @@ function DepositPageContent() {
             ) : features.walletConnect ? (
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">
-                  WalletConnect
+                  {depositCopy.walletMisconfiguredHeading}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Wallet deposits are enabled on the API, but{" "}
-                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
-                    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
-                  </code>{" "}
-                  is not configured for this web build. Use the EIP-681 QR or
-                  CEX TXID flow instead.
+                  {depositCopy.walletMisconfiguredBody}
                 </p>
               </section>
             ) : null}
