@@ -1,0 +1,7 @@
+# Landing hero photograph
+
+- File: `hero-travel.jpg` (also `.webp` / `.avif` masters for reference)
+- Photo: Airport window traveler — Henry Deng / Unsplash
+- URL: https://unsplash.com/photos/a-person-sitting-in-front-of-a-window-looking-out-at-an-airport-6MxF5a6pa0c
+- License: Unsplash License (https://unsplash.com/license)
+- Phase 1 pick: P1

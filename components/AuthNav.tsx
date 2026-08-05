@@ -33,12 +33,12 @@ type AuthNavProps = {
 };
 
 const SIGN_IN_BASE =
-  "rounded-lg px-4 py-2.5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2";
+  "rounded-lg px-4 py-2.5 text-sm font-semibold outline-none transition";
 
 const SIGN_IN_VARIANT: Record<AuthNavVariant, string> = {
-  app: "bg-sky-700 text-white hover:bg-sky-800 focus-visible:ring-sky-500 focus-visible:ring-offset-white",
-  landing:
-    "bg-cyan-500 text-slate-950 hover:bg-cyan-400 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-[#05070a]",
+  app: "bg-sky-700 text-white hover:bg-sky-800 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+  /** Colors from `--landing-*` tokens via `.landing-cta` (globals.css). */
+  landing: "landing-cta",
 };
 
 export function AuthNav({ variant = "app" }: AuthNavProps) {
