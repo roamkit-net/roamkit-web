@@ -20,6 +20,15 @@ describe("depositCopy", () => {
     assert.match(depositCopy.cexAmountNote, /on-chain/i);
   });
 
+  it("includes pending resume banner copy", () => {
+    assert.equal(depositCopy.pendingBannerTitle, "Pending deposit detected");
+    assert.equal(depositCopy.pendingContinue, "Continue verification");
+    assert.match(
+      depositCopy.pendingBannerBody("0xaaaa…bbbb", "exchange", "25"),
+      /0xaaaa…bbbb/,
+    );
+  });
+
   it("builds lead copy from token symbol and chain id", () => {
     const lead = depositCopy.networkWarningLead("USDT", 80002);
     assert.match(lead, /USDT/);

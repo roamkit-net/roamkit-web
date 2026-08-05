@@ -10,6 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositNetworkWarning } from "@/components/deposit/DepositNetworkWarning";
+import { DepositPendingBanner } from "@/components/deposit/DepositPendingBanner";
 import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
 import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemErrorBoundary";
@@ -23,6 +24,11 @@ import {
 } from "@/lib/api";
 import { depositCopy } from "@/lib/billing/depositCopy";
 import { formatCredits } from "@/lib/billing/format";
+import {
+  clearPendingDeposit,
+  peekPendingDeposit,
+  type PendingDepositSession,
+} from "@/lib/billing/pendingDeposit";
 import { returnDestinationLabel } from "@/lib/billing/returnLabel";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { isValidDepositAmount } from "@/lib/eip681";
@@ -102,9 +108,17 @@ function DepositPageContent() {
   const [userError, setUserError] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [returning, setReturning] = useState(false);
+  const [bannerSession, setBannerSession] =
+    useState<PendingDepositSession | null>(null);
+  const [resumeRequest, setResumeRequest] =
+    useState<PendingDepositSession | null>(null);
 
   useEffect(() => {
     billingTelemetry.track("deposit_page_open");
+  }, []);
+
+  useEffect(() => {
+    setBannerSession(peekPendingDeposit());
   }, []);
 
   useEffect(() => {
@@ -112,6 +126,33 @@ function DepositPageContent() {
       setAmount(normalizeDepositAmount(amountParam));
     }
   }, [amountParam]);
+
+  const handleResumeConsumed = useCallback(() => {
+    setResumeRequest(null);
+  }, []);
+
+  const handleVerifyStart = useCallback(() => {
+    setBannerSession(null);
+  }, []);
+
+  const handlePendingContinue = useCallback(() => {
+    const session = peekPendingDeposit();
+    if (!session) {
+      setBannerSession(null);
+      return;
+    }
+    billingTelemetry.track("deposit_pending_resumed", {
+      method: session.method,
+    });
+    setBannerSession(null);
+    setResumeRequest(session);
+  }, []);
+
+  const handlePendingDismiss = useCallback(() => {
+    clearPendingDeposit();
+    setBannerSession(null);
+    setResumeRequest(null);
+  }, []);
 
   useEffect(() => {
     if (!codeParam) {
@@ -280,6 +321,15 @@ function DepositPageContent() {
               chainId={config.chainId}
             />
 
+            {bannerSession ? (
+              <DepositPendingBanner
+                session={bannerSession}
+                chainId={config.chainId}
+                onContinue={handlePendingContinue}
+                onDismiss={handlePendingDismiss}
+              />
+            ) : null}
+
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
@@ -345,6 +395,11 @@ function DepositPageContent() {
                 amount={amount}
                 onAmountChange={setAmount}
                 onVerified={() => void handleVerified()}
+                resumeRequest={
+                  resumeRequest?.method === "wallet" ? resumeRequest : null
+                }
+                onResumeConsumed={handleResumeConsumed}
+                onVerifyStart={handleVerifyStart}
               />
             ) : features.walletConnect ? (
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -362,6 +417,11 @@ function DepositPageContent() {
               amount={amount}
               onAmountChange={setAmount}
               onVerified={() => void handleVerified()}
+              resumeRequest={
+                resumeRequest?.method === "cex" ? resumeRequest : null
+              }
+              onResumeConsumed={handleResumeConsumed}
+              onVerifyStart={handleVerifyStart}
             />
           </div>
         )}

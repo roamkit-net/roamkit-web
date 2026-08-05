@@ -1,3 +1,4 @@
+import { clearPendingDeposit } from "@/lib/billing/pendingDeposit";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 
 const DEFAULT_API_URL = "http://localhost:8000";
@@ -242,6 +243,7 @@ export function setTokens(
 
 export function clearTokens(): void {
   clearPendingSpend();
+  clearPendingDeposit();
   memoryTokens = null;
   if (canUseLocalStorage()) {
     clearWebStorageTokens(localStorage);

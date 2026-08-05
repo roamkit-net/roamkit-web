@@ -14,6 +14,11 @@ import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
 import { addressExplorerUrl, explorerName } from "@/lib/billing/explorer";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
+import {
+  clearPendingDeposit,
+  savePendingDeposit,
+  type PendingDepositSession,
+} from "@/lib/billing/pendingDeposit";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
 import { isValidDepositAmount } from "@/lib/eip681";
@@ -24,6 +29,11 @@ type CexDepositFormProps = {
   amount: string;
   onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
+  /** When set (method cex), resume verify once — parent clears after consume. */
+  resumeRequest?: PendingDepositSession | null;
+  onResumeConsumed?: () => void;
+  /** Hide page pending banner when a verify starts from this form. */
+  onVerifyStart?: () => void;
 };
 
 type ExplorerStatus = "pending" | "completed" | "failed";
@@ -44,6 +54,9 @@ export function CexDepositForm({
   amount,
   onAmountChange,
   onVerified,
+  resumeRequest = null,
+  onResumeConsumed,
+  onVerifyStart,
 }: CexDepositFormProps) {
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +72,7 @@ export function CexDepositForm({
   const abortRef = useRef<AbortController | null>(null);
   const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
   const addressCopyStatusRef = useRef<HTMLSpanElement | null>(null);
+  const resumeStartedRef = useRef(false);
 
   const addressExplorer = config.wallet
     ? addressExplorerUrl(config.chainId, config.wallet)
@@ -76,6 +90,29 @@ export function CexDepositForm({
       mismatchAlertRef.current.focus();
     }
   }, [mismatchAmount]);
+
+  useEffect(() => {
+    if (!resumeRequest) {
+      resumeStartedRef.current = false;
+      return;
+    }
+    if (resumeRequest.method !== "cex") {
+      return;
+    }
+    if (resumeStartedRef.current) {
+      return;
+    }
+    resumeStartedRef.current = true;
+    const { txHash: hash, amount: resumeAmount, idempotencyKey: key } =
+      resumeRequest;
+    onResumeConsumed?.();
+    setTxHash(hash);
+    setIdempotencyKey(key);
+    onAmountChange?.(resumeAmount);
+    void runVerify(resumeAmount, hash, key, { isRetry: false });
+    // Intentionally once per resumeRequest identity; runVerify closes over latest helpers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resume gate
+  }, [resumeRequest]);
 
   async function copyPlatformAddress() {
     if (!config.wallet) {
@@ -104,11 +141,20 @@ export function CexDepositForm({
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const trimmedAmount = amountRequested.trim();
     const payload = {
       tx_hash: hash,
-      amount_requested: amountRequested.trim(),
+      amount_requested: trimmedAmount,
       idempotency_key: key,
     };
+
+    onVerifyStart?.();
+    savePendingDeposit({
+      txHash: hash,
+      amount: trimmedAmount,
+      idempotencyKey: key,
+      method: "cex",
+    });
 
     setIsSubmitting(true);
     setActiveTxHash(hash);
@@ -132,6 +178,12 @@ export function CexDepositForm({
           signal: controller.signal,
           onUpdate: (current) => {
             if (shouldShowPending(current)) {
+              savePendingDeposit({
+                txHash: hash,
+                amount: trimmedAmount,
+                idempotencyKey: key,
+                method: "cex",
+              });
               setExplorerStatus("pending");
               setStatusMessage(
                 formatDepositPendingMessage(current, config.confirmations),
@@ -142,6 +194,7 @@ export function CexDepositForm({
       );
 
       if (isDepositVerified(deposit)) {
+        clearPendingDeposit();
         billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
         if (isRetry) {
           billingTelemetry.track("deposit_retry_success", { method: "cex" });
@@ -156,6 +209,7 @@ export function CexDepositForm({
       }
 
       if (isDepositFailed(deposit)) {
+        clearPendingDeposit();
         billingTelemetry.track("deposit_verify_failed", {
           method: "cex",
           code: "FAILED",
@@ -185,10 +239,15 @@ export function CexDepositForm({
         mapped.category === "pending" ? "pending" : "failed",
       );
       if (mismatch) {
+        clearPendingDeposit();
         setMismatchAmount(mismatch.onChainAmount);
         setError(null);
         setStatusMessage(null);
+      } else if (mapped.category === "pending") {
+        // Keep pending session for Continue after timeout / transient errors.
+        setError(mapped.message);
       } else {
+        clearPendingDeposit();
         setError(mapped.message);
       }
       if (mapped.category !== "pending") {

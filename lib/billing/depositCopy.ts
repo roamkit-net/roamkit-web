@@ -69,4 +69,16 @@ export const depositCopy = {
   viewOnExplorer: (explorerName: string) => `View on ${explorerName} →`,
   viewOnExplorerAria: (explorerName: string) =>
     `View transaction on ${explorerName}`,
+
+  pendingBannerTitle: "Pending deposit detected",
+  pendingBannerBody: (
+    truncatedTx: string,
+    methodLabel: string,
+    amount: string,
+  ) =>
+    `You left verification in progress for ${truncatedTx} (${methodLabel}, ${amount}). Continue to resume with the same transaction.`,
+  pendingMethodCex: "exchange",
+  pendingMethodWallet: "wallet",
+  pendingContinue: "Continue verification",
+  pendingDismiss: "Dismiss",
 } as const;

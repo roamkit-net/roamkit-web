@@ -26,6 +26,11 @@ import {
 import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
+import {
+  clearPendingDeposit,
+  savePendingDeposit,
+  type PendingDepositSession,
+} from "@/lib/billing/pendingDeposit";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
 import { isValidDepositAmount } from "@/lib/eip681";
@@ -40,6 +45,9 @@ type WalletDepositPanelProps = {
   amount: string;
   onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
+  resumeRequest?: PendingDepositSession | null;
+  onResumeConsumed?: () => void;
+  onVerifyStart?: () => void;
 };
 
 type ExplorerStatus = "pending" | "completed" | "failed";
@@ -49,6 +57,9 @@ export function WalletDepositPanel({
   amount,
   onAmountChange,
   onVerified,
+  resumeRequest = null,
+  onResumeConsumed,
+  onVerifyStart,
 }: WalletDepositPanelProps) {
   const { open } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
@@ -66,6 +77,7 @@ export function WalletDepositPanel({
   const [retryPending, setRetryPending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
+  const resumeStartedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -90,6 +102,16 @@ export function WalletDepositPanel({
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const trimmedAmount = amountRequested.trim();
+
+      onVerifyStart?.();
+      savePendingDeposit({
+        txHash: hash,
+        amount: trimmedAmount,
+        idempotencyKey,
+        method: "wallet",
+      });
+
       setIsVerifying(true);
       setError(null);
       setMismatchAmount(null);
@@ -108,7 +130,7 @@ export function WalletDepositPanel({
           (body, signal) => verifyWallet(body, signal),
           {
             tx_hash: hash,
-            amount_requested: amountRequested.trim(),
+            amount_requested: trimmedAmount,
             idempotency_key: idempotencyKey,
           },
           {
@@ -116,6 +138,12 @@ export function WalletDepositPanel({
             onUpdate: (current) => {
               const status = current.status?.trim().toLowerCase();
               if (!status || status === "pending") {
+                savePendingDeposit({
+                  txHash: hash,
+                  amount: trimmedAmount,
+                  idempotencyKey,
+                  method: "wallet",
+                });
                 setExplorerStatus("pending");
                 setStatusMessage(
                   formatDepositPendingMessage(current, config.confirmations),
@@ -126,6 +154,7 @@ export function WalletDepositPanel({
         );
 
         if (isDepositVerified(deposit)) {
+          clearPendingDeposit();
           billingTelemetry.track("deposit_verify_succeeded", {
             method: "wallet",
           });
@@ -142,6 +171,7 @@ export function WalletDepositPanel({
         }
 
         if (isDepositFailed(deposit)) {
+          clearPendingDeposit();
           billingTelemetry.track("deposit_verify_failed", {
             method: "wallet",
             code: "FAILED",
@@ -172,18 +202,41 @@ export function WalletDepositPanel({
           mapped.category === "pending" ? "pending" : "failed",
         );
         if (mismatch) {
+          clearPendingDeposit();
           setMismatchAmount(mismatch.onChainAmount);
           setError(null);
           setStatusMessage(null);
+        } else if (mapped.category === "pending") {
+          setError(mapped.message);
         } else {
+          clearPendingDeposit();
           setError(mapped.message);
         }
       } finally {
         setIsVerifying(false);
       }
     },
-    [config.confirmations, onVerified],
+    [config.confirmations, onVerified, onVerifyStart],
   );
+
+  useEffect(() => {
+    if (!resumeRequest) {
+      resumeStartedRef.current = false;
+      return;
+    }
+    if (resumeRequest.method !== "wallet") {
+      return;
+    }
+    if (resumeStartedRef.current) {
+      return;
+    }
+    resumeStartedRef.current = true;
+    const { txHash: hash, amount: resumeAmount, idempotencyKey: key } =
+      resumeRequest;
+    onResumeConsumed?.();
+    onAmountChange?.(resumeAmount);
+    void verifyHash(hash, key, resumeAmount, { isRetry: false });
+  }, [resumeRequest, onAmountChange, onResumeConsumed, verifyHash]);
 
   async function handlePay() {
     setError(null);
