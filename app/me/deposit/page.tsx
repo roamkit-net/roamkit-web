@@ -135,9 +135,10 @@ function DepositPageContent() {
   }, []);
 
   const handlePendingContinue = useCallback(() => {
-    const session = peekPendingDeposit();
+    // Use the session already shown in the banner — do not re-peek storage,
+    // which may have been cleared (TTL/expiry) between render and click.
+    const session = bannerSession;
     if (!session) {
-      setBannerSession(null);
       return;
     }
     billingTelemetry.track("deposit_pending_resumed", {
@@ -145,7 +146,7 @@ function DepositPageContent() {
     });
     setBannerSession(null);
     setResumeRequest(session);
-  }, []);
+  }, [bannerSession]);
 
   const handlePendingDismiss = useCallback(() => {
     clearPendingDeposit();
