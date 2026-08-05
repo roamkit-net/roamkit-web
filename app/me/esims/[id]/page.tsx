@@ -153,11 +153,13 @@ export default function MyEsimDetailPage() {
     return undefined;
   }
 
-  function topupBuyDisabled(topup: TopupPackage): boolean {
+  function topupBuyDisabled(): boolean {
     if (pendingTopup !== null) {
       return true;
     }
-    if (busyPackageId !== null && busyPackageId !== topup.id) {
+    // Disable every CTA while any purchase/shortfall redirect is in flight
+    // (including the busy row — label shows "Buying…" / "Redirecting…").
+    if (busyPackageId !== null) {
       return true;
     }
     return false;
@@ -708,10 +710,7 @@ export default function MyEsimDetailPage() {
                                   event.currentTarget,
                                 )
                               }
-                              disabled={
-                                topupBuyDisabled(topup) ||
-                                busyPackageId === topup.id
-                              }
+                              disabled={topupBuyDisabled()}
                               title={topupBuyTitle(topup)}
                               aria-label={
                                 topupBuyTitle(topup) || shortfallLabelFor(topup)
@@ -731,7 +730,7 @@ export default function MyEsimDetailPage() {
                                   event.currentTarget,
                                 )
                               }
-                              disabled={topupBuyDisabled(topup)}
+                              disabled={topupBuyDisabled()}
                               title={topupBuyTitle(topup)}
                               aria-label={topupBuyTitle(topup)}
                               className={buttonClassName({
