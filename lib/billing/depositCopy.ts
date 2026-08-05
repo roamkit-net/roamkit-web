@@ -49,6 +49,13 @@ export const depositCopy = {
   walletVerified: "Deposit verified. Credits added to your balance.",
   walletFailedFallback: "Wallet deposit could not be verified.",
 
+  amountMismatchTitle: "Amount does not match the on-chain transfer",
+  amountMismatchBody: (tokenSymbol: string, onChainAmount: string) =>
+    `Exchanges sometimes deduct a fee. The blockchain received ${onChainAmount} ${tokenSymbol}. Enter that exact amount and retry — we will not invent credits.`,
+  amountMismatchReceivedLabel: "Received on-chain",
+  amountMismatchRetry: (amount: string, tokenSymbol: string) =>
+    `Retry with ${amount} ${tokenSymbol}`,
+
   viewOnExplorer: (explorerName: string) => `View on ${explorerName} →`,
   viewOnExplorerAria: (explorerName: string) =>
     `View transaction on ${explorerName}`,

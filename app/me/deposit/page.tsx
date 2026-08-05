@@ -343,6 +343,7 @@ function DepositPageContent() {
               <WalletDepositWithAppKit
                 config={config}
                 amount={amount}
+                onAmountChange={setAmount}
                 onVerified={() => void handleVerified()}
               />
             ) : features.walletConnect ? (
@@ -359,6 +360,7 @@ function DepositPageContent() {
             <CexDepositForm
               config={config}
               amount={amount}
+              onAmountChange={setAmount}
               onVerified={() => void handleVerified()}
             />
           </div>
