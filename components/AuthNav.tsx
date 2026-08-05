@@ -54,10 +54,13 @@ export function AuthNav({ variant = "app" }: AuthNavProps) {
           setState({ status: "authenticated", email: me.email });
         }
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
         if (err instanceof ApiError && err.status === 401) {
           clearTokens();
         }
-        if (!cancelled) setState({ status: "anonymous" });
+        setState({ status: "anonymous" });
       }
     }
 
