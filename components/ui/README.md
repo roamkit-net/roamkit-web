@@ -6,7 +6,7 @@ Colocated Cap2 changelog (ADR 016). Alert ≠ Toast.
 |-----------|--------|-----------|-------|
 | Button | ✅ | `ui/Button` | Cap2.1 — [#97](https://github.com/roamkit-net/roamkit-web/pull/97) |
 | Alert | ✅ | `ui/Alert` | Cap2.2 — [#98](https://github.com/roamkit-net/roamkit-web/pull/98) |
-| Input | ✅ | `ui/Input` | Cap2.3 — text/email/password chrome; PasswordField wraps control classes |
+| Input | ✅ | `ui/Input` | Cap2.3 — [#99](https://github.com/roamkit-net/roamkit-web/pull/99) |
 | Card | ⏳ | `ui/Card` | Cap2.4 |
 | Skeleton | ⏳ | `ui/Skeleton` | Cap2.5 |
 | Empty | ⏳ | `ui/EmptyState` | Cap2.5 |
