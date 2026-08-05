@@ -42,4 +42,14 @@ export const depositCopy = {
   cexTxHashLabel: "Transaction hash (TXID)",
   cexVerify: "Verify deposit",
   cexVerifying: "Verifying…",
+
+  cexVerified: "Deposit verified. Credits will appear in your balance.",
+  cexFailedFallback:
+    "Deposit could not be verified. Check the TXID and network.",
+  walletVerified: "Deposit verified. Credits added to your balance.",
+  walletFailedFallback: "Wallet deposit could not be verified.",
+
+  viewOnExplorer: (explorerName: string) => `View on ${explorerName} →`,
+  viewOnExplorerAria: (explorerName: string) =>
+    `View transaction on ${explorerName}`,
 } as const;
