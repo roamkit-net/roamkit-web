@@ -125,17 +125,26 @@
   --app-content-max-narrow: 42rem;
 
   /* -------------------------------------------------------------------------
-   * Auth theme — equals current AuthShell pixels.
+   * Auth theme — Cap4.1 AuthShell chrome (dark frame + light elevated panel).
+   * Brand tokens remain source of truth; auth aliases consume them.
    * ------------------------------------------------------------------------- */
   --auth-background: var(--color-background);
   --auth-surface: rgba(255, 255, 255, 0.95);
-  --auth-text: #0f172a; /* slate-900 on light card */
-  --auth-text-muted: #94a3b8; /* slate-400 on dark frame */
+  --auth-text: #0f172a; /* slate-900 on elevated panel */
+  --auth-text-muted: #64748b; /* muted on elevated panel */
+  --auth-chrome-text: var(--color-text);
+  --auth-chrome-text-muted: var(--color-text-muted);
   --auth-primary: var(--color-primary);
   --auth-primary-hover: var(--color-primary-hover);
   --auth-primary-foreground: var(--color-primary-foreground);
   --auth-focus-ring: var(--focus-ring);
   --auth-mesh-secondary: var(--accent-purple);
+  --auth-border: rgba(255, 255, 255, 0.1);
+
+  /* Spacing SoT — AuthShell owns these; same pixels as Cap4.1 baseline. */
+  --auth-gutter-x: 1.5rem;
+  --auth-page-padding-y: 4rem;
+  --auth-content-max: 28rem;
 }
 
 /*
@@ -458,9 +467,17 @@ body {
   }
 }
 
-/* Auth shell: dark frame + soft radial mesh (no landing hero image). */
+/* Auth shell: dark frame + soft radial mesh (no landing hero image). Cap4.1. */
 .auth-page-bg {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding-inline: max(var(--auth-gutter-x), env(safe-area-inset-left, 0px))
+    max(var(--auth-gutter-x), env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--auth-page-padding-y) + env(safe-area-inset-top, 0px))
+    calc(var(--auth-page-padding-y) + env(safe-area-inset-bottom, 0px));
   background-color: var(--auth-background);
+  color: var(--auth-chrome-text);
+  font-family: var(--font-body);
   background-image:
     radial-gradient(
       ellipse 55% 45% at 20% 15%,
@@ -486,7 +503,29 @@ body {
 }
 
 .auth-shell-enter {
+  width: 100%;
+  max-width: var(--auth-content-max);
+  margin-inline: auto;
   animation: auth-shell-enter var(--motion-slow) var(--motion-ease) both;
+}
+
+.auth-shell-panel {
+  margin-top: 2rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--auth-border);
+  background-color: var(--auth-surface);
+  padding: 1.5rem;
+  color: var(--auth-text);
+  backdrop-filter: blur(4px);
+}
+
+.auth-shell-footer a {
+  font-weight: 500;
+  color: var(--auth-primary);
+}
+
+.auth-shell-footer a:hover {
+  color: var(--auth-primary-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
