@@ -7,7 +7,7 @@ const HERO_IMAGE = "/landing/hero-travel.jpg";
 
 export function HeroSection() {
   return (
-    <section className="relative isolate flex min-h-[min(100svh,52rem)] flex-col justify-end overflow-hidden pb-12 pt-24 sm:justify-center sm:pb-16 sm:pt-28 lg:pb-20 lg:pt-32">
+    <section className="relative flex min-h-[min(100svh,52rem)] flex-col justify-end overflow-hidden pb-12 pt-24 sm:justify-center sm:pb-16 sm:pt-28 lg:pb-20 lg:pt-32">
       {/* Ink fallback if image fails / while loading — prevents CLS flash */}
       <div
         className="absolute inset-0 bg-[var(--landing-ink)]"
