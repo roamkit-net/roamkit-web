@@ -3,6 +3,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
 
+import { depositCopy } from "@/lib/billing/depositCopy";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { eip681UriWithAmount, isValidDepositAmount } from "@/lib/eip681";
 import type { BillingConfig } from "@/types/billing";
@@ -41,11 +42,11 @@ export function Eip681QrPanel({ config, amount }: Eip681QrPanelProps) {
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">Scan EIP-681 QR</h2>
+      <h2 className="text-lg font-semibold text-slate-900">
+        {depositCopy.qrHeading}
+      </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Scan with a wallet that supports EIP-681 to send {config.tokenSymbol}{" "}
-        (chain {config.chainId}). Enter an amount above to include it in the
-        payment request.
+        {depositCopy.qrDescription(config.tokenSymbol, config.chainId)}
       </p>
 
       <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -54,14 +55,14 @@ export function Eip681QrPanel({ config, amount }: Eip681QrPanelProps) {
             <QRCodeSVG value={uri} size={180} level="M" includeMargin />
           ) : (
             <div className="flex h-[180px] w-[180px] items-center justify-center text-sm text-slate-500">
-              Deposit address unavailable
+              {depositCopy.qrUnavailable}
             </div>
           )}
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-              Platform wallet
+              {depositCopy.qrPlatformWalletLabel}
             </p>
             <p className="mt-1 break-all font-mono text-sm text-slate-900">
               {config.wallet || "—"}
@@ -72,13 +73,13 @@ export function Eip681QrPanel({ config, amount }: Eip681QrPanelProps) {
                 className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
                 onClick={() => void copy(config.wallet, "wallet")}
               >
-                {copied === "wallet" ? "Copied" : "Copy address"}
+                {copied === "wallet" ? depositCopy.copied : depositCopy.copyAddress}
               </button>
             ) : null}
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-              EIP-681 URI
+              {depositCopy.qrPaymentUriLabel}
             </p>
             <p className="mt-1 break-all font-mono text-xs text-slate-600">
               {uri || "—"}
@@ -89,7 +90,7 @@ export function Eip681QrPanel({ config, amount }: Eip681QrPanelProps) {
                 className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800"
                 onClick={() => void copy(uri, "uri")}
               >
-                {copied === "uri" ? "Copied" : "Copy URI"}
+                {copied === "uri" ? depositCopy.copied : depositCopy.copyUri}
               </button>
             ) : null}
           </div>

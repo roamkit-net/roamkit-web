@@ -54,15 +54,14 @@ export default async function Home() {
   const featured = await loadFeaturedLocations();
 
   return (
-    <div className="landing-page-bg relative flex min-h-screen flex-col overflow-hidden">
-      <div
-        className="landing-page-overlay pointer-events-none absolute inset-0"
-        aria-hidden="true"
-      />
-
-      <Header />
-      <main className="relative flex-1">
+    <div className="relative flex min-h-screen flex-col bg-[var(--landing-ink)] text-[var(--landing-foreground)]">
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 z-20">
+          <Header />
+        </div>
         <HeroSection />
+      </div>
+      <main className="relative flex-1">
         <FeaturedPlans locations={featured} />
         <HowItWorks />
         <WhyRoamKit />

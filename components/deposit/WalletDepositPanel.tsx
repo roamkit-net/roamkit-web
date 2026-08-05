@@ -15,14 +15,22 @@ import {
 } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyWallet } from "@/lib/billing/client";
 import {
   formatDepositPendingMessage,
   isDepositFailed,
   isDepositVerified,
 } from "@/lib/billing/deposit";
+import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
+import {
+  clearPendingDeposit,
+  savePendingDeposit,
+  type PendingDepositSession,
+} from "@/lib/billing/pendingDeposit";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
 import { isValidDepositAmount } from "@/lib/eip681";
@@ -35,13 +43,23 @@ const ERC20_ABI = [
 type WalletDepositPanelProps = {
   config: BillingConfig;
   amount: string;
+  onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
+  resumeRequest?: PendingDepositSession | null;
+  onResumeConsumed?: () => void;
+  onVerifyStart?: () => void;
 };
+
+type ExplorerStatus = "pending" | "completed" | "failed";
 
 export function WalletDepositPanel({
   config,
   amount,
+  onAmountChange,
   onVerified,
+  resumeRequest = null,
+  onResumeConsumed,
+  onVerifyStart,
 }: WalletDepositPanelProps) {
   const { open } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
@@ -52,7 +70,14 @@ export function WalletDepositPanel({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [activeTxHash, setActiveTxHash] = useState<string | null>(null);
+  const [explorerStatus, setExplorerStatus] =
+    useState<ExplorerStatus>("pending");
+  const [mismatchAmount, setMismatchAmount] = useState<string | null>(null);
+  const [retryPending, setRetryPending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
+  const resumeStartedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -60,22 +85,52 @@ export function WalletDepositPanel({
     };
   }, []);
 
+  useEffect(() => {
+    if (mismatchAmount && mismatchAlertRef.current) {
+      mismatchAlertRef.current.focus();
+    }
+  }, [mismatchAmount]);
+
   const verifyHash = useCallback(
-    async (hash: string, idempotencyKey: string) => {
+    async (
+      hash: string,
+      idempotencyKey: string,
+      amountRequested: string,
+      { isRetry }: { isRetry: boolean },
+    ) => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const trimmedAmount = amountRequested.trim();
+
+      onVerifyStart?.();
+      savePendingDeposit({
+        txHash: hash,
+        amount: trimmedAmount,
+        idempotencyKey,
+        method: "wallet",
+      });
+
       setIsVerifying(true);
       setError(null);
-      billingTelemetry.track("deposit_verify_clicked", { method: "wallet" });
+      setMismatchAmount(null);
+      setActiveTxHash(hash);
+      setExplorerStatus("pending");
+      billingTelemetry.track("deposit_verify_clicked", {
+        method: "wallet",
+        ...(isRetry ? { retry: true } : {}),
+      });
+      if (isRetry) {
+        billingTelemetry.track("deposit_retry_clicked", { method: "wallet" });
+      }
 
       try {
         const deposit = await verifyDepositUntilSettled(
           (body, signal) => verifyWallet(body, signal),
           {
             tx_hash: hash,
-            amount_requested: amount.trim(),
+            amount_requested: trimmedAmount,
             idempotency_key: idempotencyKey,
           },
           {
@@ -83,6 +138,13 @@ export function WalletDepositPanel({
             onUpdate: (current) => {
               const status = current.status?.trim().toLowerCase();
               if (!status || status === "pending") {
+                savePendingDeposit({
+                  txHash: hash,
+                  amount: trimmedAmount,
+                  idempotencyKey,
+                  method: "wallet",
+                });
+                setExplorerStatus("pending");
                 setStatusMessage(
                   formatDepositPendingMessage(current, config.confirmations),
                 );
@@ -92,25 +154,36 @@ export function WalletDepositPanel({
         );
 
         if (isDepositVerified(deposit)) {
+          clearPendingDeposit();
           billingTelemetry.track("deposit_verify_succeeded", {
             method: "wallet",
           });
+          if (isRetry) {
+            billingTelemetry.track("deposit_retry_success", {
+              method: "wallet",
+            });
+          }
+          setExplorerStatus("completed");
+          setRetryPending(false);
           onVerified(deposit);
-          setStatusMessage("Deposit verified. Credits added to your balance.");
+          setStatusMessage(depositCopy.walletVerified);
           return;
         }
 
         if (isDepositFailed(deposit)) {
+          clearPendingDeposit();
           billingTelemetry.track("deposit_verify_failed", {
             method: "wallet",
             code: "FAILED",
           });
+          setExplorerStatus("failed");
           setError(
-            deposit.failure_reason || "Wallet deposit could not be verified.",
+            deposit.failure_reason || depositCopy.walletFailedFallback,
           );
           return;
         }
 
+        setExplorerStatus("pending");
         setStatusMessage(
           formatDepositPendingMessage(deposit, config.confirmations),
         );
@@ -119,22 +192,56 @@ export function WalletDepositPanel({
         if (mapped.code === "ABORTED") {
           return;
         }
+        const mismatch = parseAmountMismatch(err);
         billingTelemetry.track("deposit_verify_failed", {
           method: "wallet",
-          code: mapped.code,
+          code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
           category: mapped.category,
         });
-        setError(mapped.message);
+        setExplorerStatus(
+          mapped.category === "pending" ? "pending" : "failed",
+        );
+        if (mismatch) {
+          clearPendingDeposit();
+          setMismatchAmount(mismatch.onChainAmount);
+          setError(null);
+          setStatusMessage(null);
+        } else if (mapped.category === "pending") {
+          setError(mapped.message);
+        } else {
+          clearPendingDeposit();
+          setError(mapped.message);
+        }
       } finally {
         setIsVerifying(false);
       }
     },
-    [amount, config.confirmations, onVerified],
+    [config.confirmations, onVerified, onVerifyStart],
   );
+
+  useEffect(() => {
+    if (!resumeRequest) {
+      resumeStartedRef.current = false;
+      return;
+    }
+    if (resumeRequest.method !== "wallet") {
+      return;
+    }
+    if (resumeStartedRef.current) {
+      return;
+    }
+    resumeStartedRef.current = true;
+    const { txHash: hash, amount: resumeAmount, idempotencyKey: key } =
+      resumeRequest;
+    onResumeConsumed?.();
+    onAmountChange?.(resumeAmount);
+    void verifyHash(hash, key, resumeAmount, { isRetry: false });
+  }, [resumeRequest, onAmountChange, onResumeConsumed, verifyHash]);
 
   async function handlePay() {
     setError(null);
     setStatusMessage(null);
+    setMismatchAmount(null);
 
     if (!isValidDepositAmount(amount, config.decimals)) {
       setError(
@@ -168,9 +275,11 @@ export function WalletDepositPanel({
       const tx = await token.getFunction("transfer")(config.wallet, value);
       const hash = typeof tx.hash === "string" ? tx.hash : String(tx.hash);
 
+      setActiveTxHash(hash);
+      setExplorerStatus("pending");
       setStatusMessage(`Transaction sent (${hash.slice(0, 10)}…). Verifying…`);
       await tx.wait();
-      await verifyHash(hash, idempotencyKey);
+      await verifyHash(hash, idempotencyKey, amount, { isRetry: false });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Wallet payment failed.";
@@ -188,16 +297,27 @@ export function WalletDepositPanel({
     }
   }
 
+  async function handleRetryWithReceived() {
+    if (!mismatchAmount || !activeTxHash) {
+      return;
+    }
+    onAmountChange?.(mismatchAmount);
+    setRetryPending(true);
+    const key = newIdempotencyKey();
+    await verifyHash(activeTxHash, key, mismatchAmount, { isRetry: true });
+  }
+
   const busy = isSending || isVerifying;
+  const showExplorer =
+    Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">
-        WalletConnect (Reown AppKit)
+        {depositCopy.walletHeading}
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Connect a wallet and send {config.tokenSymbol}. After you approve the
-        transfer we capture the transaction hash and verify it with RoamKit.
+        {depositCopy.walletDescription(config.tokenSymbol)}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
@@ -220,15 +340,85 @@ export function WalletDepositPanel({
         </button>
       </div>
 
+      {mismatchAmount ? (
+        <div
+          ref={mismatchAlertRef}
+          tabIndex={-1}
+          className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 outline-none ring-sky-600 focus:ring-2"
+          role="alert"
+          data-testid="deposit-amount-mismatch"
+        >
+          <p className="font-semibold">{depositCopy.amountMismatchTitle}</p>
+          <p className="leading-6">
+            {depositCopy.amountMismatchBody(
+              config.tokenSymbol,
+              mismatchAmount,
+            )}
+          </p>
+          <p>
+            {depositCopy.amountMismatchReceivedLabel}:{" "}
+            <span className="font-mono font-semibold tabular-nums">
+              {mismatchAmount} {config.tokenSymbol}
+            </span>
+          </p>
+          {showExplorer && activeTxHash ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status="failed"
+            />
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleRetryWithReceived()}
+            className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {depositCopy.amountMismatchRetry(
+              mismatchAmount,
+              config.tokenSymbol,
+            )}
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
-        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {error}
-        </p>
+        <div className="mt-4 space-y-2">
+          <p
+            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="alert"
+          >
+            {error}
+          </p>
+          {showExplorer && activeTxHash ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status={explorerStatus}
+            />
+          ) : null}
+        </div>
       ) : null}
       {statusMessage ? (
-        <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-          {statusMessage}
-        </p>
+        <div className="mt-4 space-y-2">
+          <p
+            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+            role="status"
+            aria-live="polite"
+          >
+            {statusMessage}
+          </p>
+          {showExplorer && activeTxHash && !error && !mismatchAmount ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status={explorerStatus}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <button
@@ -238,7 +428,7 @@ export function WalletDepositPanel({
         className="mt-6 inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {busy
-          ? isVerifying
+          ? isVerifying || retryPending
             ? "Verifying…"
             : "Sending…"
           : isConnected

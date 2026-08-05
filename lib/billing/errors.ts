@@ -11,17 +11,23 @@ export type BillingError = {
   code: string;
   category: BillingErrorCategory;
   message: string;
+  /** Present when code is AMOUNT_MISMATCH (verify deposit). */
+  onChainAmount?: string;
 };
 
 export class BillingClientError extends Error implements BillingError {
   readonly code: string;
   readonly category: BillingErrorCategory;
+  readonly onChainAmount?: string;
 
   constructor(error: BillingError) {
     super(error.message);
     this.name = "BillingClientError";
     this.code = error.code;
     this.category = error.category;
+    if (error.onChainAmount) {
+      this.onChainAmount = error.onChainAmount;
+    }
   }
 
   toJSON(): BillingError {
@@ -29,6 +35,7 @@ export class BillingClientError extends Error implements BillingError {
       code: this.code,
       category: this.category,
       message: this.message,
+      ...(this.onChainAmount ? { onChainAmount: this.onChainAmount } : {}),
     };
   }
 }
@@ -109,6 +116,9 @@ function inferCodeFromBody(bodyText: string, status: number | null): string {
   if (bodyText.includes("insufficient confirmation")) {
     return "NOT_ENOUGH_CONFIRMATIONS";
   }
+  if (bodyText.includes("amount mismatch")) {
+    return "AMOUNT_MISMATCH";
+  }
   if (bodyText.includes("already verified") || bodyText.includes("duplicate")) {
     return "ALREADY_VERIFIED";
   }
@@ -156,6 +166,7 @@ function categoryForCode(
     case "ALREADY_VERIFIED":
     case "WRONG_NETWORK":
     case "VALIDATION_ERROR":
+    case "AMOUNT_MISMATCH":
     case "INSUFFICIENT_CREDITS":
       return "validation";
     case "UNAUTHORIZED":
@@ -193,6 +204,8 @@ function curatedMessage(code: string): string | null {
       return "Timed out waiting for deposit confirmation.";
     case "INSUFFICIENT_CREDITS":
       return "Not enough credits for this purchase.";
+    case "AMOUNT_MISMATCH":
+      return "The amount on-chain does not match the amount you entered.";
     case "UNAUTHORIZED":
       return "You need to sign in again.";
     case "SERVER_ERROR":
@@ -259,10 +272,18 @@ export function toBillingError(
 
   // Prefer structured API `code` so UI can branch on code, not message text.
   const code = readApiErrorCode(body) ?? inferCodeFromBody(bodyText, status);
+  const record = asRecord(body);
+  const onChainRaw =
+    record && typeof record.on_chain_amount === "string"
+      ? record.on_chain_amount.trim()
+      : "";
   return {
     code,
     category: categoryForCode(code, status),
     message: resolveMessage(code, fallbackMessage, body, error),
+    ...(code === "AMOUNT_MISMATCH" && onChainRaw
+      ? { onChainAmount: onChainRaw }
+      : {}),
   };
 }
 
