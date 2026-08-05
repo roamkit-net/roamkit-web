@@ -12,6 +12,8 @@ import { PasswordField } from "@/components/forms/PasswordField";
 import { Logo } from "@/components/landing/Logo";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Field, Label } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
 
 type AuthShellProps = {
   title: string;
@@ -41,9 +43,6 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
     </div>
   );
 }
-
-const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
 
 type SharedFormProps = {
   submitLabel: string;
@@ -184,23 +183,16 @@ export function AuthForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Email
-        </label>
-        <input
-          id="email"
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
           name="email"
           type="email"
           autoComplete="email"
           autoFocus
           required
-          className={fieldClassName}
         />
-      </div>
+      </Field>
       <PasswordField
         id="password"
         name="password"
@@ -280,23 +272,16 @@ export function EmailOnlyForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Email
-        </label>
-        <input
-          id="email"
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
           name="email"
           type="email"
           autoComplete="email"
           autoFocus
           required
-          className={fieldClassName}
         />
-      </div>
+      </Field>
 
       <TurnstileField
         onTokenChange={setTurnstileToken}
