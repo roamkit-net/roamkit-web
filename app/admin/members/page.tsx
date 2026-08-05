@@ -148,7 +148,17 @@ export default function AdminMembersPage() {
                         ? " ↑"
                         : " ↓";
                     return (
-                      <th key={key} className="px-4 py-3 font-medium">
+                      <th
+                        key={key}
+                        className="px-4 py-3 font-medium"
+                        aria-sort={
+                          active
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
                         <button
                           type="button"
                           onClick={() => onSort(key)}
@@ -156,13 +166,6 @@ export default function AdminMembersPage() {
                             active
                               ? "text-slate-900 hover:underline"
                               : "hover:text-slate-800 hover:underline"
-                          }
-                          aria-sort={
-                            active
-                              ? sortDir === "asc"
-                                ? "ascending"
-                                : "descending"
-                              : "none"
                           }
                         >
                           {label}
