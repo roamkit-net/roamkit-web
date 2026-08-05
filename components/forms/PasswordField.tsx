@@ -7,8 +7,7 @@ import {
   type ReactNode,
 } from "react";
 
-const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
+import { inputControlClassName } from "@/components/ui/Input";
 
 export type PasswordFieldProps = {
   label: ReactNode;
@@ -75,9 +74,11 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   ) {
     const [visible, setVisible] = useState(false);
     const inputId = id ?? "password";
-    const inputClassName = className
-      ? `${fieldClassName} ${className}`
-      : fieldClassName;
+    const inputClassName = inputControlClassName({
+      tone: "auth",
+      hasTrailing: true,
+      className: className ?? "",
+    });
 
     return (
       <div>
