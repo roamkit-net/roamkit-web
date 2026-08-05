@@ -21,6 +21,7 @@ import {
   isDepositFailed,
   isDepositVerified,
 } from "@/lib/billing/deposit";
+import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
 import { billingTelemetry } from "@/lib/billing/telemetry";
@@ -193,11 +194,10 @@ export function WalletDepositPanel({
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">
-        WalletConnect (Reown AppKit)
+        {depositCopy.walletHeading}
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Connect a wallet and send {config.tokenSymbol}. After you approve the
-        transfer we capture the transaction hash and verify it with RoamKit.
+        {depositCopy.walletDescription(config.tokenSymbol)}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">

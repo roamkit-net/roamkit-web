@@ -8,6 +8,7 @@ import {
   isDepositFailed,
   isDepositVerified,
 } from "@/lib/billing/deposit";
+import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
 import { billingTelemetry } from "@/lib/billing/telemetry";
@@ -146,11 +147,10 @@ export function CexDepositForm({
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">
-        CEX / manual TXID
+        {depositCopy.cexHeading}
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Withdraw {config.tokenSymbol} to the platform wallet from an exchange,
-        then paste the transaction hash here.
+        {depositCopy.cexDescription(config.tokenSymbol)}
       </p>
 
       <form
@@ -159,7 +159,7 @@ export function CexDepositForm({
       >
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
-            Transaction hash (TXID)
+            {depositCopy.cexTxHashLabel}
           </span>
           <input
             type="text"
@@ -174,12 +174,19 @@ export function CexDepositForm({
         </label>
 
         {error ? (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p
+            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
         {statusMessage ? (
-          <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+          <p
+            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+            role="status"
+            aria-live="polite"
+          >
             {statusMessage}
           </p>
         ) : null}
@@ -189,7 +196,7 @@ export function CexDepositForm({
           disabled={isSubmitting}
           className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? "Verifying…" : "Verify deposit"}
+          {isSubmitting ? depositCopy.cexVerifying : depositCopy.cexVerify}
         </button>
       </form>
     </section>
