@@ -30,6 +30,7 @@ export async function fetchOpsSearch(q: string): Promise<OpsSearchResponse> {
 export async function fetchOpsUsers(opts?: {
   q?: string;
   page?: number;
+  ordering?: string;
 }): Promise<OpsPaginated<OpsUserListItem>> {
   const params = new URLSearchParams();
   if (opts?.q) {
@@ -37,6 +38,9 @@ export async function fetchOpsUsers(opts?: {
   }
   if (opts?.page) {
     params.set("page", String(opts.page));
+  }
+  if (opts?.ordering) {
+    params.set("ordering", opts.ordering);
   }
   const qs = params.toString();
   const path = qs ? `/api/v1/admin/users/?${qs}` : "/api/v1/admin/users/";
