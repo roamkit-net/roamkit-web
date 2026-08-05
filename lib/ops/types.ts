@@ -24,9 +24,57 @@ export type OpsEvent = {
   user_email?: string | null;
 };
 
+export type OpsHealthStatus =
+  | "healthy"
+  | "degraded"
+  | "unhealthy"
+  | "unknown";
+
+export type OpsHealthCache = {
+  hit: boolean;
+  ttl_remaining_ms?: number | null;
+  expires_at?: string | null;
+};
+
+/** Locked Observability V1 check DTO — UI branches on status/reason/source only. */
 export type OpsHealthItem = {
+  status: OpsHealthStatus | string;
+  reason: string;
+  message: string;
+  checked_at: string;
+  source: string;
+  timeout_ms: number;
+  latency_ms?: number | null;
+  last_success_at?: string | null;
+  cache?: OpsHealthCache;
+  details: Record<string, unknown>;
+};
+
+export type OpsHealthMetric = {
+  key: string;
+  value: number | null;
+  unit: string;
   status: string;
-  detail: string;
+};
+
+export type OpsHealth = {
+  schema_version: number;
+  overall_status: OpsHealthStatus | string;
+  generated_at: string;
+  version: {
+    git_sha?: string;
+    build_date?: string;
+    image_tag?: string;
+    environment?: string;
+    release?: string;
+    deployment_id?: string;
+    [key: string]: unknown;
+  };
+  dependencies: Record<string, OpsHealthItem>;
+  workers: Record<string, OpsHealthItem>;
+  providers: Record<string, OpsHealthItem>;
+  metrics: OpsHealthMetric[];
+  checks: Record<string, OpsHealthItem>;
 };
 
 export type OpsAlert = {
@@ -66,7 +114,7 @@ export type OpsDashboard = {
   top_destinations: { country_code: string; count: number }[];
   top_packages: { package_title: string; count: number }[];
   alerts: OpsAlert[];
-  health: Record<string, OpsHealthItem>;
+  health: OpsHealth;
   activity: OpsEvent[];
 };
 

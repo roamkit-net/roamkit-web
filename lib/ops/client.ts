@@ -1,6 +1,7 @@
 import { fetchApi } from "@/lib/api";
 import type {
   OpsDashboard,
+  OpsHealth,
   OpsPaginated,
   OpsSearchResponse,
   OpsUserDetail,
@@ -11,6 +12,11 @@ const NO_STORE = { auth: true as const, cache: "no-store" as RequestCache };
 
 export async function fetchOpsDashboard(): Promise<OpsDashboard> {
   return fetchApi<OpsDashboard>("/api/v1/admin/dashboard/", NO_STORE);
+}
+
+/** Manual health refresh only — do not call on initial dashboard load. */
+export async function fetchOpsHealth(): Promise<OpsHealth> {
+  return fetchApi<OpsHealth>("/api/v1/admin/health/", NO_STORE);
 }
 
 export async function fetchOpsSearch(q: string): Promise<OpsSearchResponse> {

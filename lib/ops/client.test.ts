@@ -11,3 +11,11 @@ describe("ops routes", () => {
     assert.equal(adminMemberPath(42), "/admin/members/42");
   });
 });
+
+describe("ops health client surface", () => {
+  it("exports fetchOpsHealth alongside dashboard", async () => {
+    const client = await import("@/lib/ops/client");
+    assert.equal(typeof client.fetchOpsDashboard, "function");
+    assert.equal(typeof client.fetchOpsHealth, "function");
+  });
+});
