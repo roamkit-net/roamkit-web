@@ -225,6 +225,8 @@ export function WalletDepositPanel({
       return;
     }
     if (resumeRequest.method !== "wallet") {
+      // Reset so a later wallet resume can run after a non-wallet request.
+      resumeStartedRef.current = false;
       return;
     }
     if (resumeStartedRef.current) {

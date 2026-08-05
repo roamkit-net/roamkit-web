@@ -251,6 +251,8 @@ export function CexDepositForm({
       return;
     }
     if (resumeRequest.method !== "cex") {
+      // Reset so a later cex resume can run after a non-cex request.
+      resumeStartedRef.current = false;
       return;
     }
     if (resumeStartedRef.current) {
