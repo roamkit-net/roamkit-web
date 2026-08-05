@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
 import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
+import { Alert } from "@/components/ui/Alert";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -230,9 +231,7 @@ export default function EsimSetupWizardPage() {
         {isLoading ? (
           <DetailSkeleton label="Loading setup…" />
         ) : error ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{error}</p>
-          </div>
+          <Alert variant="warning" title={error} />
         ) : esim ? (
           <div className="space-y-6">
             <header>

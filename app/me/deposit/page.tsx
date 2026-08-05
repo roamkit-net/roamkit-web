@@ -15,6 +15,7 @@ import { DepositSkeleton } from "@/components/deposit/DepositSkeleton";
 import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
 import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemErrorBoundary";
 import { VoucherRedeemForm } from "@/components/deposit/VoucherRedeemForm";
+import { Alert } from "@/components/ui/Alert";
 import { isWalletConnectConfigured } from "@/config/appkit";
 import {
   ApiError,
@@ -295,9 +296,7 @@ function DepositPageContent() {
         {isLoading ? (
           <DepositSkeleton />
         ) : userError ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{userError}</p>
-          </div>
+          <Alert variant="warning" title={userError} />
         ) : !features.billingEnabled ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-lg font-medium text-slate-900">
@@ -308,12 +307,13 @@ function DepositPageContent() {
             </p>
           </div>
         ) : billingError || !config ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">
-              {billingError?.message ||
-                "Unable to load deposit details right now."}
-            </p>
-          </div>
+          <Alert
+            variant="warning"
+            title={
+              billingError?.message ||
+              "Unable to load deposit details right now."
+            }
+          />
         ) : (
           <div className={`space-y-6 ${returning ? "opacity-60" : ""}`}>
             <DepositNetworkWarning

@@ -10,6 +10,7 @@ import {
 } from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
 import { Logo } from "@/components/landing/Logo";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
 type AuthShellProps = {
@@ -56,14 +57,14 @@ function AuthError({ error }: { error: string | null }) {
     return null;
   }
   return (
-    <p
-      role="alert"
+    <Alert
+      variant="error"
+      size="sm"
       aria-live="polite"
       aria-atomic="true"
-      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
     >
       {error}
-    </p>
+    </Alert>
   );
 }
 

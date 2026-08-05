@@ -14,7 +14,7 @@
     "test:orders": "npx --yes tsx --test lib/orders/*.test.ts",
     "test:navigation": "npx --yes tsx --test lib/navigation/*.test.ts",
     "test:auth": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/googleAuthError.test.ts lib/api.tokens.test.ts",
-    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/AppPageHeader.test.tsx components/AppShell.test.tsx components/TopBar.test.tsx components/CatalogPriceDisplay.test.tsx components/forms/PasswordField.test.tsx components/orders/PurchaseConfirmDialog.test.tsx components/esim/EsimNoteForm.test.tsx components/landing/FeaturedPlans.test.tsx components/ui/Button.test.tsx",
+    "test:components": "npx --yes tsx --tsconfig tsconfig.test.json --test components/AccountCluster.test.tsx components/AppPageHeader.test.tsx components/AppShell.test.tsx components/TopBar.test.tsx components/CatalogPriceDisplay.test.tsx components/forms/PasswordField.test.tsx components/orders/PurchaseConfirmDialog.test.tsx components/esim/EsimNoteForm.test.tsx components/landing/FeaturedPlans.test.tsx components/ui/Button.test.tsx components/ui/Alert.test.tsx",
     "test:version": "npx --yes tsx --tsconfig tsconfig.test.json --test app/version/route.test.ts",
     "test:esim": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/esim/*.test.ts",
     "test:popular": "npx --yes tsx --test lib/popular/*.test.ts",
