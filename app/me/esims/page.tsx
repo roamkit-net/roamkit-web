@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { buttonClassName } from "@/components/ui/Button";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -122,7 +123,11 @@ export default function MyEsimsPage() {
             <DepositCta returnPath="/me/esims">Deposit credits</DepositCta>
             <Link
               href="/plans"
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className={buttonClassName({
+                variant: "secondary",
+                size: "sm",
+                tone: "app",
+              })}
             >
               Browse plans
             </Link>
@@ -153,7 +158,11 @@ export default function MyEsimsPage() {
               </DepositCta>
               <Link
                 href="/plans"
-                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                className={buttonClassName({
+                  variant: "secondary",
+                  size: "sm",
+                  tone: "app",
+                })}
               >
                 Browse plans
               </Link>

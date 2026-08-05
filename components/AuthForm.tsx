@@ -10,6 +10,7 @@ import {
 } from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
 import { Logo } from "@/components/landing/Logo";
+import { Button } from "@/components/ui/Button";
 
 type AuthShellProps = {
   title: string;
@@ -42,9 +43,6 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 
 const fieldClassName =
   "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
-
-const submitButtonClassName =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 type SharedFormProps = {
   submitLabel: string;
@@ -91,15 +89,18 @@ function AuthSubmitButton({
 }) {
   const isDisabled = Boolean(disabled) || isLoading;
   return (
-    <button
+    <Button
       type="submit"
+      tone="auth"
+      size="md"
+      variant="primary"
       disabled={isDisabled}
       aria-busy={isLoading}
-      className={submitButtonClassName}
+      className="w-full"
     >
       {isLoading ? <SubmitSpinner /> : null}
       {isLoading ? loadingLabel : submitLabel}
-    </button>
+    </Button>
   );
 }
 

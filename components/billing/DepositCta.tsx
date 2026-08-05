@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { useBilling } from "@/components/billing/useBilling";
+import { buttonClassName } from "@/components/ui/Button";
 
 type DepositCtaProps = {
   /** Relative path after deposit (safe paths only — validated by deposit page). */
@@ -27,9 +28,12 @@ function buildHref(options: { amount?: string; returnPath?: string }): string {
   return query ? `/me/deposit?${query}` : "/me/deposit";
 }
 
+/**
+ * Cap2.1: primary uses canonical Button classes.
+ * secondary (sky outline) and link remain local — Cap2.1 API gaps (see ui/Button).
+ */
 const VARIANT_CLASS: Record<NonNullable<DepositCtaProps["variant"]>, string> = {
-  primary:
-    "inline-flex items-center justify-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800",
+  primary: buttonClassName({ variant: "primary", size: "sm", tone: "app" }),
   secondary:
     "inline-flex items-center justify-center rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-900 hover:bg-sky-100",
   link: "text-sm font-medium text-sky-700 hover:text-sky-800",
