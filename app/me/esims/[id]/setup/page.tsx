@@ -256,10 +256,10 @@ export default function EsimSetupWizardPage() {
                     key={label}
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
                       active
-                        ? "bg-sky-700 text-white"
+                        ? "bg-[var(--app-primary)] text-[var(--app-primary-foreground)]"
                         : n < step
-                          ? "bg-sky-100 text-sky-800"
-                          : "bg-slate-200 text-slate-600"
+                          ? "bg-[var(--app-surface-elevated)] text-[var(--app-text)]"
+                          : "bg-[var(--app-border)] text-[var(--app-text-muted)]"
                     }`}
                   >
                     {n}. {label}
