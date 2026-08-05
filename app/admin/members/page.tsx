@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ApiError, clearTokens } from "@/lib/api";
@@ -13,6 +14,8 @@ import { fetchOpsUsers } from "@/lib/ops/client";
 import type { OpsUserListItem } from "@/lib/ops/types";
 import { loginHref } from "@/lib/navigation/safePath";
 import { adminMemberPath, routes } from "@/lib/routes";
+
+const PAGE_SIZE = 20;
 
 function badgeVariant(
   badge: string,
@@ -27,8 +30,11 @@ function badgeVariant(
 export default function AdminMembersPage() {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
   const [members, setMembers] = useState<OpsUserListItem[]>([]);
   const [count, setCount] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,10 +44,15 @@ export default function AdminMembersPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchOpsUsers({ q: q.trim() || undefined });
+        const data = await fetchOpsUsers({
+          q: q.trim() || undefined,
+          page: page > 1 ? page : undefined,
+        });
         if (cancelled) return;
         setMembers(data.results);
         setCount(data.count);
+        setHasNext(Boolean(data.next));
+        setHasPrev(Boolean(data.previous) || page > 1);
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && err.status === 401) {
@@ -62,7 +73,11 @@ export default function AdminMembersPage() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [q, router]);
+  }, [q, page, router]);
+
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const from = count === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, count);
 
   return (
     <div className="space-y-4">
@@ -74,7 +89,10 @@ export default function AdminMembersPage() {
         <input
           type="search"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
           placeholder="Filter by email…"
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:max-w-xs"
         />
@@ -91,52 +109,91 @@ export default function AdminMembersPage() {
       ) : null}
 
       {!loading && members.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Balance</th>
-                <th className="px-4 py-3 font-medium">Last login</th>
-                <th className="px-4 py-3 font-medium">Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr
-                  key={member.id}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={adminMemberPath(member.id)}
-                      className="font-medium text-slate-900 hover:underline"
-                    >
-                      {member.email}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-slate-700">
-                    {member.balance ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {member.last_login
-                      ? new Date(member.last_login).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {member.badges.map((badge) => (
-                        <Badge key={badge} variant={badgeVariant(badge)}>
-                          {badge}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
+        <>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Balance</th>
+                  <th className="px-4 py-3 font-medium">Last login</th>
+                  <th className="px-4 py-3 font-medium">Flags</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {members.map((member) => (
+                  <tr
+                    key={member.id}
+                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={adminMemberPath(member.id)}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
+                        {member.email}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-slate-700">
+                      {member.balance ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {member.last_login
+                        ? new Date(member.last_login).toLocaleString()
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {member.badges.map((badge) => (
+                          <Badge key={badge} variant={badgeVariant(badge)}>
+                            {badge}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              Showing{" "}
+              <span className="font-medium tabular-nums text-slate-800">
+                {from}–{to}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium tabular-nums text-slate-800">
+                {count}
+              </span>
+              <span className="text-slate-400">
+                {" "}
+                · page {page}/{totalPages}
+              </span>
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={!hasPrev || loading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={!hasNext || loading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
       ) : null}
     </div>
   );
