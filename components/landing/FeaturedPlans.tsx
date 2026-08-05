@@ -72,6 +72,14 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
             );
           })}
         </ul>
+        <p className="mt-8">
+          <Link
+            href="/plans"
+            className="text-sm font-medium text-cyan-400 outline-none transition hover:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070a]"
+          >
+            Browse all destinations →
+          </Link>
+        </p>
       </div>
     </section>
   );
