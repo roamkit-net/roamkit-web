@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useBilling } from "@/components/billing/useBilling";
+import { TokenIcon } from "@/components/billing/TokenIcon";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import { Button } from "@/components/ui/Button";
 import { formatCredits } from "@/lib/billing/format";
@@ -104,8 +105,8 @@ export function PurchaseConfirmDialog({
   }
 
   const tokenSymbol = config?.tokenSymbol ?? "credits";
-  const balanceLabel =
-    balance != null ? `${formatCredits(balance)} ${tokenSymbol}` : null;
+  const balanceAmount =
+    balance != null ? formatCredits(balance) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -154,11 +155,16 @@ export function PurchaseConfirmDialog({
                 <CatalogPriceDisplay amount={summary.priceUsd} />
               </dd>
             </div>
-            {balanceLabel ? (
+            {balanceAmount ? (
               <div className="flex justify-between gap-4 border-t border-slate-100 pt-2">
                 <dt className="text-slate-500">Your balance</dt>
                 <dd className="tabular-nums font-medium text-slate-900">
-                  {balanceLabel}
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                    <TokenIcon size="sm" />
+                    <span>
+                      {balanceAmount} {tokenSymbol}
+                    </span>
+                  </span>
                 </dd>
               </div>
             ) : null}

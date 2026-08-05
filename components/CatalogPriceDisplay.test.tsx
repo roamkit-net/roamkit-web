@@ -88,6 +88,7 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /data-testid="catalog-price-degraded"/);
     assert.match(html, /19\.50 credits/);
     assert.match(html, /Currency configuration unavailable/);
+    assert.doesNotMatch(html, /data-testid="token-icon"/);
   });
 
   it("renders degraded credits when config errored and currency missing", () => {
@@ -103,6 +104,7 @@ describe("CatalogPriceDisplay", () => {
     assert.doesNotMatch(html, /data-testid="catalog-price-skeleton"/);
     assert.match(html, /data-testid="catalog-price-degraded"/);
     assert.match(html, /8\.00 credits/);
+    assert.doesNotMatch(html, /data-testid="token-icon"/);
   });
 
   it("resolves amount from DisplayCurrency context", () => {
@@ -111,7 +113,9 @@ describe("CatalogPriceDisplay", () => {
       displayCurrencyValue(),
     );
     assert.match(html, /aria-label="Price 12\.50 USDT"/);
-    assert.match(html, />12\.50 USDT</);
+    assert.match(html, /12\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
+    assert.match(html, /whitespace-nowrap/);
   });
 
   it("resolves amount with from prefix from context", () => {
@@ -120,7 +124,9 @@ describe("CatalogPriceDisplay", () => {
       displayCurrencyValue(),
     );
     assert.match(html, /aria-label="Price from 4\.50 USDT"/);
-    assert.match(html, />from 4\.50 USDT</);
+    assert.match(html, /from/);
+    assert.match(html, /4\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
   });
 
   it("renders amount with symbol and tabular-nums", () => {
@@ -133,7 +139,8 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /tabular-nums/);
     assert.match(html, /font-variant-numeric:tabular-nums/);
     assert.match(html, /aria-label="Price 12\.50 USDT"/);
-    assert.match(html, />12\.50 USDT</);
+    assert.match(html, /12\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
     assert.doesNotMatch(html, /\$/);
     assert.doesNotMatch(html, /\bUSD\b/);
   });
@@ -146,7 +153,8 @@ describe("CatalogPriceDisplay", () => {
     };
     const html = render({ price });
     assert.match(html, /aria-label="Price from 4\.50 USDT"/);
-    assert.match(html, />from 4\.50 USDT</);
+    assert.match(html, /from/);
+    assert.match(html, /4\.50 USDT/);
   });
 
   it("falls back to credits when symbol is empty", () => {
@@ -159,7 +167,8 @@ describe("CatalogPriceDisplay", () => {
     try {
       const html = render({ price });
       assert.match(html, /aria-label="Price 99\.99 credits"/);
-      assert.match(html, />99\.99 credits</);
+      assert.match(html, /99\.99 credits/);
+      assert.doesNotMatch(html, /data-testid="token-icon"/);
     } finally {
       console.warn = originalWarn;
     }
