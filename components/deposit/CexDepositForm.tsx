@@ -186,7 +186,6 @@ export function CexDepositForm({
             billingTelemetry.track("deposit_retry_success", { method: "cex" });
           }
           setExplorerStatus("completed");
-          setRetryPending(false);
           onVerified(deposit);
           setStatusMessage(depositCopy.cexVerified);
           setIdempotencyKey(newIdempotencyKey());
@@ -239,6 +238,7 @@ export function CexDepositForm({
         }
       } finally {
         setIsSubmitting(false);
+        setRetryPending(false);
       }
     },
     [config, onVerified, onVerifyStart],

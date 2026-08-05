@@ -165,7 +165,6 @@ export function WalletDepositPanel({
             });
           }
           setExplorerStatus("completed");
-          setRetryPending(false);
           onVerified(deposit);
           setStatusMessage(depositCopy.walletVerified);
           return;
@@ -211,6 +210,7 @@ export function WalletDepositPanel({
         }
       } finally {
         setIsVerifying(false);
+        setRetryPending(false);
       }
     },
     // Full `config` — verify closes over confirmations today; keep identity fresh
