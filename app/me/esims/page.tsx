@@ -9,6 +9,7 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { buttonClassName } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -138,9 +139,7 @@ export default function MyEsimsPage() {
         {isLoading ? (
           <ListSkeleton rows={3} label="Loading your eSIMs…" />
         ) : error ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{error}</p>
-          </div>
+          <Alert variant="warning" title={error} />
         ) : esims.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-lg font-medium text-slate-900">No eSIMs yet</p>

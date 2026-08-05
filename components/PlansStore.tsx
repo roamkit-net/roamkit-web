@@ -11,6 +11,7 @@ import {
   LocationSearch,
   matchLocations,
 } from "@/components/LocationSearch";
+import { Alert } from "@/components/ui/Alert";
 import type { Location, LocationListType } from "@/lib/api";
 import { selectPopularLocations } from "@/lib/popular/ranking";
 import { recordPopularRankingMeta } from "@/lib/popular/telemetry";
@@ -194,12 +195,11 @@ export function PlansStore({
         </div>
 
         {errorMessage ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{errorMessage}</p>
-            <p className="mt-2 text-sm">
+          <Alert variant="warning" title={errorMessage}>
+            <p className="mt-2">
               Ensure the API is running and packages have been synced.
             </p>
-          </div>
+          </Alert>
         ) : visibleLocations.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             {isSearching ? (

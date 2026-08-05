@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell, PasswordPairForm } from "@/components/AuthForm";
 import { isTurnstileConfigured } from "@/components/auth/TurnstileField";
+import { Alert } from "@/components/ui/Alert";
 import { activateAccount, ApiError, getRememberMePreference, isAuthenticated, login } from "@/lib/api";
 
 function SetPasswordForm() {
@@ -70,13 +71,13 @@ function SetPasswordForm() {
       }
     >
       {!uid || !token ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" size="sm">
           This confirmation link is invalid or incomplete. Request a new one from{" "}
           <Link href="/register" className="font-medium underline">
             register
           </Link>
           .
-        </p>
+        </Alert>
       ) : (
         <PasswordPairForm
           submitLabel="Activate account"
