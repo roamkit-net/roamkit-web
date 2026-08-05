@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
-import { DepositCta } from "@/components/billing/DepositCta";
 import { LocationCard } from "@/components/LocationCard";
 import { LocationSearch, matchLocations } from "@/components/LocationSearch";
 import { Alert } from "@/components/ui/Alert";
@@ -137,11 +136,6 @@ export function PlansStore({
   return (
     <AppShell>
       <AppPageHeader
-        eyebrow={
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
-            RoamKit Store
-          </p>
-        }
         title={
           <h1 className="text-3xl font-bold tracking-tight text-[var(--app-chrome-text)]">
             {copy.title}
@@ -151,11 +145,6 @@ export function PlansStore({
           <p className="max-w-2xl text-base leading-7 text-[var(--app-chrome-text-muted)]">
             {copy.description}
           </p>
-        }
-        actions={
-          <DepositCta returnPath="/plans" variant="link">
-            Need credits? Deposit →
-          </DepositCta>
         }
       />
 
