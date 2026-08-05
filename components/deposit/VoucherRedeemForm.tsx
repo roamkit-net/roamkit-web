@@ -25,8 +25,9 @@ import {
   toVoucherUiError,
   type VoucherUiError,
 } from "@/lib/billing/voucherErrors";
-import type { BillingBalance, VoucherRedeemResponse } from "@/types/billing";
 import { Card, CardSection } from "@/components/ui/Card";
+import { buttonClassName } from "@/components/ui/Button";
+import type { BillingBalance, VoucherRedeemResponse } from "@/types/billing";
 
 export type VoucherRedeemStatus = "idle" | "redeeming" | "success" | "error";
 
@@ -461,7 +462,11 @@ export function VoucherRedeemForm({
               type="submit"
               data-testid="voucher-redeem-submit"
               disabled={busy || !code.trim()}
-              className="rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className={buttonClassName({
+                variant: "primary",
+                size: "lg",
+                tone: "app",
+              })}
             >
               {busy ? "Redeeming…" : "Redeem"}
             </button>

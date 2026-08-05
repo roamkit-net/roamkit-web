@@ -10,8 +10,9 @@ import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
 import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import { Alert } from "@/components/ui/Alert";
-import { DetailSkeleton } from "@/components/ui/ListSkeleton";
+import { buttonClassName } from "@/components/ui/Button";
 import { Card, CardSection } from "@/components/ui/Card";
+import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
   Esim,
@@ -311,7 +312,11 @@ export default function EsimSetupWizardPage() {
                           href={esim.direct_apple_installation_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                          className={buttonClassName({
+                            variant: "primary",
+                            size: "md",
+                            tone: "app",
+                          })}
                           onClick={() =>
                             telemetry.track("install.apple_install_clicked", {
                               resumeStep: 1,
@@ -340,7 +345,11 @@ export default function EsimSetupWizardPage() {
                       onClick={() =>
                         void attemptAndroidInstall(androidInstallAction)
                       }
-                      className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       {deepLinkBusy ? "Opening…" : androidInstallAction.label}
                     </button>
@@ -448,7 +457,11 @@ export default function EsimSetupWizardPage() {
                     <button
                       type="button"
                       onClick={markInstalled}
-                      className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       I installed the eSIM
                     </button>
@@ -474,7 +487,11 @@ export default function EsimSetupWizardPage() {
                   <button
                     type="button"
                     onClick={() => goTo(3)}
-                    className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "md",
+                      tone: "app",
+                    })}
                   >
                     Next
                   </button>
@@ -503,7 +520,11 @@ export default function EsimSetupWizardPage() {
                   <button
                     type="button"
                     onClick={() => goTo(4)}
-                    className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "md",
+                      tone: "app",
+                    })}
                   >
                     Next
                   </button>
@@ -523,7 +544,11 @@ export default function EsimSetupWizardPage() {
                     <button
                       type="button"
                       onClick={() => finish(false)}
-                      className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       Done
                     </button>

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
 import { Card, CardSection } from "@/components/ui/Card";
+import { buttonClassName } from "@/components/ui/Button";
 import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyWallet } from "@/lib/billing/client";
 import {
@@ -374,7 +375,11 @@ export function WalletDepositPanel({
               type="button"
               disabled={busy}
               onClick={() => void handleRetryWithReceived()}
-              className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className={buttonClassName({
+                variant: "primary",
+                size: "lg",
+                tone: "app",
+              })}
             >
               {depositCopy.amountMismatchRetry(
                 mismatchAmount,
@@ -426,7 +431,12 @@ export function WalletDepositPanel({
           type="button"
           disabled={busy}
           onClick={() => void handlePay()}
-          className="mt-6 inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className={buttonClassName({
+            variant: "primary",
+            size: "lg",
+            tone: "app",
+            className: "mt-6",
+          })}
         >
           {busy
             ? isVerifying || retryPending
