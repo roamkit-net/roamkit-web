@@ -21,7 +21,11 @@ import { PackageRow } from "@/components/PackageRow";
 import { Card, CardSection } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import type { Location, Package } from "@/lib/api";
-import { isAuthenticated, locationImageSrc } from "@/lib/api";
+import {
+  fetchAllPackages,
+  isAuthenticated,
+  locationImageSrc,
+} from "@/lib/api";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { loginHref } from "@/lib/navigation/safePath";
 import { hasSufficientCredits } from "@/lib/orders/canAfford";
@@ -87,7 +91,7 @@ function currentPathWithSearch(): string {
 
 export function LocationDetail({
   location,
-  packages,
+  packages: initialPackages,
 }: {
   location: Location;
   packages: Package[];
@@ -97,6 +101,36 @@ export function LocationDetail({
   const imageSrc = locationImageSrc(location);
   const coverages = location.coverages ?? [];
   const broader = location.broader_locations ?? [];
+
+  /**
+   * SSR catalog fetch is anonymous (JWT lives in browser storage).
+   * When logged in, refetch with Authorization so ADR 019 profile prices apply.
+   */
+  const [packages, setPackages] = useState<Package[]>(initialPackages);
+
+  useEffect(() => {
+    setPackages(initialPackages);
+  }, [initialPackages]);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const refreshed = await fetchAllPackages({ location: location.slug });
+        if (!cancelled) {
+          setPackages(refreshed);
+        }
+      } catch {
+        // Keep SSR retail packages if authenticated refetch fails.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.slug]);
 
   const hasData = packages.some((pkg) => !isDataCallsTexts(pkg));
   const hasDataCallsTexts = packages.some(isDataCallsTexts);
