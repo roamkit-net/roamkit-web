@@ -1,4 +1,5 @@
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { Button } from "@/components/ui/Button";
 import type { Package } from "@/lib/api";
 
 function formatValidity(days: number): string {
@@ -77,16 +78,18 @@ export function PackageRow({
           <CatalogPriceDisplay amount={plan.price_usd} />
         </p>
         {onBuy ? (
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant="primary"
             onClick={(event) => onBuy(plan, event.currentTarget)}
             disabled={isBuying || buyDisabled}
             title={buyTitle}
             aria-label={buyTitle}
-            className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11"
           >
             {isBuying ? "Buying…" : "Buy"}
-          </button>
+          </Button>
         ) : null}
       </div>
     </article>

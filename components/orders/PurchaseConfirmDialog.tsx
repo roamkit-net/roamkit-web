@@ -9,6 +9,7 @@ import {
 
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { Button } from "@/components/ui/Button";
 import { formatCredits } from "@/lib/billing/format";
 
 /**
@@ -169,21 +170,25 @@ export function PurchaseConfirmDialog({
         </div>
 
         <div className="sticky bottom-0 flex gap-3 border-t border-slate-200 bg-white px-5 py-4">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={onCancel}
             disabled={isPurchasing}
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11 flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             ref={confirmRef}
             type="button"
+            variant="primary"
+            size="md"
             onClick={handleConfirm}
             disabled={isPurchasing}
             aria-busy={isPurchasing}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11 flex-1"
           >
             {isPurchasing ? (
               <>
@@ -193,7 +198,7 @@ export function PurchaseConfirmDialog({
             ) : (
               "Confirm purchase"
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
