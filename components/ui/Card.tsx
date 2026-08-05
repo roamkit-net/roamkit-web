@@ -34,7 +34,10 @@ export type CardProps = HTMLAttributes<HTMLElement> & {
 export function cardClassName({
   className = "",
 }: { className?: string } = {}): string {
-  return ["rounded-2xl border border-slate-200 bg-white shadow-sm", className]
+  return [
+    "rounded-2xl border border-slate-200 bg-[var(--app-surface-elevated)] text-[var(--app-text)] shadow-sm",
+    className,
+  ]
     .filter(Boolean)
     .join(" ")
     .trim();
