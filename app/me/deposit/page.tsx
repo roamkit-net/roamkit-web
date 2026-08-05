@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, Suspense } from "react";
 
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositNetworkWarning } from "@/components/deposit/DepositNetworkWarning";
@@ -229,7 +230,7 @@ function DepositPageContent() {
         <Link
           href={returnPath ?? "/me/esims"}
           onClick={() => clearPendingSpend()}
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← {returnPath ? `Back to ${returnLabel}` : "My eSIMs"}
         </Link>

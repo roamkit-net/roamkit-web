@@ -25,8 +25,9 @@ describe("AppShell", () => {
     assert.match(html, /app-shell/);
     assert.match(html, /app-shell-main--default/);
     assert.match(html, /app-shell-content/);
+    assert.match(html, /app-topbar/);
     assert.match(html, /data-testid="top-bar"/);
-    assert.match(html, /grid-cols-\[1fr_auto\]/);
+    assert.doesNotMatch(html, /grid-cols-\[1fr_auto\]/);
     assert.doesNotMatch(html, /flex-wrap/);
     assert.match(html, /data-testid="page-content"/);
     assert.doesNotMatch(html, /bg-slate-50/);

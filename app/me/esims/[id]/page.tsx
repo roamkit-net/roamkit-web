@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
@@ -301,7 +302,7 @@ export default function MyEsimDetailPage() {
       nav={
         <Link
           href="/me/esims"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← Back to My eSIMs
         </Link>

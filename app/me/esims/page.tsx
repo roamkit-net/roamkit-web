@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { buttonClassName } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -101,7 +102,7 @@ export default function MyEsimsPage() {
       nav={
         <Link
           href="/plans"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← Browse plans
         </Link>

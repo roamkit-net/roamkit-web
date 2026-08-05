@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
 import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
@@ -223,7 +224,7 @@ export default function EsimSetupWizardPage() {
       nav={
         <Link
           href={`/me/esims/${esimId}`}
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← Skip to eSIM details
         </Link>

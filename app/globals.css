@@ -119,6 +119,7 @@
   --app-gutter-x: 1.5rem;
   --app-page-padding-y: 4rem;
   --app-header-gap: 2rem;
+  --app-topbar-height: 2.5rem;
   --app-content-max: 56rem;
   --app-content-max-mid: 48rem;
   --app-content-max-narrow: 42rem;
@@ -166,8 +167,10 @@ body {
   box-sizing: border-box;
   background-color: var(--app-background);
   color: var(--app-chrome-text);
-  padding-inline: var(--app-gutter-x);
-  padding-block: var(--app-page-padding-y);
+  padding-inline: max(var(--app-gutter-x), env(safe-area-inset-left, 0px))
+    max(var(--app-gutter-x), env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--app-page-padding-y) + env(safe-area-inset-top, 0px))
+    calc(var(--app-page-padding-y) + env(safe-area-inset-bottom, 0px));
 }
 
 .app-shell-main {
@@ -189,6 +192,50 @@ body {
 
 .app-shell-content {
   margin-top: var(--app-header-gap);
+}
+
+/* Cap3.2 — TopBar is shell chrome: static, always visible, one height SoT. */
+.app-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: var(--app-topbar-height);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--app-border-chrome);
+  color: var(--app-chrome-text);
+}
+
+.app-topbar-nav {
+  min-width: 0;
+}
+
+.app-topbar-end {
+  justify-self: end;
+}
+
+.app-shell-nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-chrome-text-muted);
+  text-decoration: none;
+  transition: color var(--app-motion-duration, var(--motion-normal))
+    var(--app-motion-ease, var(--motion-ease));
+}
+
+.app-shell-nav-link:hover {
+  color: var(--app-chrome-text);
+}
+
+.app-shell-nav-link:focus-visible {
+  outline: 2px solid var(--app-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-nav-link {
+    transition: none;
+  }
 }
 
 /* Decorative accent only — not brand identity (was cyan→purple→pink). */
