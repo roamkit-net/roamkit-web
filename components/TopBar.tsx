@@ -6,17 +6,18 @@ export type TopBarProps = {
   rightSlot?: ReactNode;
 };
 
+/** Shared class for AppShell back/nav links (dark shell contrast). */
+export const appShellNavLinkClassName = "app-shell-nav-link";
+
 /**
- * App chrome top row. CSS grid keeps `rightSlot` pinned right without flex-wrap.
+ * Cap3.2 — Shell navigation chrome (part of AppShell, not a page header).
+ * Static, always visible; height from `--app-topbar-height`.
  */
 export function TopBar({ nav, rightSlot }: TopBarProps) {
   return (
-    <div
-      data-testid="top-bar"
-      className="grid grid-cols-[1fr_auto] items-start gap-4"
-    >
-      <div className="min-w-0">{nav}</div>
-      <div className="justify-self-end">{rightSlot}</div>
+    <div data-testid="top-bar" className="app-topbar">
+      <div className="app-topbar-nav">{nav}</div>
+      <div className="app-topbar-end">{rightSlot}</div>
     </div>
   );
 }

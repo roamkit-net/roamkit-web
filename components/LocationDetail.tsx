@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CompatibilityButton } from "@/components/CompatibilityButton";
@@ -249,22 +250,19 @@ export function LocationDetail({
   return (
     <AppShell
       nav={
-        <nav className="text-sm text-slate-500">
-          <Link
-            href="/plans"
-            className="font-medium text-sky-700 hover:text-sky-800"
-          >
+        <nav className="text-sm text-[var(--app-chrome-text-muted)]">
+          <Link href="/plans" className={appShellNavLinkClassName}>
             Store
           </Link>
           <span className="mx-2">/</span>
           <Link
             href={`/plans?tab=${location.coverage_type}`}
-            className="font-medium text-sky-700 hover:text-sky-800"
+            className={appShellNavLinkClassName}
           >
             {coverageLabel(location.coverage_type)}
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-700">{location.title}</span>
+          <span className="text-[var(--app-chrome-text)]">{location.title}</span>
         </nav>
       }
     >

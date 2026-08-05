@@ -36,7 +36,7 @@ const SIGN_IN_BASE =
   "rounded-lg px-4 py-2.5 text-sm font-semibold outline-none transition";
 
 const SIGN_IN_VARIANT: Record<AuthNavVariant, string> = {
-  app: "bg-sky-700 text-white hover:bg-sky-800 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+  app: "bg-sky-700 text-white hover:bg-sky-800 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--app-background)]",
   /** Colors from `--landing-*` tokens via `.landing-cta` (globals.css). */
   landing: "landing-cta",
 };
