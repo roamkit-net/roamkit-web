@@ -45,6 +45,22 @@ describe("Button", () => {
     assert.match(classes, /py-1\.5/);
   });
 
+  it("app tone uses AppShell ring-offset (AuthNav parity)", () => {
+    for (const variant of VARIANTS) {
+      const classes = buttonClassName({ variant, tone: "app" });
+      assert.match(
+        classes,
+        /focus-visible:ring-offset-\[var\(--app-background\)\]/,
+        variant,
+      );
+    }
+    const auth = buttonClassName({ variant: "primary", tone: "auth" });
+    assert.doesNotMatch(
+      auth,
+      /ring-offset-\[var\(--app-background\)\]/,
+    );
+  });
+
   it("auth primary md matches AuthForm submit (cyan-500)", () => {
     const classes = buttonClassName({
       variant: "primary",
