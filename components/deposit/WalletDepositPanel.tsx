@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyWallet } from "@/lib/billing/client";
 import {
   formatDepositPendingMessage,
@@ -37,6 +38,7 @@ const ERC20_ABI = [
 type WalletDepositPanelProps = {
   config: BillingConfig;
   amount: string;
+  onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
 };
 
@@ -45,6 +47,7 @@ type ExplorerStatus = "pending" | "completed" | "failed";
 export function WalletDepositPanel({
   config,
   amount,
+  onAmountChange,
   onVerified,
 }: WalletDepositPanelProps) {
   const { open } = useAppKit();
@@ -59,7 +62,10 @@ export function WalletDepositPanel({
   const [activeTxHash, setActiveTxHash] = useState<string | null>(null);
   const [explorerStatus, setExplorerStatus] =
     useState<ExplorerStatus>("pending");
+  const [mismatchAmount, setMismatchAmount] = useState<string | null>(null);
+  const [retryPending, setRetryPending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -67,24 +73,42 @@ export function WalletDepositPanel({
     };
   }, []);
 
+  useEffect(() => {
+    if (mismatchAmount && mismatchAlertRef.current) {
+      mismatchAlertRef.current.focus();
+    }
+  }, [mismatchAmount]);
+
   const verifyHash = useCallback(
-    async (hash: string, idempotencyKey: string) => {
+    async (
+      hash: string,
+      idempotencyKey: string,
+      amountRequested: string,
+      { isRetry }: { isRetry: boolean },
+    ) => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
       setIsVerifying(true);
       setError(null);
+      setMismatchAmount(null);
       setActiveTxHash(hash);
       setExplorerStatus("pending");
-      billingTelemetry.track("deposit_verify_clicked", { method: "wallet" });
+      billingTelemetry.track("deposit_verify_clicked", {
+        method: "wallet",
+        ...(isRetry ? { retry: true } : {}),
+      });
+      if (isRetry) {
+        billingTelemetry.track("deposit_retry_clicked", { method: "wallet" });
+      }
 
       try {
         const deposit = await verifyDepositUntilSettled(
           (body, signal) => verifyWallet(body, signal),
           {
             tx_hash: hash,
-            amount_requested: amount.trim(),
+            amount_requested: amountRequested.trim(),
             idempotency_key: idempotencyKey,
           },
           {
@@ -105,7 +129,13 @@ export function WalletDepositPanel({
           billingTelemetry.track("deposit_verify_succeeded", {
             method: "wallet",
           });
+          if (isRetry) {
+            billingTelemetry.track("deposit_retry_success", {
+              method: "wallet",
+            });
+          }
           setExplorerStatus("completed");
+          setRetryPending(false);
           onVerified(deposit);
           setStatusMessage(depositCopy.walletVerified);
           return;
@@ -132,25 +162,33 @@ export function WalletDepositPanel({
         if (mapped.code === "ABORTED") {
           return;
         }
+        const mismatch = parseAmountMismatch(err);
         billingTelemetry.track("deposit_verify_failed", {
           method: "wallet",
-          code: mapped.code,
+          code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
           category: mapped.category,
         });
         setExplorerStatus(
           mapped.category === "pending" ? "pending" : "failed",
         );
-        setError(mapped.message);
+        if (mismatch) {
+          setMismatchAmount(mismatch.onChainAmount);
+          setError(null);
+          setStatusMessage(null);
+        } else {
+          setError(mapped.message);
+        }
       } finally {
         setIsVerifying(false);
       }
     },
-    [amount, config.confirmations, onVerified],
+    [config.confirmations, onVerified],
   );
 
   async function handlePay() {
     setError(null);
     setStatusMessage(null);
+    setMismatchAmount(null);
 
     if (!isValidDepositAmount(amount, config.decimals)) {
       setError(
@@ -188,7 +226,7 @@ export function WalletDepositPanel({
       setExplorerStatus("pending");
       setStatusMessage(`Transaction sent (${hash.slice(0, 10)}…). Verifying…`);
       await tx.wait();
-      await verifyHash(hash, idempotencyKey);
+      await verifyHash(hash, idempotencyKey, amount, { isRetry: false });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Wallet payment failed.";
@@ -206,8 +244,19 @@ export function WalletDepositPanel({
     }
   }
 
+  async function handleRetryWithReceived() {
+    if (!mismatchAmount || !activeTxHash) {
+      return;
+    }
+    onAmountChange?.(mismatchAmount);
+    setRetryPending(true);
+    const key = newIdempotencyKey();
+    await verifyHash(activeTxHash, key, mismatchAmount, { isRetry: true });
+  }
+
   const busy = isSending || isVerifying;
-  const showExplorer = Boolean(activeTxHash) && (error || statusMessage);
+  const showExplorer =
+    Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -238,6 +287,49 @@ export function WalletDepositPanel({
         </button>
       </div>
 
+      {mismatchAmount ? (
+        <div
+          ref={mismatchAlertRef}
+          tabIndex={-1}
+          className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 outline-none ring-sky-600 focus:ring-2"
+          role="alert"
+          data-testid="deposit-amount-mismatch"
+        >
+          <p className="font-semibold">{depositCopy.amountMismatchTitle}</p>
+          <p className="leading-6">
+            {depositCopy.amountMismatchBody(
+              config.tokenSymbol,
+              mismatchAmount,
+            )}
+          </p>
+          <p>
+            {depositCopy.amountMismatchReceivedLabel}:{" "}
+            <span className="font-mono font-semibold tabular-nums">
+              {mismatchAmount} {config.tokenSymbol}
+            </span>
+          </p>
+          {showExplorer && activeTxHash ? (
+            <DepositTxExplorerLink
+              chainId={config.chainId}
+              txHash={activeTxHash}
+              method="wallet"
+              status="failed"
+            />
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleRetryWithReceived()}
+            className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {depositCopy.amountMismatchRetry(
+              mismatchAmount,
+              config.tokenSymbol,
+            )}
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <div className="mt-4 space-y-2">
           <p
@@ -265,7 +357,7 @@ export function WalletDepositPanel({
           >
             {statusMessage}
           </p>
-          {showExplorer && activeTxHash && !error ? (
+          {showExplorer && activeTxHash && !error && !mismatchAmount ? (
             <DepositTxExplorerLink
               chainId={config.chainId}
               txHash={activeTxHash}
@@ -283,7 +375,7 @@ export function WalletDepositPanel({
         className="mt-6 inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {busy
-          ? isVerifying
+          ? isVerifying || retryPending
             ? "Verifying…"
             : "Sending…"
           : isConnected

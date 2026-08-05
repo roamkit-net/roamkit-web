@@ -7,6 +7,7 @@ import type { BillingConfig, DepositRequest } from "@/types/billing";
 type WalletDepositWithAppKitProps = {
   config: BillingConfig;
   amount: string;
+  onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
 };
 
@@ -14,6 +15,7 @@ type WalletDepositWithAppKitProps = {
 export function WalletDepositWithAppKit({
   config,
   amount,
+  onAmountChange,
   onVerified,
 }: WalletDepositWithAppKitProps) {
   return (
@@ -21,6 +23,7 @@ export function WalletDepositWithAppKit({
       <WalletDepositPanel
         config={config}
         amount={amount}
+        onAmountChange={onAmountChange}
         onVerified={onVerified}
       />
     </AppKitProvider>

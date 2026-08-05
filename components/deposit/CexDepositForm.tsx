@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyCex } from "@/lib/billing/client";
 import {
   formatDepositPendingMessage,
@@ -20,6 +21,7 @@ import type { BillingConfig, DepositRequest } from "@/types/billing";
 type CexDepositFormProps = {
   config: BillingConfig;
   amount: string;
+  onAmountChange?: (amount: string) => void;
   onVerified: (deposit: DepositRequest) => void;
 };
 
@@ -39,6 +41,7 @@ function normalizeTxHash(value: string): string {
 export function CexDepositForm({
   config,
   amount,
+  onAmountChange,
   onVerified,
 }: CexDepositFormProps) {
   const [txHash, setTxHash] = useState("");
@@ -49,7 +52,10 @@ export function CexDepositForm({
   const [activeTxHash, setActiveTxHash] = useState<string | null>(null);
   const [explorerStatus, setExplorerStatus] =
     useState<ExplorerStatus>("pending");
+  const [mismatchAmount, setMismatchAmount] = useState<string | null>(null);
+  const [retryPending, setRetryPending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -57,38 +63,41 @@ export function CexDepositForm({
     };
   }, []);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setStatusMessage(null);
-
-    if (!isValidDepositAmount(amount, config.decimals)) {
-      setError(
-        `Enter a valid amount (max ${config.decimals} decimal places).`,
-      );
-      return;
+  useEffect(() => {
+    if (mismatchAmount && mismatchAlertRef.current) {
+      mismatchAlertRef.current.focus();
     }
+  }, [mismatchAmount]);
 
-    const normalizedHash = normalizeTxHash(txHash);
-    if (!/^0x[0-9a-fA-F]{64}$/.test(normalizedHash)) {
-      setError("Paste a valid transaction hash (TXID).");
-      return;
-    }
-
+  async function runVerify(
+    amountRequested: string,
+    hash: string,
+    key: string,
+    { isRetry }: { isRetry: boolean },
+  ) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     const payload = {
-      tx_hash: normalizedHash,
-      amount_requested: amount.trim(),
-      idempotency_key: idempotencyKey,
+      tx_hash: hash,
+      amount_requested: amountRequested.trim(),
+      idempotency_key: key,
     };
 
     setIsSubmitting(true);
-    setActiveTxHash(normalizedHash);
+    setActiveTxHash(hash);
     setExplorerStatus("pending");
-    billingTelemetry.track("deposit_verify_clicked", { method: "cex" });
+    setMismatchAmount(null);
+    setError(null);
+    setStatusMessage(null);
+    billingTelemetry.track("deposit_verify_clicked", {
+      method: "cex",
+      ...(isRetry ? { retry: true } : {}),
+    });
+    if (isRetry) {
+      billingTelemetry.track("deposit_retry_clicked", { method: "cex" });
+    }
 
     try {
       const deposit = await verifyDepositUntilSettled(
@@ -109,7 +118,11 @@ export function CexDepositForm({
 
       if (isDepositVerified(deposit)) {
         billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
+        if (isRetry) {
+          billingTelemetry.track("deposit_retry_success", { method: "cex" });
+        }
         setExplorerStatus("completed");
+        setRetryPending(false);
         onVerified(deposit);
         setStatusMessage(depositCopy.cexVerified);
         setIdempotencyKey(newIdempotencyKey());
@@ -137,15 +150,22 @@ export function CexDepositForm({
       if (mapped.code === "ABORTED") {
         return;
       }
+      const mismatch = parseAmountMismatch(err);
       billingTelemetry.track("deposit_verify_failed", {
         method: "cex",
-        code: mapped.code,
+        code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
         category: mapped.category,
       });
       setExplorerStatus(
         mapped.category === "pending" ? "pending" : "failed",
       );
-      setError(mapped.message);
+      if (mismatch) {
+        setMismatchAmount(mismatch.onChainAmount);
+        setError(null);
+        setStatusMessage(null);
+      } else {
+        setError(mapped.message);
+      }
       if (mapped.category !== "pending") {
         setIdempotencyKey(newIdempotencyKey());
       }
@@ -154,7 +174,38 @@ export function CexDepositForm({
     }
   }
 
-  const showExplorer = Boolean(activeTxHash) && (error || statusMessage);
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+
+    if (!isValidDepositAmount(amount, config.decimals)) {
+      setError(
+        `Enter a valid amount (max ${config.decimals} decimal places).`,
+      );
+      return;
+    }
+
+    const normalizedHash = normalizeTxHash(txHash);
+    if (!/^0x[0-9a-fA-F]{64}$/.test(normalizedHash)) {
+      setError("Paste a valid transaction hash (TXID).");
+      return;
+    }
+
+    await runVerify(amount, normalizedHash, idempotencyKey, { isRetry: false });
+  }
+
+  async function handleRetryWithReceived() {
+    if (!mismatchAmount || !activeTxHash) {
+      return;
+    }
+    onAmountChange?.(mismatchAmount);
+    setRetryPending(true);
+    const key = newIdempotencyKey();
+    setIdempotencyKey(key);
+    setTxHash(activeTxHash);
+    await runVerify(mismatchAmount, activeTxHash, key, { isRetry: true });
+  }
+
+  const showExplorer = Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -185,6 +236,49 @@ export function CexDepositForm({
           />
         </label>
 
+        {mismatchAmount ? (
+          <div
+            ref={mismatchAlertRef}
+            tabIndex={-1}
+            className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 outline-none ring-sky-600 focus:ring-2"
+            role="alert"
+            data-testid="deposit-amount-mismatch"
+          >
+            <p className="font-semibold">{depositCopy.amountMismatchTitle}</p>
+            <p className="leading-6">
+              {depositCopy.amountMismatchBody(
+                config.tokenSymbol,
+                mismatchAmount,
+              )}
+            </p>
+            <p>
+              {depositCopy.amountMismatchReceivedLabel}:{" "}
+              <span className="font-mono font-semibold tabular-nums">
+                {mismatchAmount} {config.tokenSymbol}
+              </span>
+            </p>
+            {showExplorer && activeTxHash ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="cex"
+                status="failed"
+              />
+            ) : null}
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => void handleRetryWithReceived()}
+              className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {depositCopy.amountMismatchRetry(
+                mismatchAmount,
+                config.tokenSymbol,
+              )}
+            </button>
+          </div>
+        ) : null}
+
         {error ? (
           <div className="space-y-2">
             <p
@@ -212,7 +306,7 @@ export function CexDepositForm({
             >
               {statusMessage}
             </p>
-            {showExplorer && activeTxHash && !error ? (
+            {showExplorer && activeTxHash && !error && !mismatchAmount ? (
               <DepositTxExplorerLink
                 chainId={config.chainId}
                 txHash={activeTxHash}
@@ -228,7 +322,11 @@ export function CexDepositForm({
           disabled={isSubmitting}
           className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? depositCopy.cexVerifying : depositCopy.cexVerify}
+          {isSubmitting
+            ? depositCopy.cexVerifying
+            : retryPending
+              ? depositCopy.cexVerifying
+              : depositCopy.cexVerify}
         </button>
       </form>
     </section>
