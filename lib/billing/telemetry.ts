@@ -9,6 +9,22 @@ export type BillingTelemetryProps = Record<
   string | number | boolean | null | undefined
 >;
 
+/**
+ * Frozen catalog of billing analytics event names (public API for dashboards).
+ *
+ * Do **not** rename existing members without an explicit analytics / dashboard
+ * migration. Additive events are fine; emit them from the PR that lands the UX.
+ *
+ * Deposit usability (locked for deposit UX PR0+):
+ * - existing: deposit_page_open, deposit_qr_generated, deposit_verify_*,
+ *   deposit_poll_*
+ * - PR0 additions (emit when UX lands): deposit_network_warning_seen,
+ *   deposit_explorer_opened, deposit_retry_clicked, deposit_retry_success,
+ *   deposit_pending_resumed, deposit_copy_address_clicked
+ *
+ * Prefer `deposit_verify_failed` + `code: "AMOUNT_MISMATCH"` over a parallel
+ * mismatch event name.
+ */
 export type BillingTelemetryEvent =
   | "deposit_page_open"
   | "deposit_qr_generated"
@@ -18,6 +34,12 @@ export type BillingTelemetryEvent =
   | "deposit_poll_started"
   | "deposit_poll_stopped"
   | "deposit_poll_timed_out"
+  | "deposit_network_warning_seen"
+  | "deposit_explorer_opened"
+  | "deposit_retry_clicked"
+  | "deposit_retry_success"
+  | "deposit_pending_resumed"
+  | "deposit_copy_address_clicked"
   | "spend_insufficient_credits"
   | "spend_retry_after_deposit"
   | "purchase_confirm_opened"
@@ -28,6 +50,29 @@ export type BillingTelemetryEvent =
   | "voucher_scan_failed"
   | "voucher_redeem_success"
   | "voucher_redeem_failed";
+
+/**
+ * Runtime list of locked deposit-related event names (catalog for tests / ops).
+ * Keep in sync with the deposit_* members of {@link BillingTelemetryEvent}.
+ */
+export const DEPOSIT_TELEMETRY_EVENTS = [
+  "deposit_page_open",
+  "deposit_qr_generated",
+  "deposit_verify_clicked",
+  "deposit_verify_succeeded",
+  "deposit_verify_failed",
+  "deposit_poll_started",
+  "deposit_poll_stopped",
+  "deposit_poll_timed_out",
+  "deposit_network_warning_seen",
+  "deposit_explorer_opened",
+  "deposit_retry_clicked",
+  "deposit_retry_success",
+  "deposit_pending_resumed",
+  "deposit_copy_address_clicked",
+] as const satisfies ReadonlyArray<BillingTelemetryEvent>;
+
+export type DepositTelemetryEvent = (typeof DEPOSIT_TELEMETRY_EVENTS)[number];
 
 export type BillingTelemetry = {
   track(
