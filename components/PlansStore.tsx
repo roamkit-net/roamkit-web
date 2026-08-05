@@ -165,7 +165,7 @@ export function PlansStore({
       />
 
       <div
-        className="mb-8 flex flex-wrap gap-2 border-b border-slate-200 pb-4"
+        className="mb-8 flex flex-wrap gap-2 border-b border-[var(--app-border-chrome)] pb-4"
         role="tablist"
         aria-label="Destination types"
       >
@@ -180,8 +180,8 @@ export function PlansStore({
               onClick={() => selectTab(tab.id)}
               className={
                 isActive
-                  ? "rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
-                  : "rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+                  ? "rounded-lg bg-[var(--app-primary)] px-3 py-1.5 text-sm font-medium text-[var(--app-primary-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
+                  : "rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--app-chrome-text-muted)] outline-none hover:bg-[var(--app-surface)] hover:text-[var(--app-chrome-text)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
               }
             >
               {tab.label}

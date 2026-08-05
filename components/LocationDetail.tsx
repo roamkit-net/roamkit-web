@@ -301,7 +301,7 @@ export function LocationDetail({
         <div className="flex flex-col gap-4">
           {showServiceTabs ? (
             <div
-              className="flex gap-8 border-b border-slate-200"
+              className="flex gap-8 border-b border-[var(--app-border)]"
               role="tablist"
               aria-label="Service type"
             >
@@ -475,8 +475,8 @@ function ServiceTab({
       onClick={onClick}
       className={
         active
-          ? "-mb-px border-b-2 border-slate-900 pb-3.5 text-[15px] font-semibold tracking-tight text-slate-900 outline-none focus-visible:outline-none"
-          : "-mb-px border-b-2 border-transparent pb-3.5 text-[15px] font-medium tracking-tight text-slate-400 outline-none transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:text-slate-700"
+          ? "-mb-px border-b-2 border-[var(--app-primary)] pb-3.5 text-[15px] font-semibold tracking-tight text-[var(--app-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
+          : "-mb-px border-b-2 border-transparent pb-3.5 text-[15px] font-medium tracking-tight text-[var(--app-text-muted)] outline-none transition-colors hover:text-[var(--app-text)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
       }
     >
       {children}
