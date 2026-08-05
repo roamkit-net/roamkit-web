@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { Badge } from "@/components/ui/Badge";
 import { Card, CardSection } from "@/components/ui/Card";
 import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyCex } from "@/lib/billing/client";
@@ -299,12 +300,13 @@ export function CexDepositForm({
           <h2 className="text-lg font-semibold text-slate-900">
             {depositCopy.cexHeading}
           </h2>
-          <span
+          <Badge
             data-testid="deposit-cex-network-badge"
-            className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-950"
+            variant="warning"
+            className="rounded-md px-2 py-0.5 font-semibold"
           >
             {depositCopy.cexNetworkBadge}
-          </span>
+          </Badge>
         </div>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {depositCopy.cexDescription(config.tokenSymbol)}

@@ -10,6 +10,7 @@ import { LocationCard } from "@/components/LocationCard";
 import { LocationSearch, matchLocations } from "@/components/LocationSearch";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardSection } from "@/components/ui/Card";
+import { Empty } from "@/components/ui/Empty";
 import type { Location, LocationListType } from "@/lib/api";
 import { selectPopularLocations } from "@/lib/popular/ranking";
 import { recordPopularRankingMeta } from "@/lib/popular/telemetry";
@@ -195,25 +196,17 @@ export function PlansStore({
         </Alert>
       ) : visibleLocations.length === 0 ? (
         <Card>
-          <CardSection padding="lg" className="text-center">
+          <CardSection padding="lg">
             {isSearching ? (
-              <>
-                <p className="text-lg font-medium text-slate-900">
-                  No destinations match “{trimmedQuery}”
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  Try another country, region, or ISO code.
-                </p>
-              </>
+              <Empty
+                title={`No destinations match “${trimmedQuery}”`}
+                description="Try another country, region, or ISO code."
+              />
             ) : (
-              <>
-                <p className="text-lg font-medium text-slate-900">
-                  No destinations available yet
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  Run a package sync on the API to populate the catalog.
-                </p>
-              </>
+              <Empty
+                title="No destinations available yet"
+                description="Run a package sync on the API to populate the catalog."
+              />
             )}
           </CardSection>
         </Card>

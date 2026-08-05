@@ -21,7 +21,10 @@ describe("Button", () => {
       for (const variant of VARIANTS) {
         for (const size of SIZES) {
           const classes = buttonClassName({ variant, size, tone });
-          assert.ok(classes.includes("inline-flex"), `${tone}/${variant}/${size}`);
+          assert.ok(
+            classes.includes("inline-flex"),
+            `${tone}/${variant}/${size}`,
+          );
           assert.match(classes, /rounded-(lg|xl)/);
           assert.match(classes, /text-sm/);
         }

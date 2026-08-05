@@ -19,6 +19,7 @@ import {
 import { useBuyPackage } from "@/components/orders/useBuyPackage";
 import { PackageRow } from "@/components/PackageRow";
 import { Card, CardSection } from "@/components/ui/Card";
+import { Empty } from "@/components/ui/Empty";
 import type { Location, Package } from "@/lib/api";
 import { isAuthenticated, locationImageSrc } from "@/lib/api";
 import { billingTelemetry } from "@/lib/billing/telemetry";
@@ -374,13 +375,12 @@ export function LocationDetail({
 
         {filteredPackages.length === 0 ? (
           <Card className="mt-4">
-            <CardSection padding="lg" className="text-center">
-              <p className="font-medium text-slate-900">
-                No plans in this filter
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Try another plan type or browse a different destination.
-              </p>
+            <CardSection padding="lg">
+              <Empty
+                compact
+                title="No plans in this filter"
+                description="Try another plan type or browse a different destination."
+              />
             </CardSection>
           </Card>
         ) : (

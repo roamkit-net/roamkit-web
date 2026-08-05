@@ -11,8 +11,10 @@ import { DepositCta } from "@/components/billing/DepositCta";
 import { buttonClassName } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardSection } from "@/components/ui/Card";
+import { Empty } from "@/components/ui/Empty";
 import { listRowClassName } from "@/components/ui/ListRow";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
+import { Badge } from "@/components/ui/Badge";
 import {
   ApiError,
   Esim,
@@ -142,31 +144,37 @@ export default function MyEsimsPage() {
         <Alert variant="warning" title={error} />
       ) : esims.length === 0 ? (
         <Card>
-          <CardSection padding="lg" className="text-center">
-            <p className="text-lg font-medium text-slate-900">No eSIMs yet</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Deposit credits, then buy a plan from the store — or ask an admin
-              to run{" "}
-              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
-                create_sandbox_esim
-              </code>{" "}
-              for your account.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <DepositCta variant="primary" returnPath="/me/esims">
-                Deposit credits
-              </DepositCta>
-              <Link
-                href="/plans"
-                className={buttonClassName({
-                  variant: "secondary",
-                  size: "sm",
-                  tone: "app",
-                })}
-              >
-                Browse plans
-              </Link>
-            </div>
+          <CardSection padding="lg">
+            <Empty
+              title="No eSIMs yet"
+              description={
+                <>
+                  Deposit credits, then buy a plan from the store — or ask an
+                  admin to run{" "}
+                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+                    create_sandbox_esim
+                  </code>{" "}
+                  for your account.
+                </>
+              }
+              action={
+                <>
+                  <DepositCta variant="primary" returnPath="/me/esims">
+                    Deposit credits
+                  </DepositCta>
+                  <Link
+                    href="/plans"
+                    className={buttonClassName({
+                      variant: "secondary",
+                      size: "sm",
+                      tone: "app",
+                    })}
+                  >
+                    Browse plans
+                  </Link>
+                </>
+              }
+            />
           </CardSection>
         </Card>
       ) : (
@@ -227,9 +235,9 @@ export default function MyEsimsPage() {
                       </p>
                     ) : null}
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  <Badge variant="default" className="shrink-0">
                     {statusLabel}
-                  </span>
+                  </Badge>
                 </Link>
               </li>
             );

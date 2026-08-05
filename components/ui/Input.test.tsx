@@ -3,12 +3,7 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import {
-  ErrorMessage,
-  Field,
-  HelpText,
-  Label,
-} from "./Field";
+import { ErrorMessage, Field, HelpText, Label } from "./Field";
 import { Input, inputControlClassName } from "./Input";
 import { Textarea } from "./Textarea";
 
@@ -41,10 +36,7 @@ describe("inputControlClassName", () => {
       inputControlClassName({ state: "success" }),
       /ring-emerald-500/,
     );
-    assert.match(
-      inputControlClassName({ state: "warning" }),
-      /ring-amber-500/,
-    );
+    assert.match(inputControlClassName({ state: "warning" }), /ring-amber-500/);
   });
 
   it("end adornment adds pr-10 for toggle clearance", () => {

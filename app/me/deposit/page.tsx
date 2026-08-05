@@ -17,6 +17,8 @@ import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemEr
 import { VoucherRedeemForm } from "@/components/deposit/VoucherRedeemForm";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardSection } from "@/components/ui/Card";
+import { Empty } from "@/components/ui/Empty";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { isWalletConnectConfigured } from "@/config/appkit";
 import { ApiError, clearTokens, fetchMe, isAuthenticated } from "@/lib/api";
 import { depositCopy } from "@/lib/billing/depositCopy";
@@ -44,10 +46,10 @@ const WalletDepositWithAppKit = dynamic(
     loading: () => (
       <Card as="section">
         <CardSection>
-          <div className="animate-pulse space-y-3" aria-hidden="true">
-            <div className="h-5 w-48 rounded-lg bg-slate-200/80" />
-            <div className="h-4 w-full max-w-md rounded-lg bg-slate-200/80" />
-            <div className="h-10 w-40 rounded-lg bg-slate-200/80" />
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton variant="line" className="h-4 w-full max-w-md" />
+            <Skeleton className="h-10 w-40" />
           </div>
           <span className="sr-only">Loading wallet connector…</span>
         </CardSection>
@@ -293,13 +295,11 @@ function DepositPageContent() {
         <Alert variant="warning" title={userError} />
       ) : !features.billingEnabled ? (
         <Card>
-          <CardSection padding="lg" className="text-center">
-            <p className="text-lg font-medium text-slate-900">
-              Billing is unavailable
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              Prepaid credits are not enabled in this environment yet.
-            </p>
+          <CardSection padding="lg">
+            <Empty
+              title="Billing is unavailable"
+              description="Prepaid credits are not enabled in this environment yet."
+            />
           </CardSection>
         </Card>
       ) : billingError || !config ? (
