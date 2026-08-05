@@ -11,8 +11,6 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 
 const SKY700_ALLOWLIST = new Set([
-  /** Setup stepper active pill — Cap5.2 Visual Debt. */
-  "app/me/esims/[id]/setup/page.tsx",
   /** Avatar chrome — Cap5.3 Visual Debt. */
   "components/UserMenu.tsx",
 ]);
@@ -127,16 +125,6 @@ describe("Cap3.5 theme + CTA boundaries", () => {
   it("primary CTA call sites do not hardcode bg-sky-700", () => {
     for (const rel of PRIMARY_CTA_FILES) {
       const source = read(rel);
-      if (rel.endsWith("setup/page.tsx")) {
-        // Stepper active state may keep sky; action CTAs must use buttonClassName.
-        assert.match(source, /buttonClassName\(\{/);
-        const withoutStepper = source.replace(
-          /\? "bg-sky-700 text-white"/g,
-          "",
-        );
-        assert.doesNotMatch(withoutStepper, /bg-sky-700/);
-        continue;
-      }
       assert.doesNotMatch(
         source,
         /bg-sky-700/,
