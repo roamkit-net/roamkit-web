@@ -4,21 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useBilling } from "@/components/billing/useBilling";
+import { useShortfallDeposit } from "@/components/orders/useShortfallDeposit";
 import { ApiError, isAuthenticated } from "@/lib/api";
 import { toBillingError } from "@/lib/billing/errors";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { newSpendIdempotencyKey } from "@/lib/orders/idempotency";
-import {
-  buildDepositRedirectUrl,
-  isInsufficientCreditsError,
-  parseInsufficientCredits,
-} from "@/lib/orders/insufficientCredits";
+import { isInsufficientCreditsError } from "@/lib/orders/insufficientCredits";
 import { loginHref } from "@/lib/navigation/safePath";
 import {
   clearPendingSpend,
   peekPendingSpend,
-  savePendingSpend,
 } from "@/lib/orders/pendingSpend";
+import {
+  redirectAfterInsufficientCredits,
+  type ShortfallDepositOutcome,
+} from "@/lib/orders/shortfallDeposit";
 import { purchaseTopup } from "@/lib/orders/topupClient";
 import type { TopupPurchase } from "@/types/orders";
 
@@ -28,6 +28,10 @@ export type PurchaseTopupState = {
   successTopup: TopupPurchase | null;
   isRetrying: boolean;
   purchase: (packageId: string) => Promise<void>;
+  startDepositForShortfall: (
+    packageId: string,
+    priceUsd: string,
+  ) => Promise<ShortfallDepositOutcome>;
   clearError: () => void;
   clearSuccess: () => void;
 };
@@ -59,33 +63,11 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
   const retryStarted = useRef(false);
   const inFlightRef = useRef(false);
 
-  const redirectToDeposit = useCallback(
-    (packageId: string, idempotencyKey: string, err: unknown) => {
-      const info = parseInsufficientCredits(err);
-      const amount = info?.missing || info?.required || "";
-      const returnPath = currentPathWithSearch();
-      savePendingSpend({
-        kind: "topup",
-        esimId: String(esimId),
-        packageId,
-        idempotencyKey,
-        returnPath,
-      });
-      billingTelemetry.track("spend_insufficient_credits", {
-        kind: "topup",
-        packageId,
-        esimId: String(esimId),
-        missing: amount || null,
-      });
-      router.push(
-        buildDepositRedirectUrl({
-          amount: amount || "25",
-          returnPath,
-        }),
-      );
-    },
-    [esimId, router],
-  );
+  const { startDepositForShortfall: startShortfall } = useShortfallDeposit({
+    inFlightRef,
+    setBusyPackageId,
+    setError,
+  });
 
   const executePurchase = useCallback(
     async (
@@ -120,7 +102,16 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
         }
       } catch (err) {
         if (isInsufficientCreditsError(err)) {
-          redirectToDeposit(packageId, idempotencyKey, err);
+          redirectAfterInsufficientCredits({
+            target: {
+              kind: "topup",
+              packageId,
+              esimId: String(esimId),
+            },
+            idempotencyKey,
+            err,
+            push: (href) => router.push(href),
+          });
           return;
         }
         if (options?.isRetry) {
@@ -142,7 +133,7 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
         setIsRetrying(false);
       }
     },
-    [esimId, invalidateBalance, redirectToDeposit, router],
+    [esimId, invalidateBalance, router],
   );
 
   const purchase = useCallback(
@@ -158,6 +149,20 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
       await executePurchase(packageId, key);
     },
     [executePurchase, router],
+  );
+
+  const startDepositForShortfall = useCallback(
+    async (packageId: string, priceUsd: string) => {
+      if (!isAuthenticated()) {
+        router.push(loginHref(currentPathWithSearch()));
+        return { status: "noop" as const };
+      }
+      return startShortfall(
+        { kind: "topup", packageId, esimId: String(esimId) },
+        priceUsd,
+      );
+    },
+    [esimId, router, startShortfall],
   );
 
   useEffect(() => {
@@ -188,6 +193,7 @@ export function usePurchaseTopup(esimId: string): PurchaseTopupState {
     successTopup,
     isRetrying,
     purchase,
+    startDepositForShortfall,
     clearError: () => setError(null),
     clearSuccess: () => setSuccessTopup(null),
   };

@@ -173,18 +173,60 @@ test.describe("purchase confirm dialog", () => {
     await expect.poll(() => orderPosts).toBe(1);
   });
 
-  test("low balance disables Buy with deposit hint", async ({ page }) => {
+  test("low balance shows Add credits CTA and redirects to deposit", async ({
+    page,
+  }) => {
     await seedAuth(page);
     await mockBillingRoutes(page, "0.01");
 
     await page.goto(STORE_PATH, { waitUntil: "domcontentloaded" });
-    const buy = page.getByRole("button", { name: "Buy" }).first();
-    await expect(buy).toBeVisible({ timeout: 30_000 });
-    await expect(buy).toBeDisabled();
-    await expect(buy).toHaveAttribute(
+    const cta = page
+      .getByRole("button", { name: /Add credits|Add \d/ })
+      .first();
+    await expect(cta).toBeVisible({ timeout: 30_000 });
+    await expect(cta).toBeEnabled();
+    await expect(cta).toHaveAttribute(
       "title",
       "Not enough credits — deposit to buy this plan",
     );
+
+    await cta.click();
+    await expect(page).toHaveURL(/\/me\/deposit\?/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/amount=/);
+    await expect(page).toHaveURL(/return=/);
+
+    const pending = await page.evaluate(() =>
+      sessionStorage.getItem("roamkit_pending_spend"),
+    );
+    expect(pending).toBeTruthy();
+    const parsed = JSON.parse(pending!) as {
+      kind: string;
+      version?: number;
+      packageId: string;
+    };
+    expect(parsed.kind).toBe("order");
+    expect(parsed.packageId).toBeTruthy();
+  });
+
+  test("double-click shortfall CTA creates one pending spend", async ({
+    page,
+  }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page, "0");
+
+    await page.goto(STORE_PATH, { waitUntil: "domcontentloaded" });
+    const cta = page.getByRole("button", { name: "Add credits" }).first();
+    await expect(cta).toBeVisible({ timeout: 30_000 });
+
+    await Promise.all([cta.click(), cta.click()]);
+    await expect(page).toHaveURL(/\/me\/deposit\?/, { timeout: 15_000 });
+
+    const pending = await page.evaluate(() =>
+      sessionStorage.getItem("roamkit_pending_spend"),
+    );
+    expect(pending).toBeTruthy();
+    // Single JSON object — replace allowed, but not two concurrent saves mid-flight
+    expect(() => JSON.parse(pending!)).not.toThrow();
   });
 
   test("pending spend auto-retries without opening the dialog", async ({
@@ -198,6 +240,7 @@ test.describe("purchase confirm dialog", () => {
         sessionStorage.setItem(
           "roamkit_pending_spend",
           JSON.stringify({
+            version: 1,
             kind: "order",
             packageId: "pending-package-id",
             idempotencyKey: "order-idem-e2e",
@@ -234,10 +277,67 @@ test.describe("purchase confirm dialog", () => {
       page.getByRole("heading", { name: "Confirm purchase" }),
     ).toHaveCount(0);
     await expect.poll(() => orderPosts).toBe(1);
+
+    const pendingAfter = await page.evaluate(() =>
+      sessionStorage.getItem("roamkit_pending_spend"),
+    );
+    expect(pendingAfter).toBeNull();
+
+    // Returning to the store without pending must not POST again
+    await page.goto(STORE_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByText("Completing your purchase after deposit…"),
+    ).toHaveCount(0);
+    await expect.poll(() => orderPosts).toBe(1);
   });
 });
 
 test.describe("purchase confirm dialog — top-up", () => {
+  test("low balance top-up CTA redirects to deposit", async ({ page }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page, "0");
+
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockEsim),
+      });
+    });
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/topups/**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockTopups),
+      });
+    });
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/usage/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          remaining_mb: 1000,
+          total_mb: 1000,
+          expired_at: null,
+          is_unlimited: false,
+          status: "active",
+          synced_at: null,
+        }),
+      });
+    });
+
+    await page.goto(TOPUP_DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    const cta = page.getByRole("button", { name: "Add credits" }).first();
+    await expect(cta).toBeVisible({ timeout: 30_000 });
+    await cta.click();
+    await expect(page).toHaveURL(/\/me\/deposit\?/, { timeout: 15_000 });
+    const pending = await page.evaluate(() =>
+      sessionStorage.getItem("roamkit_pending_spend"),
+    );
+    expect(pending).toBeTruthy();
+    expect(JSON.parse(pending!).kind).toBe("topup");
+  });
+
   test("pending top-up spend auto-retries without dialog", async ({ page }) => {
     await seedAuth(page);
     await mockBillingRoutes(page, "500.00");

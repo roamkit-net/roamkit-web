@@ -49,7 +49,7 @@ describe("pendingSpend", () => {
     clearPendingSpend();
   });
 
-  it("saves and peeks an order spend intent", () => {
+  it("saves version 1 and peeks an order spend intent", () => {
     savePendingSpend({
       kind: "order",
       packageId: "pkg-1",
@@ -59,11 +59,63 @@ describe("pendingSpend", () => {
     const pending = peekPendingSpend();
     assert.ok(pending);
     assert.equal(pending.kind, "order");
+    assert.equal(pending.version, 1);
     if (pending.kind === "order") {
       assert.equal(pending.packageId, "pkg-1");
       assert.equal(pending.idempotencyKey, "order-key-1");
       assert.equal(pending.returnPath, "/croatia-esim");
     }
+  });
+
+  it("accepts legacy payloads without version as v1", () => {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        kind: "order",
+        packageId: "pkg-legacy",
+        idempotencyKey: "legacy-key",
+        returnPath: "/croatia-esim",
+        createdAt: Date.now(),
+      }),
+    );
+    const pending = peekPendingSpend();
+    assert.ok(pending);
+    assert.equal(pending.packageId, "pkg-legacy");
+  });
+
+  it("discards unknown pending spend versions", () => {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 99,
+        kind: "order",
+        packageId: "pkg-future",
+        idempotencyKey: "future-key",
+        returnPath: "/croatia-esim",
+        createdAt: Date.now(),
+      }),
+    );
+    assert.equal(peekPendingSpend(), null);
+    assert.equal(sessionStorage.getItem(STORAGE_KEY), null);
+  });
+
+  it("replace: latest save wins", () => {
+    savePendingSpend({
+      kind: "order",
+      packageId: "pkg-old",
+      idempotencyKey: "key-old",
+      returnPath: "/croatia-esim",
+    });
+    savePendingSpend({
+      kind: "order",
+      packageId: "pkg-new",
+      idempotencyKey: "key-new",
+      returnPath: "/croatia-esim",
+    });
+    const pending = peekPendingSpend();
+    assert.ok(pending);
+    assert.equal(pending.packageId, "pkg-new");
+    assert.equal(pending.idempotencyKey, "key-new");
   });
 
   it("takes a matching return path once", () => {
