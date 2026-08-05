@@ -18,8 +18,9 @@ import {
 } from "@/components/orders/PurchaseConfirmDialog";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
 import { Alert } from "@/components/ui/Alert";
-import { DetailSkeleton } from "@/components/ui/ListSkeleton";
+import { buttonClassName } from "@/components/ui/Button";
 import { Card, CardSection } from "@/components/ui/Card";
+import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
   Esim,
@@ -330,7 +331,11 @@ export default function MyEsimDetailPage() {
               <p className="mt-4">
                 <Link
                   href={`/me/esims/${esimId}/setup`}
-                  className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                  className={buttonClassName({
+                    variant: "primary",
+                    size: "md",
+                    tone: "app",
+                  })}
                 >
                   Continue setup
                 </Link>
@@ -659,7 +664,12 @@ export default function MyEsimDetailPage() {
                           disabled={topupBuyDisabled(topup)}
                           title={topupBuyTitle(topup)}
                           aria-label={topupBuyTitle(topup)}
-                          className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClassName({
+                            variant: "primary",
+                            size: "sm",
+                            tone: "app",
+                            className: "min-h-11",
+                          })}
                         >
                           {busyPackageId === topup.id ? "Buying…" : "Buy"}
                         </button>

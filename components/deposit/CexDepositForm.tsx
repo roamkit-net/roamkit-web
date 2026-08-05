@@ -10,6 +10,7 @@ import {
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
 import { Badge } from "@/components/ui/Badge";
+import { buttonClassName } from "@/components/ui/Button";
 import { Card, CardSection } from "@/components/ui/Card";
 import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyCex } from "@/lib/billing/client";
@@ -437,7 +438,11 @@ export function CexDepositForm({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => void handleRetryWithReceived()}
-                className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClassName({
+                  variant: "primary",
+                  size: "lg",
+                  tone: "app",
+                })}
               >
                 {depositCopy.amountMismatchRetry(
                   mismatchAmount,
@@ -488,7 +493,11 @@ export function CexDepositForm({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className={buttonClassName({
+              variant: "primary",
+              size: "lg",
+              tone: "app",
+            })}
           >
             {isSubmitting
               ? depositCopy.cexVerifying

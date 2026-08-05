@@ -32,14 +32,17 @@ describe("Button", () => {
     }
   });
 
-  it("app primary sm matches store Buy chrome (sky-700, rounded-lg)", () => {
+  it("app primary uses --app-* theme tokens (Cap3.4)", () => {
     const classes = buttonClassName({
       variant: "primary",
       size: "sm",
       tone: "app",
     });
-    assert.match(classes, /bg-sky-700/);
-    assert.match(classes, /hover:bg-sky-800/);
+    assert.match(classes, /bg-\[var\(--app-primary\)\]/);
+    assert.match(classes, /hover:bg-\[var\(--app-primary-hover\)\]/);
+    assert.match(classes, /text-\[var\(--app-primary-foreground\)\]/);
+    assert.match(classes, /focus-visible:ring-\[var\(--app-focus-ring\)\]/);
+    assert.doesNotMatch(classes, /bg-sky-700/);
     assert.match(classes, /rounded-lg/);
     assert.match(classes, /px-3/);
     assert.match(classes, /py-1\.5/);
@@ -79,7 +82,7 @@ describe("Button", () => {
     assert.match(html, /<button/);
     assert.match(html, /type="button"/);
     assert.match(html, /Browse plans/);
-    assert.match(html, /bg-sky-700/);
+    assert.match(html, /bg-\[var\(--app-primary\)\]/);
   });
 
   it("forwards disabled and type=submit", () => {

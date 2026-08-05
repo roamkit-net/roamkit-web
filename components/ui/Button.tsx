@@ -13,7 +13,9 @@ import {
  * <Button variant="primary" size="md">Browse plans</Button>
  * ```
  *
- * Themes via `tone` (not extra variants): app = store sky chrome, auth = cyan submit.
+ * Themes via `tone` (not extra variants):
+ * - app = store primary via `--app-*` (Cap3.4)
+ * - auth = cyan submit on AuthShell (unchanged)
  *
  * Cap2.1 gaps (do not expand the API yet — log and revisit):
  * - DepositCta sky outline secondary (`border-sky-300 bg-sky-50`) ≠ slate secondary
@@ -50,7 +52,7 @@ const VARIANT_CLASS: Record<
   Record<ButtonVariant, string>
 > = {
   app: {
-    primary: `bg-sky-700 font-semibold text-white hover:bg-sky-800 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
+    primary: `bg-[var(--app-primary)] font-semibold text-[var(--app-primary-foreground)] hover:bg-[var(--app-primary-hover)] focus-visible:ring-[var(--app-focus-ring)] ${APP_RING_OFFSET}`,
     secondary: `border border-slate-300 bg-white font-semibold text-slate-800 hover:bg-slate-50 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
     ghost: `font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
     danger: `bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500 ${APP_RING_OFFSET}`,
