@@ -15,13 +15,33 @@ import {
   fetchMe,
   isAuthenticated,
 } from "@/lib/api";
+import { routes } from "@/lib/routes";
 
 type AuthNavState =
   | { status: "loading" }
   | { status: "anonymous" }
   | { status: "authenticated"; email: string };
 
-export function AuthNav() {
+export type AuthNavVariant = "app" | "landing";
+
+type AuthNavProps = {
+  /**
+   * `landing` only changes visual presentation for the marketing homepage.
+   * Authentication behaviour must remain identical to the default app variant.
+   */
+  variant?: AuthNavVariant;
+};
+
+const SIGN_IN_BASE =
+  "rounded-lg px-4 py-2.5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2";
+
+const SIGN_IN_VARIANT: Record<AuthNavVariant, string> = {
+  app: "bg-sky-700 text-white hover:bg-sky-800 focus-visible:ring-sky-500 focus-visible:ring-offset-white",
+  landing:
+    "bg-cyan-500 text-slate-950 hover:bg-cyan-400 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-[#05070a]",
+};
+
+export function AuthNav({ variant = "app" }: AuthNavProps) {
   const [state, setState] = useState<AuthNavState>({ status: "loading" });
 
   useEffect(() => {
@@ -72,8 +92,8 @@ export function AuthNav() {
 
   return (
     <Link
-      href="/login"
-      className="rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+      href={routes.login}
+      className={`${SIGN_IN_BASE} ${SIGN_IN_VARIANT[variant]}`}
     >
       Sign in
     </Link>
