@@ -1,8 +1,50 @@
 import { ApiError } from "@/lib/api";
+import {
+  FALLBACK_CREDIT_SYMBOL,
+  formatCredits,
+} from "@/lib/billing/format";
 import { isSafeReturnPath } from "@/lib/navigation/safePath";
 import type { InsufficientCreditsPayload } from "@/types/orders";
 
 export { isSafeReturnPath } from "@/lib/navigation/safePath";
+
+/**
+ * Sole shortfall calculator — components must not do local `price - balance`.
+ *
+ * @returns normalized missing amount, or `null` when not short / unparseable
+ *   (including when balance ≥ price — never a negative string).
+ */
+export function computeMissingCredits(
+  balance: string,
+  price: string,
+): string | null {
+  const balanceAmount = Number(balance);
+  const priceAmount = Number(price);
+  if (!Number.isFinite(balanceAmount) || !Number.isFinite(priceAmount)) {
+    return null;
+  }
+  const missing = priceAmount - balanceAmount;
+  if (missing <= 0) {
+    return null;
+  }
+  return normalizeDepositAmount(String(missing));
+}
+
+/**
+ * Shortfall CTA copy: zero balance → generic; otherwise show missing amount.
+ */
+export function shortfallCtaLabel(options: {
+  missing: string;
+  balance: string;
+  tokenSymbol?: string | null;
+}): string {
+  const balanceAmount = Number(options.balance);
+  if (Number.isFinite(balanceAmount) && balanceAmount <= 0) {
+    return "Add credits";
+  }
+  const symbol = options.tokenSymbol?.trim() || FALLBACK_CREDIT_SYMBOL;
+  return `Add ${formatCredits(options.missing, 2)} ${symbol}`;
+}
 
 function asRecord(body: unknown): Record<string, unknown> | null {
   if (!body || typeof body !== "object") {

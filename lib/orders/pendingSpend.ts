@@ -9,23 +9,28 @@
  *   - logout / auth reset
  *   - TTL expiry
  * - Auto-retry is allowed only while a valid pending spend exists.
+ * - New shortfall intent replaces an existing pending (latest intent wins).
+ * - Concurrent double-clicks are blocked by caller inFlight — not by reject.
  */
 
-export type PendingOrderSpend = {
-  kind: "order";
+export const PENDING_SPEND_VERSION = 1 as const;
+
+type PendingSpendBase = {
+  /** Schema version — missing treated as v1 for older sessions. */
+  version?: typeof PENDING_SPEND_VERSION;
   packageId: string;
   idempotencyKey: string;
   returnPath: string;
   createdAt: number;
 };
 
-export type PendingTopupSpend = {
+export type PendingOrderSpend = PendingSpendBase & {
+  kind: "order";
+};
+
+export type PendingTopupSpend = PendingSpendBase & {
   kind: "topup";
   esimId: string;
-  packageId: string;
-  idempotencyKey: string;
-  returnPath: string;
-  createdAt: number;
 };
 
 export type PendingSpend = PendingOrderSpend | PendingTopupSpend;
@@ -38,11 +43,21 @@ function canUseSessionStorage(): boolean {
   return typeof window !== "undefined" && typeof sessionStorage !== "undefined";
 }
 
+function isSupportedVersion(version: unknown): boolean {
+  if (version === undefined) {
+    return true;
+  }
+  return version === PENDING_SPEND_VERSION;
+}
+
 function isPendingSpend(value: unknown): value is PendingSpend {
   if (!value || typeof value !== "object") {
     return false;
   }
   const record = value as Record<string, unknown>;
+  if (!isSupportedVersion(record.version)) {
+    return false;
+  }
   if (
     typeof record.packageId !== "string" ||
     typeof record.idempotencyKey !== "string" ||
@@ -65,12 +80,18 @@ function isFresh(spend: PendingSpend, now = Date.now()): boolean {
 }
 
 export function savePendingSpend(
-  spend: Omit<PendingOrderSpend, "createdAt"> | Omit<PendingTopupSpend, "createdAt">,
+  spend:
+    | Omit<PendingOrderSpend, "createdAt" | "version">
+    | Omit<PendingTopupSpend, "createdAt" | "version">,
 ): void {
   if (!canUseSessionStorage()) {
     return;
   }
-  const payload: PendingSpend = { ...spend, createdAt: Date.now() };
+  const payload: PendingSpend = {
+    ...spend,
+    version: PENDING_SPEND_VERSION,
+    createdAt: Date.now(),
+  };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 

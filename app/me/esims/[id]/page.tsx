@@ -17,6 +17,7 @@ import {
   validityLabelFromDays,
 } from "@/components/orders/PurchaseConfirmDialog";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
+import { SHORTFALL_CTA_CLASS } from "@/components/orders/shortfallCtaClass";
 import { Alert } from "@/components/ui/Alert";
 import { buttonClassName } from "@/components/ui/Button";
 import { Card, CardSection } from "@/components/ui/Card";
@@ -51,6 +52,11 @@ import {
 } from "@/lib/esim/telemetry";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { hasSufficientCredits } from "@/lib/orders/canAfford";
+import {
+  computeMissingCredits,
+  shortfallCtaLabel,
+} from "@/lib/orders/insufficientCredits";
+import { restoreShortfallScroll } from "@/lib/orders/shortfallScroll";
 import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
@@ -72,7 +78,7 @@ function currentPathWithSearch(): string {
 
 export default function MyEsimDetailPage() {
   const router = useRouter();
-  const { balance } = useBilling();
+  const { balance, config } = useBilling();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
   const detailPath = `/me/esims/${esimId}`;
@@ -101,6 +107,7 @@ export default function MyEsimDetailPage() {
     error: purchaseError,
     successTopup,
     isRetrying,
+    startDepositForShortfall,
     clearError: clearPurchaseError,
     clearSuccess,
   } = usePurchaseTopup(esimId);
@@ -108,6 +115,10 @@ export default function MyEsimDetailPage() {
   const [pendingTopup, setPendingTopup] = useState<TopupPackage | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    restoreShortfallScroll(currentPathWithSearch());
+  }, []);
 
   useEffect(() => {
     if (!purchaseAttemptedRef.current) {
@@ -120,24 +131,50 @@ export default function MyEsimDetailPage() {
     purchaseAttemptedRef.current = false;
   }, [busyPackageId]);
 
+  function shortfallLabelFor(topup: TopupPackage): string | undefined {
+    if (balance == null || balance === "") {
+      return undefined;
+    }
+    const missing = computeMissingCredits(balance, topup.price_usd);
+    if (missing === null) {
+      return undefined;
+    }
+    return shortfallCtaLabel({
+      missing,
+      balance,
+      tokenSymbol: config?.tokenSymbol,
+    });
+  }
+
   function topupBuyTitle(topup: TopupPackage): string | undefined {
-    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+    if (shortfallLabelFor(topup)) {
       return INSUFFICIENT_CREDITS_TITLE;
     }
     return undefined;
   }
 
   function topupBuyDisabled(topup: TopupPackage): boolean {
-    if (hasSufficientCredits(balance, topup.price_usd) === false) {
-      return true;
-    }
     if (pendingTopup !== null) {
       return true;
     }
-    if (busyPackageId !== null) {
+    if (busyPackageId !== null && busyPackageId !== topup.id) {
       return true;
     }
     return false;
+  }
+
+  function openTopupConfirm(
+    topup: TopupPackage,
+    buyButton: HTMLButtonElement,
+  ) {
+    returnFocusRef.current = buyButton;
+    purchaseAttemptedRef.current = false;
+    billingTelemetry.track("purchase_confirm_opened", {
+      kind: "topup",
+      packageId: topup.id,
+      esimId: String(esimId),
+    });
+    setPendingTopup(topup);
   }
 
   function handleTopupBuyClick(
@@ -148,14 +185,19 @@ export default function MyEsimDetailPage() {
       router.push(loginHref(currentPathWithSearch()));
       return;
     }
-    returnFocusRef.current = buyButton;
-    purchaseAttemptedRef.current = false;
-    billingTelemetry.track("purchase_confirm_opened", {
-      kind: "topup",
-      packageId: topup.id,
-      esimId: String(esimId),
-    });
-    setPendingTopup(topup);
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      void (async () => {
+        const outcome = await startDepositForShortfall(
+          topup.id,
+          topup.price_usd,
+        );
+        if (outcome.status === "can_afford") {
+          openTopupConfirm(topup, buyButton);
+        }
+      })();
+      return;
+    }
+    openTopupConfirm(topup, buyButton);
   }
 
   function handleConfirmTopup() {
@@ -656,23 +698,55 @@ export default function MyEsimDetailPage() {
                         <p className="font-semibold text-slate-900">
                           <CatalogPriceDisplay amount={topup.price_usd} />
                         </p>
-                        <button
-                          type="button"
-                          onClick={(event) =>
-                            handleTopupBuyClick(topup, event.currentTarget)
-                          }
-                          disabled={topupBuyDisabled(topup)}
-                          title={topupBuyTitle(topup)}
-                          aria-label={topupBuyTitle(topup)}
-                          className={buttonClassName({
-                            variant: "primary",
-                            size: "sm",
-                            tone: "app",
-                            className: "min-h-11",
-                          })}
-                        >
-                          {busyPackageId === topup.id ? "Buying…" : "Buy"}
-                        </button>
+                        <span aria-live="polite">
+                          {shortfallLabelFor(topup) ? (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleTopupBuyClick(
+                                  topup,
+                                  event.currentTarget,
+                                )
+                              }
+                              disabled={
+                                topupBuyDisabled(topup) ||
+                                busyPackageId === topup.id
+                              }
+                              title={topupBuyTitle(topup)}
+                              aria-label={
+                                topupBuyTitle(topup) || shortfallLabelFor(topup)
+                              }
+                              className={SHORTFALL_CTA_CLASS}
+                            >
+                              {busyPackageId === topup.id
+                                ? "Redirecting…"
+                                : shortfallLabelFor(topup)}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleTopupBuyClick(
+                                  topup,
+                                  event.currentTarget,
+                                )
+                              }
+                              disabled={topupBuyDisabled(topup)}
+                              title={topupBuyTitle(topup)}
+                              aria-label={topupBuyTitle(topup)}
+                              className={buttonClassName({
+                                variant: "primary",
+                                size: "sm",
+                                tone: "app",
+                                className: "min-h-11",
+                              })}
+                            >
+                              {busyPackageId === topup.id
+                                ? "Buying…"
+                                : "Buy"}
+                            </button>
+                          )}
+                        </span>
                       </div>
                     </li>
                   ))}

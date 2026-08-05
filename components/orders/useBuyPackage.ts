@@ -4,22 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useBilling } from "@/components/billing/useBilling";
+import { useShortfallDeposit } from "@/components/orders/useShortfallDeposit";
 import { ApiError, isAuthenticated } from "@/lib/api";
 import { toBillingError } from "@/lib/billing/errors";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { createOrder } from "@/lib/orders/client";
 import { newSpendIdempotencyKey } from "@/lib/orders/idempotency";
-import {
-  buildDepositRedirectUrl,
-  isInsufficientCreditsError,
-  parseInsufficientCredits,
-} from "@/lib/orders/insufficientCredits";
+import { isInsufficientCreditsError } from "@/lib/orders/insufficientCredits";
 import { loginHref } from "@/lib/navigation/safePath";
 import {
   clearPendingSpend,
   peekPendingSpend,
-  savePendingSpend,
 } from "@/lib/orders/pendingSpend";
+import {
+  redirectAfterInsufficientCredits,
+  type ShortfallDepositOutcome,
+} from "@/lib/orders/shortfallDeposit";
 import type { Order } from "@/types/orders";
 
 export type BuyPackageState = {
@@ -28,6 +28,10 @@ export type BuyPackageState = {
   successOrder: Order | null;
   isRetrying: boolean;
   buy: (packageId: string) => Promise<void>;
+  startDepositForShortfall: (
+    packageId: string,
+    priceUsd: string,
+  ) => Promise<ShortfallDepositOutcome>;
   clearError: () => void;
 };
 
@@ -58,6 +62,12 @@ export function useBuyPackage(): BuyPackageState {
   const retryStarted = useRef(false);
   const inFlightRef = useRef(false);
 
+  const { startDepositForShortfall: startShortfall } = useShortfallDeposit({
+    inFlightRef,
+    setBusyPackageId,
+    setError,
+  });
+
   const completeSuccess = useCallback(
     async (order: Order) => {
       clearPendingSpend();
@@ -75,32 +85,6 @@ export function useBuyPackage(): BuyPackageState {
       }
     },
     [invalidateBalance, router],
-  );
-
-  const redirectToDeposit = useCallback(
-    (packageId: string, idempotencyKey: string, err: unknown) => {
-      const info = parseInsufficientCredits(err);
-      const amount = info?.missing || info?.required || "";
-      const returnPath = currentPathWithSearch();
-      savePendingSpend({
-        kind: "order",
-        packageId,
-        idempotencyKey,
-        returnPath,
-      });
-      billingTelemetry.track("spend_insufficient_credits", {
-        kind: "order",
-        packageId,
-        missing: amount || null,
-      });
-      router.push(
-        buildDepositRedirectUrl({
-          amount: amount || "25",
-          returnPath,
-        }),
-      );
-    },
-    [router],
   );
 
   const executeBuy = useCallback(
@@ -130,7 +114,12 @@ export function useBuyPackage(): BuyPackageState {
         await completeSuccess(order);
       } catch (err) {
         if (isInsufficientCreditsError(err)) {
-          redirectToDeposit(packageId, idempotencyKey, err);
+          redirectAfterInsufficientCredits({
+            target: { kind: "order", packageId },
+            idempotencyKey,
+            err,
+            push: (href) => router.push(href),
+          });
           return;
         }
         if (options?.isRetry) {
@@ -152,7 +141,7 @@ export function useBuyPackage(): BuyPackageState {
         setIsRetrying(false);
       }
     },
-    [completeSuccess, redirectToDeposit, router],
+    [completeSuccess, router],
   );
 
   const buy = useCallback(
@@ -168,6 +157,17 @@ export function useBuyPackage(): BuyPackageState {
       await executeBuy(packageId, key);
     },
     [executeBuy, router],
+  );
+
+  const startDepositForShortfall = useCallback(
+    async (packageId: string, priceUsd: string) => {
+      if (!isAuthenticated()) {
+        router.push(loginHref(currentPathWithSearch()));
+        return { status: "noop" as const };
+      }
+      return startShortfall({ kind: "order", packageId }, priceUsd);
+    },
+    [router, startShortfall],
   );
 
   useEffect(() => {
@@ -195,6 +195,7 @@ export function useBuyPackage(): BuyPackageState {
     successOrder,
     isRetrying,
     buy,
+    startDepositForShortfall,
     clearError: () => setError(null),
   };
 }

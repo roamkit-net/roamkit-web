@@ -1,4 +1,5 @@
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { SHORTFALL_CTA_CLASS } from "@/components/orders/shortfallCtaClass";
 import { Button } from "@/components/ui/Button";
 import { ListRow } from "@/components/ui/ListRow";
 import type { Package } from "@/lib/api";
@@ -62,6 +63,7 @@ export function PackageRow({
   isBuying = false,
   buyDisabled = false,
   buyTitle,
+  shortfallLabel,
 }: {
   plan: Package;
   showValidity?: boolean;
@@ -69,7 +71,16 @@ export function PackageRow({
   isBuying?: boolean;
   buyDisabled?: boolean;
   buyTitle?: string;
+  /** When set, render sky shortfall CTA instead of primary Buy. */
+  shortfallLabel?: string;
 }) {
+  const isShortfall = Boolean(shortfallLabel);
+  const label = isBuying
+    ? isShortfall
+      ? "Redirecting…"
+      : "Buying…"
+    : shortfallLabel || "Buy";
+
   return (
     <ListRow
       as="article"
@@ -79,18 +90,33 @@ export function PackageRow({
             <CatalogPriceDisplay amount={plan.price_usd} />
           </p>
           {onBuy ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="primary"
-              onClick={(event) => onBuy(plan, event.currentTarget)}
-              disabled={isBuying || buyDisabled}
-              title={buyTitle}
-              aria-label={buyTitle}
-              className="min-h-11"
-            >
-              {isBuying ? "Buying…" : "Buy"}
-            </Button>
+            <span aria-live="polite">
+              {isShortfall ? (
+                <button
+                  type="button"
+                  onClick={(event) => onBuy(plan, event.currentTarget)}
+                  disabled={isBuying || buyDisabled}
+                  title={buyTitle}
+                  aria-label={buyTitle || shortfallLabel}
+                  className={SHORTFALL_CTA_CLASS}
+                >
+                  {label}
+                </button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={(event) => onBuy(plan, event.currentTarget)}
+                  disabled={isBuying || buyDisabled}
+                  title={buyTitle}
+                  aria-label={buyTitle}
+                  className="min-h-11"
+                >
+                  {label}
+                </Button>
+              )}
+            </span>
           ) : null}
         </>
       }

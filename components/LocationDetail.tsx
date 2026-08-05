@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/AppShell";
 import { appShellNavLinkClassName } from "@/components/TopBar";
-import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CompatibilityButton } from "@/components/CompatibilityButton";
 import { CoveragesSummary } from "@/components/CoveragesModal";
@@ -26,6 +25,11 @@ import { isAuthenticated, locationImageSrc } from "@/lib/api";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { loginHref } from "@/lib/navigation/safePath";
 import { hasSufficientCredits } from "@/lib/orders/canAfford";
+import {
+  computeMissingCredits,
+  shortfallCtaLabel,
+} from "@/lib/orders/insufficientCredits";
+import { restoreShortfallScroll } from "@/lib/orders/shortfallScroll";
 import {
   filterPackagesByPlan,
   resolveActivePlanFilter,
@@ -89,7 +93,7 @@ export function LocationDetail({
   packages: Package[];
 }) {
   const router = useRouter();
-  const { balance } = useBilling();
+  const { balance, config } = useBilling();
   const imageSrc = locationImageSrc(location);
   const coverages = location.coverages ?? [];
   const broader = location.broader_locations ?? [];
@@ -107,12 +111,17 @@ export function LocationDetail({
     busyPackageId,
     error: buyError,
     isRetrying,
+    startDepositForShortfall,
     clearError,
   } = useBuyPackage();
 
   const [pendingPackage, setPendingPackage] = useState<Package | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    restoreShortfallScroll(currentPathWithSearch());
+  }, []);
 
   useEffect(() => {
     if (!purchaseAttemptedRef.current) {
@@ -125,31 +134,39 @@ export function LocationDetail({
     purchaseAttemptedRef.current = false;
   }, [busyPackageId]);
 
+  function shortfallLabelFor(plan: Package): string | undefined {
+    if (balance == null || balance === "") {
+      return undefined;
+    }
+    const missing = computeMissingCredits(balance, plan.price_usd);
+    if (missing === null) {
+      return undefined;
+    }
+    return shortfallCtaLabel({
+      missing,
+      balance,
+      tokenSymbol: config?.tokenSymbol,
+    });
+  }
+
   function buyTitleFor(plan: Package): string | undefined {
-    if (hasSufficientCredits(balance, plan.price_usd) === false) {
+    if (shortfallLabelFor(plan)) {
       return INSUFFICIENT_CREDITS_TITLE;
     }
     return undefined;
   }
 
   function buyDisabledFor(plan: Package): boolean {
-    if (hasSufficientCredits(balance, plan.price_usd) === false) {
-      return true;
-    }
     if (pendingPackage !== null) {
       return true;
     }
-    if (busyPackageId !== null) {
+    if (busyPackageId !== null && busyPackageId !== plan.id) {
       return true;
     }
     return false;
   }
 
-  function handleBuyClick(plan: Package, buyButton: HTMLButtonElement) {
-    if (!isAuthenticated()) {
-      router.push(loginHref(currentPathWithSearch()));
-      return;
-    }
+  function openConfirmDialog(plan: Package, buyButton: HTMLButtonElement) {
     returnFocusRef.current = buyButton;
     purchaseAttemptedRef.current = false;
     billingTelemetry.track("purchase_confirm_opened", {
@@ -157,6 +174,26 @@ export function LocationDetail({
       packageId: plan.id,
     });
     setPendingPackage(plan);
+  }
+
+  function handleBuyClick(plan: Package, buyButton: HTMLButtonElement) {
+    if (!isAuthenticated()) {
+      router.push(loginHref(currentPathWithSearch()));
+      return;
+    }
+    if (hasSufficientCredits(balance, plan.price_usd) === false) {
+      void (async () => {
+        const outcome = await startDepositForShortfall(
+          plan.id,
+          plan.price_usd,
+        );
+        if (outcome.status === "can_afford") {
+          openConfirmDialog(plan, buyButton);
+        }
+      })();
+      return;
+    }
+    openConfirmDialog(plan, buyButton);
   }
 
   function handleConfirmPurchase() {
@@ -345,12 +382,9 @@ export function LocationDetail({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-slate-700">
-              Choose your package
-            </p>
-            <DepositCta variant="link">Need credits? Deposit →</DepositCta>
-          </div>
+          <p className="text-sm font-medium text-slate-700">
+            Choose your package
+          </p>
         </div>
 
         {isRetrying ? (
@@ -395,6 +429,7 @@ export function LocationDetail({
                   isBuying={busyPackageId === mostPopular.id}
                   buyDisabled={buyDisabledFor(mostPopular)}
                   buyTitle={buyTitleFor(mostPopular)}
+                  shortfallLabel={shortfallLabelFor(mostPopular)}
                 />
               </div>
             ) : null}
@@ -412,6 +447,7 @@ export function LocationDetail({
                         isBuying={busyPackageId === plan.id}
                         buyDisabled={buyDisabledFor(plan)}
                         buyTitle={buyTitleFor(plan)}
+                        shortfallLabel={shortfallLabelFor(plan)}
                       />
                     </li>
                   ))}
