@@ -1,17 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { OpsEventList } from "@/components/ops/OpsEventRow";
+import { OpsHealthStrip } from "@/components/ops/OpsHealthStrip";
 import { Alert } from "@/components/ui/Alert";
-import { Badge } from "@/components/ui/Badge";
 import { Card, CardSection } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ApiError, clearTokens } from "@/lib/api";
-import { fetchOpsDashboard } from "@/lib/ops/client";
-import type { OpsDashboard } from "@/lib/ops/types";
+import { fetchOpsDashboard, fetchOpsHealth } from "@/lib/ops/client";
+import type { OpsDashboard, OpsHealth } from "@/lib/ops/types";
 import { loginHref } from "@/lib/navigation/safePath";
 import { routes } from "@/lib/routes";
 
@@ -28,20 +28,14 @@ function KpiCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function healthVariant(
-  status: string,
-): "success" | "danger" | "warning" | "neutral" {
-  if (status === "ok" || status === "enabled") return "success";
-  if (status === "error" || status === "misconfigured") return "danger";
-  if (status === "disabled") return "warning";
-  return "neutral";
-}
-
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<OpsDashboard | null>(null);
+  const [health, setHealth] = useState<OpsHealth | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,8 +43,12 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       try {
+        // One request on load — embedded health; no waterfall.
         const dashboard = await fetchOpsDashboard();
-        if (!cancelled) setData(dashboard);
+        if (!cancelled) {
+          setData(dashboard);
+          setHealth(dashboard.health);
+        }
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && err.status === 401) {
@@ -73,6 +71,30 @@ export default function AdminDashboardPage() {
     };
   }, [router]);
 
+  const onRefreshHealth = useCallback(async () => {
+    setRefreshing(true);
+    setHealthError(null);
+    try {
+      const next = await fetchOpsHealth();
+      setHealth(next);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        clearTokens();
+        router.replace(loginHref(routes.adminDashboard));
+        return;
+      }
+      if (err instanceof ApiError && err.status === 403) {
+        router.replace(routes.adminForbidden);
+        return;
+      }
+      setHealthError(
+        err instanceof Error ? err.message : "Failed to refresh health",
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [router]);
+
   if (loading) {
     return <ListSkeleton rows={4} label="Loading dashboard…" />;
   }
@@ -81,11 +103,11 @@ export default function AdminDashboardPage() {
     return <Alert variant="error">{error}</Alert>;
   }
 
-  if (!data) {
+  if (!data || !health) {
     return <Empty title="No dashboard data" />;
   }
 
-  const { kpi, pending_work, financial, health, alerts, activity } = data;
+  const { kpi, pending_work, financial, alerts, activity } = data;
 
   return (
     <div className="space-y-6">
@@ -96,6 +118,15 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
+      <OpsHealthStrip
+        health={health}
+        refreshing={refreshing}
+        onRefresh={() => {
+          void onRefreshHealth();
+        }}
+        error={healthError}
+      />
+
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="New users today" value={kpi.new_users_today} />
         <KpiCard label="Orders today" value={kpi.orders_today} />
@@ -105,14 +136,6 @@ export default function AdminDashboardPage() {
         <KpiCard label="Topups today" value={kpi.topups_today} />
         <KpiCard label="Users total" value={kpi.users_total} />
         <KpiCard label="Active eSIMs" value={kpi.active_esims} />
-      </section>
-
-      <section className="flex flex-wrap gap-2">
-        {Object.entries(health).map(([key, item]) => (
-          <Badge key={key} variant={healthVariant(item.status)} title={item.detail}>
-            {key}: {item.status}
-          </Badge>
-        ))}
       </section>
 
       {alerts.length > 0 ? (
