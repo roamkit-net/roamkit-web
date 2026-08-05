@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import type { Location } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
-import { locationEsimPath } from "@/lib/routes";
+import { locationEsimPath, routes } from "@/lib/routes";
 
 type FeaturedPlansProps = {
   locations: Location[];
@@ -17,12 +17,12 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
   }
 
   return (
-    <section className="relative px-6 py-12 sm:px-10 lg:px-16">
+    <section className="landing-section relative px-6 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-6xl">
-        <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+        <h2 className="text-2xl font-semibold tracking-tight text-[var(--landing-foreground)] sm:text-3xl">
           Featured plans
         </h2>
-        <p className="mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
+        <p className="mt-2 max-w-xl text-sm text-[var(--landing-muted)] sm:text-base">
           Live destinations from the catalog — open a plan to see data packages.
         </p>
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -32,7 +32,7 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
               <li key={location.slug}>
                 <Link
                   href={locationEsimPath(location.slug)}
-                  className="group flex h-full flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 outline-none transition hover:border-cyan-500/30 hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070a]"
+                  className="landing-card group flex h-full flex-col gap-4 rounded-xl p-4 outline-none"
                 >
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white/5">
                     {imageSrc ? (
@@ -44,16 +44,16 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
                         sizes="48px"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-500">
+                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-[var(--landing-muted-soft)]">
                         {location.title.slice(0, 2)}
                       </div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-base font-semibold text-white group-hover:text-cyan-200">
+                    <h3 className="landing-card-title truncate text-base font-semibold">
                       {location.title}
                     </h3>
-                    <p className="mt-0.5 text-sm text-slate-400">
+                    <p className="mt-0.5 text-sm text-[var(--landing-muted)]">
                       {location.min_price_usd ? (
                         <CatalogPriceDisplay
                           amount={location.min_price_usd}
@@ -64,7 +64,7 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
                       )}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-cyan-400">
+                  <span className="landing-link text-sm font-medium">
                     View plan
                   </span>
                 </Link>
@@ -74,8 +74,8 @@ export function FeaturedPlans({ locations }: FeaturedPlansProps) {
         </ul>
         <p className="mt-8">
           <Link
-            href="/plans"
-            className="text-sm font-medium text-cyan-400 outline-none transition hover:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070a]"
+            href={routes.plans}
+            className="landing-link text-sm font-medium outline-none"
           >
             Browse all destinations →
           </Link>

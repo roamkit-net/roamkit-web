@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 
 import { AppProviders } from "@/components/AppProviders";
 import { siteOrigin } from "@/lib/routes";
@@ -14,6 +14,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+/** Landing H1 only — see Design Lock typography scope. */
+const sourceSerif = Source_Serif_4({
+  variable: "--font-landing-display",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
 const siteUrl = siteOrigin();
@@ -59,7 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} antialiased`}
       >
         <AppProviders>{children}</AppProviders>
       </body>

@@ -9,6 +9,26 @@
   --accent-pink: #ec4899;
   --surface: #0d1117;
   --surface-border: rgba(148, 163, 184, 0.12);
+
+  /*
+   * Landing-scoped tokens (marketing homepage only).
+   * Do not repurpose these for /plans, auth shell, or AppShell —
+   * change global tokens above only when the whole app should shift.
+   */
+  --landing-ink: #05070a;
+  --landing-foreground: #f0f4f8;
+  --landing-muted: #94a3b8;
+  /* ≥ 4.5:1 on --landing-ink (AA for 14px body text); #64748b was 4.23:1 */
+  --landing-muted-soft: #6b7c93;
+  --landing-cta: #22d3ee;
+  --landing-cta-hover: #67e8f9;
+  --landing-cta-foreground: #020617;
+  --landing-focus-ring: color-mix(in srgb, var(--landing-cta) 60%, transparent);
+  --landing-border: rgba(255, 255, 255, 0.15);
+  --landing-surface: rgba(255, 255, 255, 0.03);
+  --landing-motion-duration: 200ms;
+  --landing-motion-duration-enter: 450ms;
+  --landing-motion-ease: ease-out;
 }
 
 @theme inline {
@@ -26,47 +46,223 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Decorative accent only — not brand identity (was cyan→purple→pink). */
 .landing-gradient-text {
-  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 50%, var(--accent-pink) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--landing-cta);
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
 }
 
 .landing-gradient-bg {
-  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 50%, var(--accent-pink) 100%);
+  background: var(--landing-cta);
 }
 
 .landing-page-bg {
-  background-color: #05070a;
-  background-image: url("/landing/hero-background.png");
-  background-size: cover;
-  background-position: center right;
-  background-repeat: no-repeat;
+  background-color: var(--landing-ink);
 }
 
-.landing-page-overlay {
+/* Strong left/top wash so hero copy meets WCAG AA without relying on the photo. */
+.landing-hero-overlay {
   background: linear-gradient(
     to right,
-    rgba(5, 7, 10, 0.95) 0%,
-    rgba(5, 7, 10, 0.82) 40%,
-    rgba(5, 7, 10, 0.45) 65%,
-    transparent 85%
+    color-mix(in srgb, var(--landing-ink) 94%, transparent) 0%,
+    color-mix(in srgb, var(--landing-ink) 88%, transparent) 38%,
+    color-mix(in srgb, var(--landing-ink) 55%, transparent) 62%,
+    color-mix(in srgb, var(--landing-ink) 20%, transparent) 82%,
+    transparent 100%
   );
 }
 
 @media (max-width: 1023px) {
-  .landing-page-bg {
-    background-position: 75% center;
-  }
-
-  .landing-page-overlay {
+  .landing-hero-overlay {
     background: linear-gradient(
       to bottom,
-      rgba(5, 7, 10, 0.92) 0%,
-      rgba(5, 7, 10, 0.75) 55%,
-      rgba(5, 7, 10, 0.5) 100%
+      color-mix(in srgb, var(--landing-ink) 88%, transparent) 0%,
+      color-mix(in srgb, var(--landing-ink) 78%, transparent) 42%,
+      color-mix(in srgb, var(--landing-ink) 55%, transparent) 100%
     );
+  }
+}
+
+.landing-display {
+  font-family: var(--font-landing-display), ui-serif, Georgia, serif;
+}
+
+/* Consistent vertical rhythm for post-hero sections (existing spacing scale). */
+.landing-section {
+  padding-block: 4rem;
+}
+
+@media (min-width: 640px) {
+  .landing-section {
+    padding-block: 5rem;
+  }
+}
+
+/* 1) Hero content enter — CTAs remain interactive during animation. */
+@keyframes landing-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-hero-enter {
+  animation: landing-hero-enter var(--landing-motion-duration-enter)
+    var(--landing-motion-ease) both;
+}
+
+/* 3) Subtle hero media settle (not a looping effect). */
+@keyframes landing-hero-media {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.landing-hero-media {
+  transform-origin: center right;
+  animation: landing-hero-media 1.1s var(--landing-motion-ease) both;
+}
+
+/* Shared landing CTA chrome — AuthNav landing + hero/closing CTAs. */
+.landing-cta {
+  background-color: var(--landing-cta);
+  color: var(--landing-cta-foreground);
+  transition:
+    background-color var(--landing-motion-duration) var(--landing-motion-ease),
+    color var(--landing-motion-duration) var(--landing-motion-ease),
+    border-color var(--landing-motion-duration) var(--landing-motion-ease),
+    transform var(--landing-motion-duration) var(--landing-motion-ease);
+}
+
+.landing-cta:hover {
+  background-color: var(--landing-cta-hover);
+  transform: translateY(-1px);
+}
+
+.landing-cta:active {
+  transform: translateY(0);
+}
+
+.landing-cta:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--landing-ink),
+    0 0 0 4px var(--landing-focus-ring);
+}
+
+.landing-cta-secondary {
+  border: 1px solid var(--landing-border);
+  background-color: var(--landing-surface);
+  color: var(--landing-foreground);
+  transition:
+    background-color var(--landing-motion-duration) var(--landing-motion-ease),
+    border-color var(--landing-motion-duration) var(--landing-motion-ease),
+    color var(--landing-motion-duration) var(--landing-motion-ease),
+    transform var(--landing-motion-duration) var(--landing-motion-ease);
+}
+
+.landing-cta-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.landing-cta-secondary:active {
+  transform: translateY(0);
+}
+
+.landing-cta-secondary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--landing-ink),
+    0 0 0 4px var(--landing-focus-ring);
+}
+
+.landing-link {
+  color: var(--landing-cta);
+  transition: color var(--landing-motion-duration) var(--landing-motion-ease);
+}
+
+.landing-link:hover {
+  color: var(--landing-cta-hover);
+}
+
+.landing-link:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--landing-ink),
+    0 0 0 4px var(--landing-focus-ring);
+}
+
+.landing-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--landing-surface);
+  transition:
+    border-color var(--landing-motion-duration) var(--landing-motion-ease),
+    background-color var(--landing-motion-duration) var(--landing-motion-ease),
+    transform var(--landing-motion-duration) var(--landing-motion-ease);
+}
+
+.landing-card:hover {
+  border-color: color-mix(in srgb, var(--landing-cta) 30%, transparent);
+  background-color: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.landing-card:active {
+  transform: translateY(0);
+}
+
+.landing-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--landing-ink),
+    0 0 0 4px var(--landing-focus-ring);
+}
+
+.landing-card-title {
+  color: var(--landing-foreground);
+  transition: color var(--landing-motion-duration) var(--landing-motion-ease);
+}
+
+.landing-card:hover .landing-card-title {
+  color: color-mix(in srgb, var(--landing-cta) 85%, white);
+}
+
+.landing-accent {
+  color: var(--landing-cta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-enter,
+  .landing-hero-media {
+    animation: none;
+  }
+
+  .landing-cta,
+  .landing-cta-secondary,
+  .landing-card,
+  .landing-link,
+  .landing-card-title {
+    transition: none;
+  }
+
+  .landing-cta:hover,
+  .landing-cta-secondary:hover,
+  .landing-card:hover,
+  .landing-cta:active,
+  .landing-cta-secondary:active,
+  .landing-card:active {
+    transform: none;
   }
 }
 
