@@ -12,6 +12,7 @@ import {
 } from "@/lib/billing/deposit";
 import { depositCopy } from "@/lib/billing/depositCopy";
 import { toBillingError } from "@/lib/billing/errors";
+import { addressExplorerUrl, explorerName } from "@/lib/billing/explorer";
 import { newIdempotencyKey } from "@/lib/billing/idempotency";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { verifyDepositUntilSettled } from "@/lib/billing/verifyPoll";
@@ -54,8 +55,15 @@ export function CexDepositForm({
     useState<ExplorerStatus>("pending");
   const [mismatchAmount, setMismatchAmount] = useState<string | null>(null);
   const [retryPending, setRetryPending] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const mismatchAlertRef = useRef<HTMLDivElement | null>(null);
+  const addressCopyStatusRef = useRef<HTMLSpanElement | null>(null);
+
+  const addressExplorer = config.wallet
+    ? addressExplorerUrl(config.chainId, config.wallet)
+    : null;
+  const addressExplorerLabel = explorerName(config.chainId);
 
   useEffect(() => {
     return () => {
@@ -68,6 +76,23 @@ export function CexDepositForm({
       mismatchAlertRef.current.focus();
     }
   }, [mismatchAmount]);
+
+  async function copyPlatformAddress() {
+    if (!config.wallet) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(config.wallet);
+      setAddressCopied(true);
+      billingTelemetry.track("deposit_copy_address_clicked", {
+        method: "cex",
+      });
+      addressCopyStatusRef.current?.focus();
+      window.setTimeout(() => setAddressCopied(false), 2000);
+    } catch {
+      setAddressCopied(false);
+    }
+  }
 
   async function runVerify(
     amountRequested: string,
@@ -205,16 +230,93 @@ export function CexDepositForm({
     await runVerify(mismatchAmount, activeTxHash, key, { isRetry: true });
   }
 
-  const showExplorer = Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
+  const showExplorer =
+    Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">
-        {depositCopy.cexHeading}
-      </h2>
+    <section
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      data-testid="deposit-cex-panel"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold text-slate-900">
+          {depositCopy.cexHeading}
+        </h2>
+        <span
+          data-testid="deposit-cex-network-badge"
+          className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-950"
+        >
+          {depositCopy.cexNetworkBadge}
+        </span>
+      </div>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         {depositCopy.cexDescription(config.tokenSymbol)}
       </p>
+
+      <div className="mt-5 space-y-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
+            {depositCopy.qrPlatformWalletLabel}
+          </p>
+          <p
+            data-testid="deposit-cex-wallet"
+            className="mt-1 break-all font-mono text-sm text-slate-900"
+          >
+            {config.wallet || "—"}
+          </p>
+          {config.wallet ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="text-sm font-medium text-sky-700 hover:text-sky-800"
+                onClick={() => void copyPlatformAddress()}
+              >
+                {addressCopied ? depositCopy.copied : depositCopy.copyAddress}
+              </button>
+              <span
+                ref={addressCopyStatusRef}
+                tabIndex={-1}
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+              >
+                {addressCopied ? depositCopy.copied : ""}
+              </span>
+              {addressExplorer && addressExplorerLabel ? (
+                <a
+                  href={addressExplorer}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-sky-700 underline hover:text-sky-900"
+                  onClick={() => {
+                    billingTelemetry.track("deposit_explorer_opened", {
+                      method: "cex",
+                      status: "address",
+                    });
+                  }}
+                >
+                  {depositCopy.cexViewAddressOnExplorer(addressExplorerLabel)}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-slate-800">
+            {depositCopy.cexChecklistTitle}
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-slate-700">
+            <li>{depositCopy.cexChecklistToken(config.tokenSymbol)}</li>
+            <li>{depositCopy.cexChecklistNetwork}</li>
+            <li>{depositCopy.cexChecklistWithdraw}</li>
+            <li>{depositCopy.cexChecklistPasteTxid}</li>
+          </ol>
+          <p className="mt-3 text-sm leading-6 text-amber-900">
+            {depositCopy.cexAmountNote}
+          </p>
+        </div>
+      </div>
 
       <form
         className="mt-6 space-y-4"

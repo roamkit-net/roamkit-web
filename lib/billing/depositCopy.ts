@@ -39,6 +39,16 @@ export const depositCopy = {
   cexHeading: "Deposit from exchange",
   cexDescription: (tokenSymbol: string) =>
     `Withdraw ${tokenSymbol} to the platform wallet from an exchange, then paste the transaction hash here.`,
+  cexNetworkBadge: "Polygon PoS",
+  cexChecklistTitle: "Before you withdraw",
+  cexChecklistToken: (tokenSymbol: string) => `Token: ${tokenSymbol}`,
+  cexChecklistNetwork: "Network: Polygon PoS",
+  cexChecklistWithdraw: "Withdraw to the address below",
+  cexChecklistPasteTxid: "Paste the withdrawal TXID and verify",
+  cexAmountNote:
+    "The amount you enter must match the exact amount received on-chain (after any exchange fee).",
+  cexViewAddressOnExplorer: (explorerName: string) =>
+    `View address on ${explorerName}`,
   cexTxHashLabel: "Transaction hash (TXID)",
   cexVerify: "Verify deposit",
   cexVerifying: "Verifying…",
