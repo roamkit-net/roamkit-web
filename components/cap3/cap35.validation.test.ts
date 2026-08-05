@@ -10,9 +10,8 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 
-const SKY700_ALLOWLIST = new Set([
-  /** Avatar chrome — Cap5.3 Visual Debt. */
-  "components/UserMenu.tsx",
+const SKY700_ALLOWLIST = new Set<string>([
+  // Cap5.1–5.3 cleared PlansStore / setup / UserMenu. Cap6 may audit remaining text-sky-700.
 ]);
 
 const APPSHELL_ROUTES: { label: string; path: string }[] = [
