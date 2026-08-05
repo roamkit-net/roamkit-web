@@ -237,13 +237,13 @@ export default function EsimSetupWizardPage() {
       ) : esim ? (
         <div className="space-y-6">
           <header>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
               Purchase complete
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-[var(--app-chrome-text)]">
               Set up your eSIM
             </h1>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-[var(--app-chrome-text-muted)]">
               Step {step} of {STEPS.length}: {STEPS[step - 1]}
             </p>
             <ol className="mt-4 flex flex-wrap gap-2">

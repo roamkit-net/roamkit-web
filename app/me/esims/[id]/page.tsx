@@ -315,14 +315,14 @@ export default function MyEsimDetailPage() {
       ) : esim ? (
         <div className="space-y-6">
           <header>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
               {formatEsimStatus(esim.status)}
             </p>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-[var(--app-chrome-text)] sm:text-3xl">
               {esimDestinationLabel(esim)}
             </h1>
             {esim.location_title?.trim() && esim.package_title?.trim() ? (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-[var(--app-chrome-text-muted)]">
                 {esim.package_title}
               </p>
             ) : null}

@@ -238,17 +238,17 @@ function DepositPageContent() {
     >
       <AppPageHeader
         eyebrow={
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
             RoamKit
           </p>
         }
         title={
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--app-chrome-text)]">
             {depositCopy.pageTitle}
           </h1>
         }
         description={
-          <p className="max-w-2xl text-base leading-7 text-slate-600">
+          <p className="max-w-2xl text-base leading-7 text-[var(--app-chrome-text-muted)]">
             {features.walletConnect
               ? depositCopy.pageDescriptionWithWallet
               : depositCopy.pageDescriptionWithoutWallet}
