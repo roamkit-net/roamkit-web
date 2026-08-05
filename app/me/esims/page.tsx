@@ -35,6 +35,12 @@ import {
 import { needsSetup } from "@/lib/esim/telemetry";
 import { loginHref } from "@/lib/navigation/safePath";
 
+/**
+ * Cap3.3a Golden Route — reference AppShell surface composition
+ * (dark shell chrome text + Cap2 elevated Card / ListRow).
+ * After pilot smoke: Pilot Freeze — prefer propagate over further edits here.
+ */
+
 function formatUsage(esim: Esim): string {
   if (esim.usage_is_unlimited) {
     return "Unlimited";
@@ -110,13 +116,17 @@ export default function MyEsimsPage() {
     >
       <AppPageHeader
         eyebrow={
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
             RoamKit
           </p>
         }
-        title={<h1 className="text-3xl font-bold tracking-tight">My eSIMs</h1>}
+        title={
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--app-chrome-text)]">
+            My eSIMs
+          </h1>
+        }
         description={
-          <p className="max-w-2xl text-base leading-7 text-slate-600">
+          <p className="max-w-2xl text-base leading-7 text-[var(--app-chrome-text-muted)]">
             {user
               ? `Signed in as ${user.email}. Manage your plans and installation.`
               : "Manage your plans and installation."}
@@ -131,6 +141,8 @@ export default function MyEsimsPage() {
                 variant: "secondary",
                 size: "sm",
                 tone: "app",
+                className:
+                  "focus-visible:ring-offset-[var(--app-background)]",
               })}
             >
               Browse plans
