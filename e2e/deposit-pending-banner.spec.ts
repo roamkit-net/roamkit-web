@@ -189,28 +189,32 @@ test.describe("deposit pending session resume (PR5)", () => {
 
   test("Dismiss clears pending so banner does not return", async ({ page }) => {
     await seedAuth(page);
-    await page.addInitScript(
-      ({ tx }) => {
-        try {
-          localStorage.setItem(
-            "roamkit_pending_deposit",
-            JSON.stringify({
-              txHash: tx,
-              amount: "25",
-              idempotencyKey: "seed-dismiss",
-              method: "cex",
-              updatedAt: Date.now(),
-            }),
-          );
-        } catch {
-          // ignore
-        }
-      },
-      { tx: TX_HASH },
-    );
     await mockDepositRoutes(page);
 
     await page.goto("/me/deposit", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { name: "Deposit from exchange" }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // Seed after first paint (not addInitScript) so reload after dismiss
+    // does not re-write the cleared localStorage entry.
+    await page.evaluate(
+      ({ tx }) => {
+        localStorage.setItem(
+          "roamkit_pending_deposit",
+          JSON.stringify({
+            txHash: tx,
+            amount: "25",
+            idempotencyKey: "seed-dismiss",
+            method: "cex",
+            updatedAt: Date.now(),
+          }),
+        );
+      },
+      { tx: TX_HASH },
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+
     const banner = page.getByTestId("deposit-pending-banner");
     await expect(banner).toBeVisible({ timeout: 30_000 });
 
