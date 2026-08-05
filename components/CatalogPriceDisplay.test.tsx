@@ -7,7 +7,10 @@ import {
   DisplayCurrencyContext,
   type DisplayCurrencyContextValue,
 } from "@/components/billing/DisplayCurrencyProvider";
-import { CatalogPriceDisplay } from "./CatalogPriceDisplay";
+import {
+  CatalogPriceDisplay,
+  YOUR_PRICE_LABEL,
+} from "./CatalogPriceDisplay";
 import type { CatalogPrice, DisplayCurrency } from "@/types/billing";
 
 const usdt: DisplayCurrency = {
@@ -172,5 +175,63 @@ describe("CatalogPriceDisplay", () => {
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it("equal list and charge → single price (no dual, no Vaša cijena)", () => {
+    const html = renderWithCurrency(
+      { amount: "57.00", listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /data-testid="catalog-price"/);
+    assert.match(html, /aria-label="Price 57\.00 USDT"/);
+    assert.doesNotMatch(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /line-through/);
+  });
+
+  it("unequal list and charge → dual price with a11y and locked label", () => {
+    const html = renderWithCurrency(
+      { amount: "54.15", listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /data-testid="catalog-price-list"/);
+    assert.match(html, /line-through/);
+    assert.match(html, /List price 57\.00 USDT/);
+    assert.match(html, /Your price 54\.15 USDT/);
+    assert.match(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.match(html, /min-h-\[2\.75rem\]/);
+    assert.doesNotMatch(html, /aria-label="Price/);
+  });
+
+  it("missing list → customer charge only", () => {
+    const html = renderWithCurrency(
+      { amount: "54.15" },
+      displayCurrencyValue(),
+    );
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /aria-label="Price 54\.15 USDT"/);
+    assert.doesNotMatch(html, new RegExp(YOUR_PRICE_LABEL));
+  });
+
+  it("list without customer charge → skeleton (no broken dual)", () => {
+    const html = renderWithCurrency(
+      { listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /data-testid="catalog-price-skeleton"/);
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.doesNotMatch(html, /57\.00/);
+  });
+
+  it("does not derive charge from list or percent (render-only)", () => {
+    const html = renderWithCurrency(
+      { amount: "10.00", listAmount: "100.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /Your price 10\.00 USDT/);
+    assert.match(html, /List price 100\.00 USDT/);
+    assert.doesNotMatch(html, /90\.00/);
+    assert.doesNotMatch(html, /discount/i);
   });
 });

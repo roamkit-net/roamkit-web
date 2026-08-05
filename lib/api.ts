@@ -360,7 +360,12 @@ export type Package = {
   country_code: string;
   data_allowance: string;
   validity_days: number;
+  /** Customer charge (ADR 019). */
   price_usd: string;
+  /** Provider list / MSP; optional for older mocks. */
+  list_price_usd?: string;
+  discount_percent?: string;
+  pricing_reason?: string;
   is_unlimited: boolean;
   plan_type: string;
   voice_minutes: number | null;
@@ -587,7 +592,11 @@ export type TopupPackage = {
   title: string;
   data_allowance: string;
   validity_days: number;
+  /** Customer charge (ADR 019). */
   price_usd: string;
+  list_price_usd?: string;
+  discount_percent?: string;
+  pricing_reason?: string;
   is_unlimited: boolean;
   plan_type: string;
 };
