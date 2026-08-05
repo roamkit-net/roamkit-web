@@ -15,7 +15,7 @@ import {
  *
  * Themes via `tone` (not extra variants):
  * - app = store primary via `--app-*` (Cap3.4)
- * - auth = cyan submit on AuthShell (unchanged)
+ * - auth = AuthShell primary via `--auth-*` (Cap4.2)
  *
  * Cap2.1 gaps (do not expand the API yet — log and revisit):
  * - DepositCta sky outline secondary (`border-sky-300 bg-sky-50`) ≠ slate secondary
@@ -47,6 +47,10 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
 const APP_RING_OFFSET =
   "focus-visible:ring-offset-[var(--app-background)]";
 
+/** AuthShell frame is dark — ring gap must sit on `--auth-background`. */
+const AUTH_RING_OFFSET =
+  "focus-visible:ring-offset-[var(--auth-background)]";
+
 const VARIANT_CLASS: Record<
   ButtonTone,
   Record<ButtonVariant, string>
@@ -58,14 +62,10 @@ const VARIANT_CLASS: Record<
     danger: `bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500 ${APP_RING_OFFSET}`,
   },
   auth: {
-    primary:
-      "bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400 focus-visible:ring-cyan-500",
-    secondary:
-      "border border-slate-300 bg-white font-semibold text-slate-800 hover:bg-slate-50 focus-visible:ring-cyan-500",
-    ghost:
-      "font-medium text-cyan-700 hover:text-cyan-600 focus-visible:ring-cyan-500",
-    danger:
-      "bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500",
+    primary: `bg-[var(--auth-primary)] font-semibold text-[var(--auth-primary-foreground)] hover:bg-[var(--auth-primary-hover)] focus-visible:ring-[var(--auth-focus-ring)] ${AUTH_RING_OFFSET}`,
+    secondary: `border border-slate-300 bg-white font-semibold text-slate-800 hover:bg-slate-50 focus-visible:ring-[var(--auth-focus-ring)] ${AUTH_RING_OFFSET}`,
+    ghost: `font-medium text-[var(--auth-primary)] hover:text-[var(--auth-primary-hover)] focus-visible:ring-[var(--auth-focus-ring)] ${AUTH_RING_OFFSET}`,
+    danger: `bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500 ${AUTH_RING_OFFSET}`,
   },
 };
 

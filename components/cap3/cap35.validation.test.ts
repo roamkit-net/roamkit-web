@@ -70,9 +70,16 @@ describe("Cap3.5 theme + CTA boundaries", () => {
     );
   });
 
-  it("auth Button primary stays cyan (AuthShell tone)", () => {
+  it("auth Button primary binds --auth-* tokens (Cap4.2)", () => {
     const button = read("components/ui/Button.tsx");
-    assert.match(button, /auth:\s*\{[\s\S]*?primary:\s*"bg-cyan-500/);
+    assert.match(
+      button,
+      /primary: `bg-\[var\(--auth-primary\)\].*hover:bg-\[var\(--auth-primary-hover\)\]/,
+    );
+    assert.doesNotMatch(
+      button,
+      /auth:\s*\{[^}]*primary:[^`]*bg-cyan-500/,
+    );
     const authForm = read("components/AuthForm.tsx");
     assert.match(authForm, /tone="auth"/);
     assert.match(authForm, /auth-page-bg/);

@@ -21,7 +21,7 @@ import { useFieldContext } from "@/components/ui/Field";
  * </Field>
  * ```
  *
- * Themes via `tone` (not color names): `auth` = cyan focus, `app` = sky focus.
+ * Themes via `tone` (not color names): `auth` = `--auth-*` focus, `app` = sky focus.
  * Validation via `state` (not `error={true}`).
  * Slots: `startAdornment` / `endAdornment` (any ReactNode).
  *
@@ -43,7 +43,7 @@ export type InputProps = Omit<
 };
 
 const TONE_FOCUS: Record<InputTone, string> = {
-  auth: "border-slate-300 ring-cyan-500 focus:border-cyan-500 focus:ring-2",
+  auth: "border-slate-300 ring-[var(--auth-focus-ring)] focus:border-[var(--auth-primary)] focus:ring-2",
   app: "border-slate-300 ring-sky-600 focus:border-sky-500 focus:ring-2",
 };
 
