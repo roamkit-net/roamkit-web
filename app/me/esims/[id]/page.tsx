@@ -698,7 +698,10 @@ export default function MyEsimDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-semibold text-slate-900">
-                          <CatalogPriceDisplay amount={topup.price_usd} />
+                          <CatalogPriceDisplay
+                            amount={topup.price_usd}
+                            listAmount={topup.list_price_usd}
+                          />
                         </p>
                         <span aria-live="polite">
                           {shortfallLabelFor(topup) ? (
