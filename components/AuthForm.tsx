@@ -71,7 +71,7 @@ function SubmitSpinner() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--auth-primary-foreground)]/30 border-t-[var(--auth-primary-foreground)]"
     />
   );
 }
@@ -209,11 +209,11 @@ export function AuthForm({
             type="checkbox"
             checked={rememberMe}
             onChange={(event) => onRememberMeChange?.(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-cyan-600 outline-none ring-cyan-500 focus-visible:ring-2"
+            className="h-4 w-4 rounded border-slate-300 text-[var(--auth-primary)] outline-none ring-[var(--auth-focus-ring)] focus-visible:ring-2"
           />
           <label
             htmlFor="remember_me"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-[var(--auth-text)]"
           >
             Remember me
           </label>

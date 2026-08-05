@@ -8,13 +8,14 @@ import { Input, inputControlClassName } from "./Input";
 import { Textarea } from "./Textarea";
 
 describe("inputControlClassName", () => {
-  it("auth control chrome matches AuthForm fieldClassName", () => {
+  it("auth control chrome uses --auth-* focus tokens (Cap4.2)", () => {
     const classes = inputControlClassName({ tone: "auth" });
     assert.match(classes, /rounded-lg/);
     assert.match(classes, /border-slate-300/);
-    assert.match(classes, /ring-cyan-500/);
-    assert.match(classes, /focus:border-cyan-500/);
+    assert.match(classes, /ring-\[var\(--auth-focus-ring\)\]/);
+    assert.match(classes, /focus:border-\[var\(--auth-primary\)\]/);
     assert.match(classes, /focus:ring-2/);
+    assert.doesNotMatch(classes, /ring-cyan-500/);
     assert.match(classes, /px-3/);
     assert.match(classes, /py-2/);
   });
@@ -28,6 +29,7 @@ describe("inputControlClassName", () => {
     const classes = inputControlClassName({ tone: "auth", state: "error" });
     assert.match(classes, /border-red-300/);
     assert.match(classes, /ring-red-500/);
+    assert.doesNotMatch(classes, /ring-\[var\(--auth-focus-ring\)\]/);
     assert.doesNotMatch(classes, /ring-cyan-500/);
   });
 

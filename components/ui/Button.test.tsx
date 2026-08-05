@@ -64,15 +64,21 @@ describe("Button", () => {
     );
   });
 
-  it("auth primary md matches AuthForm submit (cyan-500)", () => {
+  it("auth primary uses --auth-* theme tokens (Cap4.2)", () => {
     const classes = buttonClassName({
       variant: "primary",
       size: "md",
       tone: "auth",
     });
-    assert.match(classes, /bg-cyan-500/);
-    assert.match(classes, /hover:bg-cyan-400/);
-    assert.match(classes, /text-slate-950/);
+    assert.match(classes, /bg-\[var\(--auth-primary\)\]/);
+    assert.match(classes, /hover:bg-\[var\(--auth-primary-hover\)\]/);
+    assert.match(classes, /text-\[var\(--auth-primary-foreground\)\]/);
+    assert.match(classes, /focus-visible:ring-\[var\(--auth-focus-ring\)\]/);
+    assert.match(
+      classes,
+      /focus-visible:ring-offset-\[var\(--auth-background\)\]/,
+    );
+    assert.doesNotMatch(classes, /bg-cyan-500/);
   });
 
   it("renders a native button with defaults", () => {
@@ -95,7 +101,7 @@ describe("Button", () => {
     );
     assert.match(html, /type="submit"/);
     assert.match(html, /disabled/);
-    assert.match(html, /bg-cyan-500/);
+    assert.match(html, /bg-\[var\(--auth-primary\)\]/);
   });
 
   it("secondary app uses slate outline (canonical Cap2.1 secondary)", () => {
