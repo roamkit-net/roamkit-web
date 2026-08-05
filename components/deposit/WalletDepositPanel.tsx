@@ -213,7 +213,9 @@ export function WalletDepositPanel({
         setIsVerifying(false);
       }
     },
-    [config.confirmations, onVerified, onVerifyStart],
+    // Full `config` — verify closes over confirmations today; keep identity fresh
+    // if deposit-info is refetched mid-session (avoid stale BillingConfig fields).
+    [config, onVerified, onVerifyStart],
   );
 
   useEffect(() => {

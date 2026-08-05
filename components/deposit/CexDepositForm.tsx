@@ -1,6 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
 import { Badge } from "@/components/ui/Badge";
@@ -93,6 +99,151 @@ export function CexDepositForm({
     }
   }, [mismatchAmount]);
 
+  async function copyPlatformAddress() {
+    if (!config.wallet) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(config.wallet);
+      setAddressCopied(true);
+      billingTelemetry.track("deposit_copy_address_clicked", {
+        method: "cex",
+      });
+      addressCopyStatusRef.current?.focus();
+      window.setTimeout(() => setAddressCopied(false), 2000);
+    } catch {
+      setAddressCopied(false);
+    }
+  }
+
+  const runVerify = useCallback(
+    async (
+      amountRequested: string,
+      hash: string,
+      key: string,
+      { isRetry }: { isRetry: boolean },
+    ) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const trimmedAmount = amountRequested.trim();
+      const payload = {
+        tx_hash: hash,
+        amount_requested: trimmedAmount,
+        idempotency_key: key,
+      };
+
+      onVerifyStart?.();
+      savePendingDeposit({
+        txHash: hash,
+        amount: trimmedAmount,
+        idempotencyKey: key,
+        method: "cex",
+      });
+
+      setIsSubmitting(true);
+      setActiveTxHash(hash);
+      setExplorerStatus("pending");
+      setMismatchAmount(null);
+      setError(null);
+      setStatusMessage(null);
+      billingTelemetry.track("deposit_verify_clicked", {
+        method: "cex",
+        ...(isRetry ? { retry: true } : {}),
+      });
+      if (isRetry) {
+        billingTelemetry.track("deposit_retry_clicked", { method: "cex" });
+      }
+
+      try {
+        const deposit = await verifyDepositUntilSettled(
+          (body, signal) => verifyCex(body, signal),
+          payload,
+          {
+            signal: controller.signal,
+            onUpdate: (current) => {
+              if (shouldShowPending(current)) {
+                savePendingDeposit({
+                  txHash: hash,
+                  amount: trimmedAmount,
+                  idempotencyKey: key,
+                  method: "cex",
+                });
+                setExplorerStatus("pending");
+                setStatusMessage(
+                  formatDepositPendingMessage(current, config.confirmations),
+                );
+              }
+            },
+          },
+        );
+
+        if (isDepositVerified(deposit)) {
+          clearPendingDeposit();
+          billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
+          if (isRetry) {
+            billingTelemetry.track("deposit_retry_success", { method: "cex" });
+          }
+          setExplorerStatus("completed");
+          setRetryPending(false);
+          onVerified(deposit);
+          setStatusMessage(depositCopy.cexVerified);
+          setIdempotencyKey(newIdempotencyKey());
+          setTxHash("");
+          return;
+        }
+
+        if (isDepositFailed(deposit)) {
+          clearPendingDeposit();
+          billingTelemetry.track("deposit_verify_failed", {
+            method: "cex",
+            code: "FAILED",
+          });
+          setExplorerStatus("failed");
+          setError(deposit.failure_reason || depositCopy.cexFailedFallback);
+          setIdempotencyKey(newIdempotencyKey());
+          return;
+        }
+
+        setExplorerStatus("pending");
+        setStatusMessage(
+          formatDepositPendingMessage(deposit, config.confirmations),
+        );
+      } catch (err) {
+        const mapped = toBillingError(err);
+        if (mapped.code === "ABORTED") {
+          return;
+        }
+        const mismatch = parseAmountMismatch(err);
+        billingTelemetry.track("deposit_verify_failed", {
+          method: "cex",
+          code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
+          category: mapped.category,
+        });
+        setExplorerStatus(mapped.category === "pending" ? "pending" : "failed");
+        if (mismatch) {
+          clearPendingDeposit();
+          setMismatchAmount(mismatch.onChainAmount);
+          setError(null);
+          setStatusMessage(null);
+        } else if (mapped.category === "pending") {
+          // Keep pending session for Continue after timeout / transient errors.
+          setError(mapped.message);
+        } else {
+          clearPendingDeposit();
+          setError(mapped.message);
+        }
+        if (mapped.category !== "pending") {
+          setIdempotencyKey(newIdempotencyKey());
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [config, onVerified, onVerifyStart],
+  );
+
   useEffect(() => {
     if (!resumeRequest) {
       resumeStartedRef.current = false;
@@ -115,151 +266,7 @@ export function CexDepositForm({
     setIdempotencyKey(key);
     onAmountChange?.(resumeAmount);
     void runVerify(resumeAmount, hash, key, { isRetry: false });
-    // Intentionally once per resumeRequest identity; runVerify closes over latest helpers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- resume gate
-  }, [resumeRequest]);
-
-  async function copyPlatformAddress() {
-    if (!config.wallet) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(config.wallet);
-      setAddressCopied(true);
-      billingTelemetry.track("deposit_copy_address_clicked", {
-        method: "cex",
-      });
-      addressCopyStatusRef.current?.focus();
-      window.setTimeout(() => setAddressCopied(false), 2000);
-    } catch {
-      setAddressCopied(false);
-    }
-  }
-
-  async function runVerify(
-    amountRequested: string,
-    hash: string,
-    key: string,
-    { isRetry }: { isRetry: boolean },
-  ) {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const trimmedAmount = amountRequested.trim();
-    const payload = {
-      tx_hash: hash,
-      amount_requested: trimmedAmount,
-      idempotency_key: key,
-    };
-
-    onVerifyStart?.();
-    savePendingDeposit({
-      txHash: hash,
-      amount: trimmedAmount,
-      idempotencyKey: key,
-      method: "cex",
-    });
-
-    setIsSubmitting(true);
-    setActiveTxHash(hash);
-    setExplorerStatus("pending");
-    setMismatchAmount(null);
-    setError(null);
-    setStatusMessage(null);
-    billingTelemetry.track("deposit_verify_clicked", {
-      method: "cex",
-      ...(isRetry ? { retry: true } : {}),
-    });
-    if (isRetry) {
-      billingTelemetry.track("deposit_retry_clicked", { method: "cex" });
-    }
-
-    try {
-      const deposit = await verifyDepositUntilSettled(
-        (body, signal) => verifyCex(body, signal),
-        payload,
-        {
-          signal: controller.signal,
-          onUpdate: (current) => {
-            if (shouldShowPending(current)) {
-              savePendingDeposit({
-                txHash: hash,
-                amount: trimmedAmount,
-                idempotencyKey: key,
-                method: "cex",
-              });
-              setExplorerStatus("pending");
-              setStatusMessage(
-                formatDepositPendingMessage(current, config.confirmations),
-              );
-            }
-          },
-        },
-      );
-
-      if (isDepositVerified(deposit)) {
-        clearPendingDeposit();
-        billingTelemetry.track("deposit_verify_succeeded", { method: "cex" });
-        if (isRetry) {
-          billingTelemetry.track("deposit_retry_success", { method: "cex" });
-        }
-        setExplorerStatus("completed");
-        setRetryPending(false);
-        onVerified(deposit);
-        setStatusMessage(depositCopy.cexVerified);
-        setIdempotencyKey(newIdempotencyKey());
-        setTxHash("");
-        return;
-      }
-
-      if (isDepositFailed(deposit)) {
-        clearPendingDeposit();
-        billingTelemetry.track("deposit_verify_failed", {
-          method: "cex",
-          code: "FAILED",
-        });
-        setExplorerStatus("failed");
-        setError(deposit.failure_reason || depositCopy.cexFailedFallback);
-        setIdempotencyKey(newIdempotencyKey());
-        return;
-      }
-
-      setExplorerStatus("pending");
-      setStatusMessage(
-        formatDepositPendingMessage(deposit, config.confirmations),
-      );
-    } catch (err) {
-      const mapped = toBillingError(err);
-      if (mapped.code === "ABORTED") {
-        return;
-      }
-      const mismatch = parseAmountMismatch(err);
-      billingTelemetry.track("deposit_verify_failed", {
-        method: "cex",
-        code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
-        category: mapped.category,
-      });
-      setExplorerStatus(mapped.category === "pending" ? "pending" : "failed");
-      if (mismatch) {
-        clearPendingDeposit();
-        setMismatchAmount(mismatch.onChainAmount);
-        setError(null);
-        setStatusMessage(null);
-      } else if (mapped.category === "pending") {
-        // Keep pending session for Continue after timeout / transient errors.
-        setError(mapped.message);
-      } else {
-        clearPendingDeposit();
-        setError(mapped.message);
-      }
-      if (mapped.category !== "pending") {
-        setIdempotencyKey(newIdempotencyKey());
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  }, [resumeRequest, onAmountChange, onResumeConsumed, runVerify]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
