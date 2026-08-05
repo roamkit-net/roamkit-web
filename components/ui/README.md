@@ -9,32 +9,34 @@ Colocated Cap2 changelog (ADR 016). Alert ≠ Toast.
 | Field | ✅ | `ui/Field` | Cap2.3 layout — Label / HelpText / ErrorMessage |
 | Input | ✅ | `ui/Input` | Cap2.3 — [#99](https://github.com/roamkit-net/roamkit-web/pull/99); `state`, adornments |
 | Textarea | ✅ | `ui/Textarea` | Cap2.3 — same chrome as Input |
-| Card | ⏳ | `ui/Card` | Cap2.4 |
+| Card | ✅ | `ui/Card` | Cap2.4 — Header / Section / Footer |
+| ListRow | ✅ | `ui/ListRow` | Cap2.4 — leading / content / trailing |
 | Skeleton | ⏳ | `ui/Skeleton` | Cap2.5 |
 | Empty | ⏳ | `ui/EmptyState` | Cap2.5 |
 | Badge | ⏳ | `ui/Badge` | Cap2.5 |
 
-### Cap2.3 ownership
+### Composition Rules
 
 ```text
-ui/Input — control primitive
-Public: state, tone, startAdornment, endAdornment, native input attrs (disabled, readOnly, …)
-Forbidden: inline colors/spacing/shadows; label/help/error layout; domain logic
-
-ui/Field — layout primitive
-Public: state, tone, id; children Label | Input | Textarea | HelpText | ErrorMessage
-Forbidden: business validation; domain copy
-
-ui/Textarea — control primitive (same state/tone as Input)
+Button → Field → Card → Page
 ```
 
-### Cap2.3 acceptance
+Never invert. Primitives never contain domain logic (Orders / eSIM / Wallet / Billing).
 
-- [x] API review (Field + state + adornments)
-- [x] a11y (label, describedby, aria-invalid)
-- [x] Keyboard navigation verified (default focusable; no tabindex=-1)
-- [x] Theme tone auth | app
-- [x] Migration: AuthForm email via Field; PasswordField composes Input endAdornment
-- [x] No Masked / Phone / OTP / Search in Cap2.3
+### Cap2.4 ownership
+
+```text
+ui/Card — container only
+Public: as, className, children
+Forbidden: elevation, shadowLevel, rounded, interactive, columns, domain props
+
+ui/CardHeader | CardSection | CardFooter — spacing slots
+Public (Section): divider, padding (md|lg|none)
+Forbidden: standalone <hr>; ad-hoc p-6 border-b outside these slots
+
+ui/ListRow — row composition
+Public: leading, children, trailing, interactive, as
+Use listRowClassName on Link/button wrappers
+```
 
 Migration policy: create → tests → migrate callers → delete duplicates. Zero intentional visual change per slice.

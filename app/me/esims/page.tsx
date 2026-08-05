@@ -10,6 +10,8 @@ import { AppShell } from "@/components/AppShell";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { buttonClassName } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { Card, CardSection } from "@/components/ui/Card";
+import { listRowClassName } from "@/components/ui/ListRow";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -109,9 +111,7 @@ export default function MyEsimsPage() {
             RoamKit
           </p>
         }
-        title={
-          <h1 className="text-3xl font-bold tracking-tight">My eSIMs</h1>
-        }
+        title={<h1 className="text-3xl font-bold tracking-tight">My eSIMs</h1>}
         description={
           <p className="max-w-2xl text-base leading-7 text-slate-600">
             {user
@@ -136,12 +136,13 @@ export default function MyEsimsPage() {
         }
       />
 
-        {isLoading ? (
-          <ListSkeleton rows={3} label="Loading your eSIMs…" />
-        ) : error ? (
-          <Alert variant="warning" title={error} />
-        ) : esims.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      {isLoading ? (
+        <ListSkeleton rows={3} label="Loading your eSIMs…" />
+      ) : error ? (
+        <Alert variant="warning" title={error} />
+      ) : esims.length === 0 ? (
+        <Card>
+          <CardSection padding="lg" className="text-center">
             <p className="text-lg font-medium text-slate-900">No eSIMs yet</p>
             <p className="mt-2 text-sm text-slate-600">
               Deposit credits, then buy a plan from the store — or ask an admin
@@ -166,74 +167,75 @@ export default function MyEsimsPage() {
                 Browse plans
               </Link>
             </div>
-          </div>
-        ) : (
-          <ul className="grid gap-3">
-            {esims.map((esim) => {
-              const destination = esimDestinationLabel(esim);
-              const validity = esimValidityLabel(esim);
-              const statusLabel = formatEsimStatus(esim.status);
-              const notePreview = truncateNote(esim.note);
-              const flagSrc = esim.country_code
-                ? flagImageUrl(esim.country_code)
-                : null;
+          </CardSection>
+        </Card>
+      ) : (
+        <ul className="grid gap-3">
+          {esims.map((esim) => {
+            const destination = esimDestinationLabel(esim);
+            const validity = esimValidityLabel(esim);
+            const statusLabel = formatEsimStatus(esim.status);
+            const notePreview = truncateNote(esim.note);
+            const flagSrc = esim.country_code
+              ? flagImageUrl(esim.country_code)
+              : null;
 
-              return (
-                <li key={esim.id}>
-                  <Link
-                    href={
-                      needsSetup(esim)
-                        ? `/me/esims/${esim.id}/setup`
-                        : `/me/esims/${esim.id}`
-                    }
-                    className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:border-sky-300 hover:shadow-md"
-                  >
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
-                      {flagSrc ? (
-                        <Image
-                          src={flagSrc}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="40px"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
-                          {destination.slice(0, 2)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h2 className="text-base font-semibold text-slate-900">
-                          {destination}
-                        </h2>
-                        {validity ? (
-                          <span className="text-sm text-slate-600">
-                            {validity}
-                          </span>
-                        ) : null}
+            return (
+              <li key={esim.id}>
+                <Link
+                  href={
+                    needsSetup(esim)
+                      ? `/me/esims/${esim.id}/setup`
+                      : `/me/esims/${esim.id}`
+                  }
+                  className={listRowClassName({ interactive: true })}
+                >
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
+                    {flagSrc ? (
+                      <Image
+                        src={flagSrc}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
+                        {destination.slice(0, 2)}
                       </div>
-                      <p className="mt-0.5 truncate text-sm text-slate-500">
-                        {esim.data_allowance
-                          ? `${esim.data_allowance} · ${formatUsage(esim)}`
-                          : formatUsage(esim)}
-                      </p>
-                      {notePreview ? (
-                        <p className="mt-0.5 truncate text-sm text-slate-500">
-                          {notePreview}
-                        </p>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <h2 className="text-base font-semibold text-slate-900">
+                        {destination}
+                      </h2>
+                      {validity ? (
+                        <span className="text-sm text-slate-600">
+                          {validity}
+                        </span>
                       ) : null}
                     </div>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                      {statusLabel}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <p className="mt-0.5 truncate text-sm text-slate-500">
+                      {esim.data_allowance
+                        ? `${esim.data_allowance} · ${formatUsage(esim)}`
+                        : formatUsage(esim)}
+                    </p>
+                    {notePreview ? (
+                      <p className="mt-0.5 truncate text-sm text-slate-500">
+                        {notePreview}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                    {statusLabel}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </AppShell>
   );
 }

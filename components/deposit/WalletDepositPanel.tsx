@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { Card, CardSection } from "@/components/ui/Card";
 import { parseAmountMismatch } from "@/lib/billing/amountMismatch";
 import { verifyWallet } from "@/lib/billing/client";
 import {
@@ -177,9 +178,7 @@ export function WalletDepositPanel({
             code: "FAILED",
           });
           setExplorerStatus("failed");
-          setError(
-            deposit.failure_reason || depositCopy.walletFailedFallback,
-          );
+          setError(deposit.failure_reason || depositCopy.walletFailedFallback);
           return;
         }
 
@@ -198,9 +197,7 @@ export function WalletDepositPanel({
           code: mismatch ? "AMOUNT_MISMATCH" : mapped.code,
           category: mapped.category,
         });
-        setExplorerStatus(
-          mapped.category === "pending" ? "pending" : "failed",
-        );
+        setExplorerStatus(mapped.category === "pending" ? "pending" : "failed");
         if (mismatch) {
           clearPendingDeposit();
           setMismatchAmount(mismatch.onChainAmount);
@@ -231,8 +228,11 @@ export function WalletDepositPanel({
       return;
     }
     resumeStartedRef.current = true;
-    const { txHash: hash, amount: resumeAmount, idempotencyKey: key } =
-      resumeRequest;
+    const {
+      txHash: hash,
+      amount: resumeAmount,
+      idempotencyKey: key,
+    } = resumeRequest;
     onResumeConsumed?.();
     onAmountChange?.(resumeAmount);
     void verifyHash(hash, key, resumeAmount, { isRetry: false });
@@ -244,9 +244,7 @@ export function WalletDepositPanel({
     setMismatchAmount(null);
 
     if (!isValidDepositAmount(amount, config.decimals)) {
-      setError(
-        `Enter a valid amount (max ${config.decimals} decimal places).`,
-      );
+      setError(`Enter a valid amount (max ${config.decimals} decimal places).`);
       return;
     }
 
@@ -312,129 +310,131 @@ export function WalletDepositPanel({
     Boolean(activeTxHash) && (error || statusMessage || mismatchAmount);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">
-        {depositCopy.walletHeading}
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        {depositCopy.walletDescription(config.tokenSymbol)}
-      </p>
+    <Card as="section">
+      <CardSection>
+        <h2 className="text-lg font-semibold text-slate-900">
+          {depositCopy.walletHeading}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {depositCopy.walletDescription(config.tokenSymbol)}
+        </p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        {isConnected && address ? (
-          <p>
-            Connected:{" "}
-            <span className="font-mono text-slate-900">
-              {address.slice(0, 6)}…{address.slice(-4)}
-            </span>
-          </p>
-        ) : (
-          <p>No wallet connected yet.</p>
-        )}
-        <button
-          type="button"
-          className="font-medium text-sky-700 hover:text-sky-800"
-          onClick={() => open()}
-        >
-          {isConnected ? "Manage wallet" : "Connect wallet"}
-        </button>
-      </div>
-
-      {mismatchAmount ? (
-        <div
-          ref={mismatchAlertRef}
-          tabIndex={-1}
-          className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 outline-none ring-sky-600 focus:ring-2"
-          role="alert"
-          data-testid="deposit-amount-mismatch"
-        >
-          <p className="font-semibold">{depositCopy.amountMismatchTitle}</p>
-          <p className="leading-6">
-            {depositCopy.amountMismatchBody(
-              config.tokenSymbol,
-              mismatchAmount,
-            )}
-          </p>
-          <p>
-            {depositCopy.amountMismatchReceivedLabel}:{" "}
-            <span className="font-mono font-semibold tabular-nums">
-              {mismatchAmount} {config.tokenSymbol}
-            </span>
-          </p>
-          {showExplorer && activeTxHash ? (
-            <DepositTxExplorerLink
-              chainId={config.chainId}
-              txHash={activeTxHash}
-              method="wallet"
-              status="failed"
-            />
-          ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+          {isConnected && address ? (
+            <p>
+              Connected:{" "}
+              <span className="font-mono text-slate-900">
+                {address.slice(0, 6)}…{address.slice(-4)}
+              </span>
+            </p>
+          ) : (
+            <p>No wallet connected yet.</p>
+          )}
           <button
             type="button"
-            disabled={busy}
-            onClick={() => void handleRetryWithReceived()}
-            className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="font-medium text-sky-700 hover:text-sky-800"
+            onClick={() => open()}
           >
-            {depositCopy.amountMismatchRetry(
-              mismatchAmount,
-              config.tokenSymbol,
-            )}
+            {isConnected ? "Manage wallet" : "Connect wallet"}
           </button>
         </div>
-      ) : null}
 
-      {error ? (
-        <div className="mt-4 space-y-2">
-          <p
-            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        {mismatchAmount ? (
+          <div
+            ref={mismatchAlertRef}
+            tabIndex={-1}
+            className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 outline-none ring-sky-600 focus:ring-2"
             role="alert"
+            data-testid="deposit-amount-mismatch"
           >
-            {error}
-          </p>
-          {showExplorer && activeTxHash ? (
-            <DepositTxExplorerLink
-              chainId={config.chainId}
-              txHash={activeTxHash}
-              method="wallet"
-              status={explorerStatus}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {statusMessage ? (
-        <div className="mt-4 space-y-2">
-          <p
-            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
-            role="status"
-            aria-live="polite"
-          >
-            {statusMessage}
-          </p>
-          {showExplorer && activeTxHash && !error && !mismatchAmount ? (
-            <DepositTxExplorerLink
-              chainId={config.chainId}
-              txHash={activeTxHash}
-              method="wallet"
-              status={explorerStatus}
-            />
-          ) : null}
-        </div>
-      ) : null}
+            <p className="font-semibold">{depositCopy.amountMismatchTitle}</p>
+            <p className="leading-6">
+              {depositCopy.amountMismatchBody(
+                config.tokenSymbol,
+                mismatchAmount,
+              )}
+            </p>
+            <p>
+              {depositCopy.amountMismatchReceivedLabel}:{" "}
+              <span className="font-mono font-semibold tabular-nums">
+                {mismatchAmount} {config.tokenSymbol}
+              </span>
+            </p>
+            {showExplorer && activeTxHash ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="wallet"
+                status="failed"
+              />
+            ) : null}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleRetryWithReceived()}
+              className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {depositCopy.amountMismatchRetry(
+                mismatchAmount,
+                config.tokenSymbol,
+              )}
+            </button>
+          </div>
+        ) : null}
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void handlePay()}
-        className="mt-6 inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {busy
-          ? isVerifying || retryPending
-            ? "Verifying…"
-            : "Sending…"
-          : isConnected
-            ? `Pay ${amount || "…"} ${config.tokenSymbol}`
-            : "Connect & pay with wallet"}
-      </button>
-    </section>
+        {error ? (
+          <div className="mt-4 space-y-2">
+            <p
+              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              role="alert"
+            >
+              {error}
+            </p>
+            {showExplorer && activeTxHash ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="wallet"
+                status={explorerStatus}
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {statusMessage ? (
+          <div className="mt-4 space-y-2">
+            <p
+              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+              role="status"
+              aria-live="polite"
+            >
+              {statusMessage}
+            </p>
+            {showExplorer && activeTxHash && !error && !mismatchAmount ? (
+              <DepositTxExplorerLink
+                chainId={config.chainId}
+                txHash={activeTxHash}
+                method="wallet"
+                status={explorerStatus}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void handlePay()}
+          className="mt-6 inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy
+            ? isVerifying || retryPending
+              ? "Verifying…"
+              : "Sending…"
+            : isConnected
+              ? `Pay ${amount || "…"} ${config.tokenSymbol}`
+              : "Connect & pay with wallet"}
+        </button>
+      </CardSection>
+    </Card>
   );
 }

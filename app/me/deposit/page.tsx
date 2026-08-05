@@ -16,13 +16,9 @@ import { Eip681QrPanel } from "@/components/deposit/Eip681QrPanel";
 import { VoucherRedeemErrorBoundary } from "@/components/deposit/VoucherRedeemErrorBoundary";
 import { VoucherRedeemForm } from "@/components/deposit/VoucherRedeemForm";
 import { Alert } from "@/components/ui/Alert";
+import { Card, CardSection } from "@/components/ui/Card";
 import { isWalletConnectConfigured } from "@/config/appkit";
-import {
-  ApiError,
-  clearTokens,
-  fetchMe,
-  isAuthenticated,
-} from "@/lib/api";
+import { ApiError, clearTokens, fetchMe, isAuthenticated } from "@/lib/api";
 import { depositCopy } from "@/lib/billing/depositCopy";
 import { formatCredits } from "@/lib/billing/format";
 import {
@@ -33,9 +29,7 @@ import {
 import { returnDestinationLabel } from "@/lib/billing/returnLabel";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { isValidDepositAmount } from "@/lib/eip681";
-import {
-  normalizeDepositAmount,
-} from "@/lib/orders/insufficientCredits";
+import { normalizeDepositAmount } from "@/lib/orders/insufficientCredits";
 import { isSafeReturnPath, loginHref } from "@/lib/navigation/safePath";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 import { normalizeVoucherCode } from "@/lib/billing/voucherCode";
@@ -48,14 +42,16 @@ const WalletDepositWithAppKit = dynamic(
   {
     ssr: false,
     loading: () => (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="animate-pulse space-y-3" aria-hidden="true">
-          <div className="h-5 w-48 rounded-lg bg-slate-200/80" />
-          <div className="h-4 w-full max-w-md rounded-lg bg-slate-200/80" />
-          <div className="h-10 w-40 rounded-lg bg-slate-200/80" />
-        </div>
-        <span className="sr-only">Loading wallet connector…</span>
-      </section>
+      <Card as="section">
+        <CardSection>
+          <div className="animate-pulse space-y-3" aria-hidden="true">
+            <div className="h-5 w-48 rounded-lg bg-slate-200/80" />
+            <div className="h-4 w-full max-w-md rounded-lg bg-slate-200/80" />
+            <div className="h-10 w-40 rounded-lg bg-slate-200/80" />
+          </div>
+          <span className="sr-only">Loading wallet connector…</span>
+        </CardSection>
+      </Card>
     ),
   },
 );
@@ -96,9 +92,7 @@ function DepositPageContent() {
   );
   const returnPath =
     returnParam && isSafeReturnPath(returnParam) ? returnParam : null;
-  const returnLabel = returnPath
-    ? returnDestinationLabel(returnPath)
-    : null;
+  const returnLabel = returnPath ? returnDestinationLabel(returnPath) : null;
 
   const [amount, setAmount] = useState(() => {
     if (amountParam && isValidDepositAmount(amountParam, 6)) {
@@ -278,59 +272,61 @@ function DepositPageContent() {
         ) : null}
       </AppPageHeader>
 
-        {returning ? (
-          <div
-            className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-sky-950"
-            role="status"
-            aria-live="polite"
-          >
-            <p className="font-medium">
-              Credits updated. Taking you back to {returnLabel}…
-            </p>
-            <p className="mt-2 text-sm text-sky-800">
-              Your purchase will retry automatically.
-            </p>
-          </div>
-        ) : null}
+      {returning ? (
+        <div
+          className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-sky-950"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="font-medium">
+            Credits updated. Taking you back to {returnLabel}…
+          </p>
+          <p className="mt-2 text-sm text-sky-800">
+            Your purchase will retry automatically.
+          </p>
+        </div>
+      ) : null}
 
-        {isLoading ? (
-          <DepositSkeleton />
-        ) : userError ? (
-          <Alert variant="warning" title={userError} />
-        ) : !features.billingEnabled ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      {isLoading ? (
+        <DepositSkeleton />
+      ) : userError ? (
+        <Alert variant="warning" title={userError} />
+      ) : !features.billingEnabled ? (
+        <Card>
+          <CardSection padding="lg" className="text-center">
             <p className="text-lg font-medium text-slate-900">
               Billing is unavailable
             </p>
             <p className="mt-2 text-sm text-slate-600">
               Prepaid credits are not enabled in this environment yet.
             </p>
-          </div>
-        ) : billingError || !config ? (
-          <Alert
-            variant="warning"
-            title={
-              billingError?.message ||
-              "Unable to load deposit details right now."
-            }
+          </CardSection>
+        </Card>
+      ) : billingError || !config ? (
+        <Alert
+          variant="warning"
+          title={
+            billingError?.message || "Unable to load deposit details right now."
+          }
+        />
+      ) : (
+        <div className={`space-y-6 ${returning ? "opacity-60" : ""}`}>
+          <DepositNetworkWarning
+            tokenSymbol={config.tokenSymbol}
+            chainId={config.chainId}
           />
-        ) : (
-          <div className={`space-y-6 ${returning ? "opacity-60" : ""}`}>
-            <DepositNetworkWarning
-              tokenSymbol={config.tokenSymbol}
+
+          {bannerSession ? (
+            <DepositPendingBanner
+              session={bannerSession}
               chainId={config.chainId}
+              onContinue={handlePendingContinue}
+              onDismiss={handlePendingDismiss}
             />
+          ) : null}
 
-            {bannerSession ? (
-              <DepositPendingBanner
-                session={bannerSession}
-                chainId={config.chainId}
-                onContinue={handlePendingContinue}
-                onDismiss={handlePendingDismiss}
-              />
-            ) : null}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
                   Credit balance
@@ -374,57 +370,60 @@ function DepositPageContent() {
                   verification.
                 </p>
               </label>
-            </section>
+            </CardSection>
+          </Card>
 
-            {features.vouchers ? (
-              <VoucherRedeemErrorBoundary>
-                <VoucherRedeemForm
-                  enabled
-                  initialCode={voucherPrefill}
-                  tokenSymbol={config.tokenSymbol}
-                  refreshBalance={refreshBalance}
-                />
-              </VoucherRedeemErrorBoundary>
-            ) : null}
-
-            <Eip681QrPanel config={config} amount={amount} />
-
-            {showWallet ? (
-              <WalletDepositWithAppKit
-                config={config}
-                amount={amount}
-                onAmountChange={setAmount}
-                onVerified={() => void handleVerified()}
-                resumeRequest={
-                  resumeRequest?.method === "wallet" ? resumeRequest : null
-                }
-                onResumeConsumed={handleResumeConsumed}
-                onVerifyStart={handleVerifyStart}
+          {features.vouchers ? (
+            <VoucherRedeemErrorBoundary>
+              <VoucherRedeemForm
+                enabled
+                initialCode={voucherPrefill}
+                tokenSymbol={config.tokenSymbol}
+                refreshBalance={refreshBalance}
               />
-            ) : features.walletConnect ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            </VoucherRedeemErrorBoundary>
+          ) : null}
+
+          <Eip681QrPanel config={config} amount={amount} />
+
+          {showWallet ? (
+            <WalletDepositWithAppKit
+              config={config}
+              amount={amount}
+              onAmountChange={setAmount}
+              onVerified={() => void handleVerified()}
+              resumeRequest={
+                resumeRequest?.method === "wallet" ? resumeRequest : null
+              }
+              onResumeConsumed={handleResumeConsumed}
+              onVerifyStart={handleVerifyStart}
+            />
+          ) : features.walletConnect ? (
+            <Card as="section">
+              <CardSection>
                 <h2 className="text-lg font-semibold text-slate-900">
                   {depositCopy.walletMisconfiguredHeading}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {depositCopy.walletMisconfiguredBody}
                 </p>
-              </section>
-            ) : null}
+              </CardSection>
+            </Card>
+          ) : null}
 
-            <CexDepositForm
-              config={config}
-              amount={amount}
-              onAmountChange={setAmount}
-              onVerified={() => void handleVerified()}
-              resumeRequest={
-                resumeRequest?.method === "cex" ? resumeRequest : null
-              }
-              onResumeConsumed={handleResumeConsumed}
-              onVerifyStart={handleVerifyStart}
-            />
-          </div>
-        )}
+          <CexDepositForm
+            config={config}
+            amount={amount}
+            onAmountChange={setAmount}
+            onVerified={() => void handleVerified()}
+            resumeRequest={
+              resumeRequest?.method === "cex" ? resumeRequest : null
+            }
+            onResumeConsumed={handleResumeConsumed}
+            onVerifyStart={handleVerifyStart}
+          />
+        </div>
+      )}
     </AppShell>
   );
 }

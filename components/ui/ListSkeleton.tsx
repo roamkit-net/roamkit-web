@@ -1,5 +1,7 @@
 /** Shared pulse placeholders for authenticated list/detail pages. */
 
+import { Card, CardSection } from "@/components/ui/Card";
+
 function Pulse({ className }: { className: string }) {
   return (
     <div
@@ -52,19 +54,23 @@ export function DetailSkeleton({ label = "Loading…" }: { label?: string }) {
         <Pulse className="mt-3 h-9 w-64 max-w-full" />
         <Pulse className="mt-3 h-4 w-full max-w-md" />
       </div>
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Pulse className="h-5 w-28" />
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Pulse className="h-12 w-full" />
-          <Pulse className="h-12 w-full" />
-          <Pulse className="h-12 w-full" />
-        </div>
-      </div>
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Pulse className="h-5 w-40" />
-        <Pulse className="mt-4 h-4 w-full max-w-lg" />
-        <Pulse className="mt-6 h-16 w-full" />
-      </div>
+      <Card>
+        <CardSection>
+          <Pulse className="h-5 w-28" />
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <Pulse className="h-12 w-full" />
+            <Pulse className="h-12 w-full" />
+            <Pulse className="h-12 w-full" />
+          </div>
+        </CardSection>
+      </Card>
+      <Card>
+        <CardSection>
+          <Pulse className="h-5 w-40" />
+          <Pulse className="mt-4 h-4 w-full max-w-lg" />
+          <Pulse className="mt-6 h-16 w-full" />
+        </CardSection>
+      </Card>
     </div>
   );
 }
