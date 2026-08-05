@@ -137,6 +137,9 @@ export default function EsimSetupWizardPage() {
 
   function goTo(next: number) {
     const clamped = Math.min(4, Math.max(1, next));
+    if (clamped === step) {
+      return;
+    }
     setStep(clamped);
     telemetry.track("install.opened", {
       resumeStep: clamped,
@@ -252,17 +255,22 @@ export default function EsimSetupWizardPage() {
                 const n = index + 1;
                 const active = n === step;
                 return (
-                  <li
-                    key={label}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      active
-                        ? "bg-[var(--app-primary)] text-[var(--app-primary-foreground)]"
-                        : n < step
-                          ? "bg-[var(--app-surface-elevated)] text-[var(--app-text)]"
-                          : "bg-[var(--app-border)] text-[var(--app-text-muted)]"
-                    }`}
-                  >
-                    {n}. {label}
+                  <li key={label}>
+                    <button
+                      type="button"
+                      onClick={() => goTo(n)}
+                      aria-current={active ? "step" : undefined}
+                      aria-label={`Go to step ${n}: ${label}`}
+                      className={`rounded-full px-3 py-1 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--app-background)] ${
+                        active
+                          ? "bg-[var(--app-primary)] text-[var(--app-primary-foreground)]"
+                          : n < step
+                            ? "bg-[var(--app-surface-elevated)] text-[var(--app-text)]"
+                            : "bg-[var(--app-border)] text-[var(--app-text-muted)]"
+                      }`}
+                    >
+                      {n}. {label}
+                    </button>
                   </li>
                 );
               })}
