@@ -12,6 +12,7 @@ import { PasswordField } from "@/components/forms/PasswordField";
 import { Logo } from "@/components/landing/Logo";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Field, Label } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 
 type AuthShellProps = {
@@ -182,16 +183,16 @@ export function AuthForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <Input
-        id="email"
-        name="email"
-        type="email"
-        label="Email"
-        autoComplete="email"
-        autoFocus
-        required
-        tone="auth"
-      />
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          autoFocus
+          required
+        />
+      </Field>
       <PasswordField
         id="password"
         name="password"
@@ -271,16 +272,16 @@ export function EmailOnlyForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <Input
-        id="email"
-        name="email"
-        type="email"
-        label="Email"
-        autoComplete="email"
-        autoFocus
-        required
-        tone="auth"
-      />
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          autoFocus
+          required
+        />
+      </Field>
 
       <TurnstileField
         onTokenChange={setTurnstileToken}
