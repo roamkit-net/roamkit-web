@@ -3,6 +3,7 @@
 import { useContext } from "react";
 
 import { DisplayCurrencyContext } from "@/components/billing/DisplayCurrencyProvider";
+import { TokenIcon } from "@/components/billing/TokenIcon";
 import {
   FALLBACK_CREDIT_SYMBOL,
   formatCatalogPrice,
@@ -36,6 +37,28 @@ export type CatalogPriceDisplayProps = {
   loading?: boolean;
   className?: string;
 };
+
+function CatalogPriceContent({
+  value,
+  symbol,
+  from,
+  withIcon,
+}: {
+  value: string;
+  symbol: string;
+  from?: boolean;
+  withIcon: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      {from ? <span>from</span> : null}
+      {withIcon ? <TokenIcon size="sm" /> : null}
+      <span>
+        {value} {symbol}
+      </span>
+    </span>
+  );
+}
 
 /**
  * Sole catalog UI entry for prepaid credit prices.
@@ -80,6 +103,7 @@ export function CatalogPriceDisplay({
 
   if (resolvedFromContext) {
     const formatted = formatCatalogPrice(resolvedFromContext);
+    const withIcon = formatted.symbol !== FALLBACK_CREDIT_SYMBOL;
     return (
       <span
         data-testid="catalog-price"
@@ -87,7 +111,12 @@ export function CatalogPriceDisplay({
         style={{ fontVariantNumeric: "tabular-nums" }}
         aria-label={`Price ${formatted.display}`}
       >
-        {formatted.display}
+        <CatalogPriceContent
+          value={formatted.value}
+          symbol={formatted.symbol}
+          from={resolvedFromContext.from}
+          withIcon={withIcon}
+        />
       </span>
     );
   }
@@ -107,7 +136,12 @@ export function CatalogPriceDisplay({
         title={CURRENCY_UNAVAILABLE_TITLE}
         aria-label={`Price ${formatted.display}. ${CURRENCY_UNAVAILABLE_TITLE}`}
       >
-        {formatted.display}
+        <CatalogPriceContent
+          value={formatted.value}
+          symbol={formatted.symbol}
+          from={from}
+          withIcon={false}
+        />
       </span>
     );
   }

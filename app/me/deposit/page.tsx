@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState, Suspense } from "react";
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { appShellNavLinkClassName } from "@/components/TopBar";
+import { TokenIcon } from "@/components/billing/TokenIcon";
 import { useBilling } from "@/components/billing/useBilling";
 import { CexDepositForm } from "@/components/deposit/CexDepositForm";
 import { DepositNetworkWarning } from "@/components/deposit/DepositNetworkWarning";
@@ -337,10 +338,13 @@ function DepositPageContent() {
                     </span>
                   ) : null}
                 </p>
-                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
-                  {balance != null ? formatCredits(balance) : "—"}{" "}
-                  <span className="text-lg font-semibold text-slate-500">
-                    {config.tokenSymbol}
+                <p className="mt-2 inline-flex items-center gap-2 whitespace-nowrap text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+                  <TokenIcon size="lg" />
+                  <span>
+                    {balance != null ? formatCredits(balance) : "—"}{" "}
+                    <span className="text-lg font-semibold text-slate-500">
+                      {config.tokenSymbol}
+                    </span>
                   </span>
                 </p>
               </div>
@@ -358,7 +362,8 @@ function DepositPageContent() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-sky-600 focus:ring-2"
                     aria-describedby="deposit-amount-hint"
                   />
-                  <span className="text-sm font-medium text-slate-600">
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-slate-600">
+                    <TokenIcon size="sm" />
                     {config.tokenSymbol}
                   </span>
                 </div>

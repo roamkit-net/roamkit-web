@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { AccountClusterDivider } from "@/components/AccountCluster";
+import { TokenIcon } from "@/components/billing/TokenIcon";
 import { useBilling } from "@/components/billing/useBilling";
 import { formatCredits } from "@/lib/billing/format";
 
@@ -71,8 +72,11 @@ export function BalanceChip({
         title="Deposit credits"
         aria-label={`Credit balance ${label}. Open deposit.`}
       >
-        <span>{amount}</span>
-        <span className="hidden sm:inline"> {symbol}</span>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <TokenIcon size="sm" />
+          <span>{amount}</span>
+          <span className="hidden sm:inline">{symbol}</span>
+        </span>
       </Link>
       {divider}
     </>
