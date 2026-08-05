@@ -11,11 +11,9 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 
 const SKY700_ALLOWLIST = new Set([
-  /** Setup stepper active pill — Visual Debt, not primary CTA. */
+  /** Setup stepper active pill — Cap5.2 Visual Debt. */
   "app/me/esims/[id]/setup/page.tsx",
-  /** PlansStore tab indicator — not a primary action. */
-  "components/PlansStore.tsx",
-  /** Avatar chrome — Cap2b Reuse, not CTA. */
+  /** Avatar chrome — Cap5.3 Visual Debt. */
   "components/UserMenu.tsx",
 ]);
 
