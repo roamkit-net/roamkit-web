@@ -1,0 +1,143 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
+import { Empty } from "@/components/ui/Empty";
+import { ListSkeleton } from "@/components/ui/ListSkeleton";
+import { ApiError, clearTokens } from "@/lib/api";
+import { fetchOpsUsers } from "@/lib/ops/client";
+import type { OpsUserListItem } from "@/lib/ops/types";
+import { loginHref } from "@/lib/navigation/safePath";
+import { adminMemberPath, routes } from "@/lib/routes";
+
+function badgeVariant(
+  badge: string,
+): "primary" | "success" | "warning" | "danger" | "neutral" {
+  if (badge === "staff") return "primary";
+  if (badge === "google") return "success";
+  if (badge === "wallet") return "neutral";
+  if (badge === "disabled") return "danger";
+  return "warning";
+}
+
+export default function AdminMembersPage() {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [members, setMembers] = useState<OpsUserListItem[]>([]);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchOpsUsers({ q: q.trim() || undefined });
+        if (cancelled) return;
+        setMembers(data.results);
+        setCount(data.count);
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 401) {
+          clearTokens();
+          router.replace(loginHref(routes.adminMembers));
+          return;
+        }
+        if (err instanceof ApiError && err.status === 403) {
+          router.replace(routes.adminForbidden);
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Failed to load members");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, q ? 250 : 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [q, router]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Members</h1>
+          <p className="text-sm text-slate-600">{count} accounts</p>
+        </div>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Filter by email…"
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:max-w-xs"
+        />
+      </div>
+
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      {loading ? <ListSkeleton rows={5} label="Loading members…" /> : null}
+
+      {!loading && members.length === 0 ? (
+        <Empty
+          title="No members found"
+          description="Try a different email filter."
+        />
+      ) : null}
+
+      {!loading && members.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Balance</th>
+                <th className="px-4 py-3 font-medium">Last login</th>
+                <th className="px-4 py-3 font-medium">Flags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((member) => (
+                <tr
+                  key={member.id}
+                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                >
+                  <td className="px-4 py-3">
+                    <Link
+                      href={adminMemberPath(member.id)}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
+                      {member.email}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-slate-700">
+                    {member.balance ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {member.last_login
+                      ? new Date(member.last_login).toLocaleString()
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {member.badges.map((badge) => (
+                        <Badge key={badge} variant={badgeVariant(badge)}>
+                          {badge}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}

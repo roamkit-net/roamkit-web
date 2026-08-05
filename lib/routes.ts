@@ -7,7 +7,14 @@ export const routes = {
   register: "/register",
   deposit: "/me/deposit",
   esims: "/me/esims",
+  adminDashboard: "/admin/dashboard",
+  adminMembers: "/admin/members",
+  adminForbidden: "/admin/forbidden",
 } as const;
+
+export function adminMemberPath(id: number | string): string {
+  return `/admin/members/${id}`;
+}
 
 /** Store URL for a catalog location slug (`europe` → `/europe-esim`). */
 export function locationEsimPath(slug: string): string {
