@@ -41,19 +41,19 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
   lg: "rounded-xl px-4 py-2.5 text-sm",
 };
 
+/** Match AuthNav / AccountCluster: ring gap must sit on dark AppShell, not default white. */
+const APP_RING_OFFSET =
+  "focus-visible:ring-offset-[var(--app-background)]";
+
 const VARIANT_CLASS: Record<
   ButtonTone,
   Record<ButtonVariant, string>
 > = {
   app: {
-    primary:
-      "bg-sky-700 font-semibold text-white hover:bg-sky-800 focus-visible:ring-sky-500",
-    secondary:
-      "border border-slate-300 bg-white font-semibold text-slate-800 hover:bg-slate-50 focus-visible:ring-sky-500",
-    ghost:
-      "font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-sky-500",
-    danger:
-      "bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500",
+    primary: `bg-sky-700 font-semibold text-white hover:bg-sky-800 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
+    secondary: `border border-slate-300 bg-white font-semibold text-slate-800 hover:bg-slate-50 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
+    ghost: `font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-sky-500 ${APP_RING_OFFSET}`,
+    danger: `bg-red-600 font-semibold text-white hover:bg-red-700 focus-visible:ring-red-500 ${APP_RING_OFFSET}`,
   },
   auth: {
     primary:
