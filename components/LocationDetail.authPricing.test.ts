@@ -14,9 +14,14 @@ describe("LocationDetail auth pricing refetch", () => {
     );
     assert.match(src, /fetchAllPackages/);
     assert.match(src, /isAuthenticated\(\)/);
-    assert.match(
-      src,
-      /SSR catalog fetch is anonymous/,
-    );
+    assert.match(src, /SSR catalog fetch is anonymous/);
+  });
+
+  it("fetchPackages attaches auth so client refetch sends JWT", () => {
+    const src = readFileSync(join(root, "lib/api.ts"), "utf8");
+    const start = src.indexOf("export async function fetchPackages");
+    assert.ok(start >= 0);
+    const chunk = src.slice(start, start + 800);
+    assert.match(chunk, /auth:\s*true/);
   });
 });
