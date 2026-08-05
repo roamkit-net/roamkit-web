@@ -13,13 +13,15 @@ import {
 } from "./Card";
 
 describe("cardClassName", () => {
-  it("matches Cap2b app panel chrome without padding", () => {
+  it("owns elevated surface and text without padding", () => {
     const classes = cardClassName();
     assert.match(classes, /rounded-2xl/);
     assert.match(classes, /border-slate-200/);
-    assert.match(classes, /bg-white/);
+    assert.match(classes, /bg-\[var\(--app-surface-elevated\)\]/);
+    assert.match(classes, /text-\[var\(--app-text\)\]/);
     assert.match(classes, /shadow-sm/);
     assert.doesNotMatch(classes, /\bp-6\b/);
+    assert.doesNotMatch(classes, /text-slate-/);
   });
 });
 
