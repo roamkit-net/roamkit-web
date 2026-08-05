@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-/** Landing H1 only — see Design Lock typography scope. */
+/** Landing H1 display face — exposed as --font-landing-display; brand alias --font-display in globals.css (ADR 016). */
 const sourceSerif = Source_Serif_4({
   variable: "--font-landing-display",
   subsets: ["latin", "latin-ext"],
