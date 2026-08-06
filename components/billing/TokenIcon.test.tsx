@@ -18,6 +18,15 @@ describe("TokenIcon", () => {
     assert.match(html, /aria-hidden/);
   });
 
+  it("catalog size is 20px (CatalogPriceDisplay dual charge only)", () => {
+    const html = renderToStaticMarkup(
+      createElement(TokenIcon, { size: "catalog" }),
+    );
+    assert.match(html, /data-size="catalog"/);
+    assert.match(html, /width="20"/);
+    assert.match(html, /height="20"/);
+  });
+
   it("defaults to md and decorative (no duplicated SR name)", () => {
     const html = renderToStaticMarkup(createElement(TokenIcon));
     assert.match(html, /data-size="md"/);

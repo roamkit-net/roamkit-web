@@ -10,6 +10,8 @@ const SIZE_PX = {
   sm: 14,
   md: 18,
   lg: 24,
+  /** Catalog dual-price charge only — do not use as general-purpose size. */
+  catalog: 20,
 } as const;
 
 export type TokenIconSize = keyof typeof SIZE_PX;

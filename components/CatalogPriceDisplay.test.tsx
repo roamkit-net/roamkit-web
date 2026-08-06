@@ -7,10 +7,7 @@ import {
   DisplayCurrencyContext,
   type DisplayCurrencyContextValue,
 } from "@/components/billing/DisplayCurrencyProvider";
-import {
-  CatalogPriceDisplay,
-  YOUR_PRICE_LABEL,
-} from "./CatalogPriceDisplay";
+import { CatalogPriceDisplay } from "./CatalogPriceDisplay";
 import type { CatalogPrice, DisplayCurrency } from "@/types/billing";
 
 const usdt: DisplayCurrency = {
@@ -177,7 +174,7 @@ describe("CatalogPriceDisplay", () => {
     }
   });
 
-  it("equal list and charge → single price (no dual, no Vaša cijena)", () => {
+  it("equal list and charge → single price (no dual, no strike)", () => {
     const html = renderWithCurrency(
       { amount: "57.00", listAmount: "57.00" },
       displayCurrencyValue(),
@@ -185,11 +182,13 @@ describe("CatalogPriceDisplay", () => {
     assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /data-testid="catalog-price"/);
     assert.match(html, /aria-label="Price 57\.00 USDT"/);
-    assert.doesNotMatch(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /Vaša cijena/);
     assert.doesNotMatch(html, /line-through/);
+    assert.doesNotMatch(html, /min-h-\[2\.25rem\]/);
+    assert.match(html, /min-h-\[1\.75rem\]/);
   });
 
-  it("unequal list and charge → dual price with a11y and locked label", () => {
+  it("unequal list and charge → dual strike + charge (no visible label)", () => {
     const html = renderWithCurrency(
       { amount: "54.15", listAmount: "57.00" },
       displayCurrencyValue(),
@@ -199,8 +198,9 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /line-through/);
     assert.match(html, /List price 57\.00 USDT/);
     assert.match(html, /Your price 54\.15 USDT/);
-    assert.match(html, new RegExp(YOUR_PRICE_LABEL));
-    assert.match(html, /min-h-\[2\.75rem\]/);
+    assert.doesNotMatch(html, /Vaša cijena/);
+    assert.match(html, /min-h-\[2\.25rem\]/);
+    assert.match(html, /data-size="catalog"/);
     assert.doesNotMatch(html, /aria-label="Price/);
   });
 
@@ -211,7 +211,7 @@ describe("CatalogPriceDisplay", () => {
     );
     assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /aria-label="Price 54\.15 USDT"/);
-    assert.doesNotMatch(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /Vaša cijena/);
   });
 
   it("list without customer charge → skeleton (no broken dual)", () => {
@@ -233,5 +233,6 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /List price 100\.00 USDT/);
     assert.doesNotMatch(html, /90\.00/);
     assert.doesNotMatch(html, /discount/i);
+    assert.doesNotMatch(html, /Vaša cijena/);
   });
 });
