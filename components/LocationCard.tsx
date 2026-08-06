@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { listRowClassName } from "@/components/ui/ListRow";
 import type { Location } from "@/lib/api";
 import { locationImageSrc } from "@/lib/api";
 
@@ -12,7 +13,10 @@ export function LocationCard({ location }: { location: Location }) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-300 hover:shadow-md"
+      className={listRowClassName({
+        interactive: true,
+        className: "group",
+      })}
     >
       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
         {imageSrc ? (

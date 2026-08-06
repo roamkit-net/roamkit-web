@@ -69,7 +69,13 @@ export function formatUsdt(
   return formatted;
 }
 
-/** Format a USD money amount (orders / list prices — legacy; prefer catalog display). */
+/**
+ * Format a USD money amount (orders / list prices).
+ *
+ * @deprecated Prefer `<CatalogPriceDisplay />` / `formatCatalogPrice` for
+ * catalog and billing display. Do not use in catalog UI — enforced by
+ * `catalogPriceGuard`. Deletion deferred to a future cleanup PR.
+ */
 export function formatMoney(value: string | number): string {
   const n = parseAmount(value);
   if (n === null) {

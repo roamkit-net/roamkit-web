@@ -55,11 +55,16 @@ export default async function Home() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[var(--landing-ink)] text-[var(--landing-foreground)]">
+      {/*
+        Header overlays the hero. Keep Header after HeroSection in the DOM and
+        give it an explicit z-index so it cannot lose to a hero stacking context
+        (e.g. former `isolate` on the section).
+      */}
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 z-20">
+        <HeroSection />
+        <div className="absolute inset-x-0 top-0 z-[var(--z-header)]">
           <Header />
         </div>
-        <HeroSection />
       </div>
       <main className="relative flex-1">
         <FeaturedPlans locations={featured} />

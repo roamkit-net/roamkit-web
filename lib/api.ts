@@ -360,7 +360,12 @@ export type Package = {
   country_code: string;
   data_allowance: string;
   validity_days: number;
+  /** Customer charge (ADR 019). */
   price_usd: string;
+  /** Provider list / MSP; optional for older mocks. */
+  list_price_usd?: string;
+  discount_percent?: string;
+  pricing_reason?: string;
   is_unlimited: boolean;
   plan_type: string;
   voice_minutes: number | null;
@@ -425,6 +430,8 @@ export async function fetchPackages(options?: {
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
   return fetchApi<PaginatedResponse<Package>>(`/api/v1/packages/${suffix}`, {
+    // Attach JWT when present so ADR 019 profile prices apply (SSR stays anon).
+    auth: true,
     cache: "no-store",
   });
 }
@@ -513,6 +520,7 @@ export type AuthTokens = {
 export type User = {
   id: number;
   email: string;
+  is_staff: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -586,7 +594,11 @@ export type TopupPackage = {
   title: string;
   data_allowance: string;
   validity_days: number;
+  /** Customer charge (ADR 019). */
   price_usd: string;
+  list_price_usd?: string;
+  discount_percent?: string;
+  pricing_reason?: string;
   is_unlimited: boolean;
   plan_type: string;
 };

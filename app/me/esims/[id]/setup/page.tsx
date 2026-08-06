@@ -5,9 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { AndroidInstallGuide } from "@/components/esim/AndroidInstallGuide";
 import { AndroidManufacturerPicker } from "@/components/esim/AndroidManufacturerPicker";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
+import { Alert } from "@/components/ui/Alert";
+import { buttonClassName } from "@/components/ui/Button";
+import { Card, CardSection } from "@/components/ui/Card";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -133,6 +137,9 @@ export default function EsimSetupWizardPage() {
 
   function goTo(next: number) {
     const clamped = Math.min(4, Math.max(1, next));
+    if (clamped === step) {
+      return;
+    }
     setStep(clamped);
     telemetry.track("install.opened", {
       resumeStep: clamped,
@@ -221,60 +228,64 @@ export default function EsimSetupWizardPage() {
       nav={
         <Link
           href={`/me/esims/${esimId}`}
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← Skip to eSIM details
         </Link>
       }
     >
-        {isLoading ? (
-          <DetailSkeleton label="Loading setup…" />
-        ) : error ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{error}</p>
-          </div>
-        ) : esim ? (
-          <div className="space-y-6">
-            <header>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-                Purchase complete
-              </p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight">
-                Set up your eSIM
-              </h1>
-              <p className="mt-3 text-slate-600">
-                Step {step} of {STEPS.length}: {STEPS[step - 1]}
-              </p>
-              <ol className="mt-4 flex flex-wrap gap-2">
-                {STEPS.map((label, index) => {
-                  const n = index + 1;
-                  const active = n === step;
-                  return (
-                    <li
-                      key={label}
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
+      {isLoading ? (
+        <DetailSkeleton label="Loading setup…" />
+      ) : error ? (
+        <Alert variant="warning" title={error} />
+      ) : esim ? (
+        <div className="space-y-6">
+          <header>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
+              Purchase complete
+            </p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-[var(--app-chrome-text)]">
+              Set up your eSIM
+            </h1>
+            <p className="mt-3 text-[var(--app-chrome-text-muted)]">
+              Step {step} of {STEPS.length}: {STEPS[step - 1]}
+            </p>
+            <ol className="mt-4 flex flex-wrap gap-2">
+              {STEPS.map((label, index) => {
+                const n = index + 1;
+                const active = n === step;
+                return (
+                  <li key={label}>
+                    <button
+                      type="button"
+                      onClick={() => goTo(n)}
+                      aria-current={active ? "step" : undefined}
+                      aria-label={`Go to step ${n}: ${label}`}
+                      className={`rounded-full px-3 py-1 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--app-background)] ${
                         active
-                          ? "bg-sky-700 text-white"
+                          ? "bg-[var(--app-primary)] text-[var(--app-primary-foreground)]"
                           : n < step
-                            ? "bg-sky-100 text-sky-800"
-                            : "bg-slate-200 text-slate-600"
+                            ? "bg-[var(--app-surface-elevated)] text-[var(--app-text)]"
+                            : "bg-[var(--app-border)] text-[var(--app-text-muted)]"
                       }`}
                     >
                       {n}. {label}
-                    </li>
-                  );
-                })}
-              </ol>
-            </header>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </header>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Activation</p>
-              <p className="mt-1">
-                {activationPolicyMessage(esim.activation_policy)}
-              </p>
-            </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Activation</p>
+            <p className="mt-1">
+              {activationPolicyMessage(esim.activation_policy)}
+            </p>
+          </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               {step === 1 ? (
                 <div className="space-y-4">
                   {device === "desktop" ? (
@@ -297,7 +308,9 @@ export default function EsimSetupWizardPage() {
                     </>
                   ) : canUseAppleInstallLink(device) ? (
                     <>
-                      <h2 className="text-lg font-semibold">Install on iPhone</h2>
+                      <h2 className="text-lg font-semibold">
+                        Install on iPhone
+                      </h2>
                       <p className="text-sm text-slate-600">
                         Use the Apple install link, or scan the QR from another
                         device.
@@ -307,7 +320,11 @@ export default function EsimSetupWizardPage() {
                           href={esim.direct_apple_installation_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                          className={buttonClassName({
+                            variant: "primary",
+                            size: "md",
+                            tone: "app",
+                          })}
                           onClick={() =>
                             telemetry.track("install.apple_install_clicked", {
                               resumeStep: 1,
@@ -336,7 +353,11 @@ export default function EsimSetupWizardPage() {
                       onClick={() =>
                         void attemptAndroidInstall(androidInstallAction)
                       }
-                      className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       {deepLinkBusy ? "Opening…" : androidInstallAction.label}
                     </button>
@@ -379,12 +400,15 @@ export default function EsimSetupWizardPage() {
                           setShowManualTips((open) => {
                             const next = !open;
                             if (next) {
-                              telemetry.track("install.manual_install_clicked", {
-                                resumeStep: 1,
-                                payload: androidGuideId
-                                  ? { manufacturer: androidGuideId }
-                                  : {},
-                              });
+                              telemetry.track(
+                                "install.manual_install_clicked",
+                                {
+                                  resumeStep: 1,
+                                  payload: androidGuideId
+                                    ? { manufacturer: androidGuideId }
+                                    : {},
+                                },
+                              );
                             }
                             return next;
                           });
@@ -441,7 +465,11 @@ export default function EsimSetupWizardPage() {
                     <button
                       type="button"
                       onClick={markInstalled}
-                      className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       I installed the eSIM
                     </button>
@@ -467,7 +495,11 @@ export default function EsimSetupWizardPage() {
                   <button
                     type="button"
                     onClick={() => goTo(3)}
-                    className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "md",
+                      tone: "app",
+                    })}
                   >
                     Next
                   </button>
@@ -476,7 +508,9 @@ export default function EsimSetupWizardPage() {
 
               {step === 3 ? (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold">Turn on Data Roaming</h2>
+                  <h2 className="text-lg font-semibold">
+                    Turn on Data Roaming
+                  </h2>
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
                     <li>
                       <span className="font-medium">Data roaming</span> — ON for
@@ -494,7 +528,11 @@ export default function EsimSetupWizardPage() {
                   <button
                     type="button"
                     onClick={() => goTo(4)}
-                    className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "md",
+                      tone: "app",
+                    })}
                   >
                     Next
                   </button>
@@ -514,7 +552,11 @@ export default function EsimSetupWizardPage() {
                     <button
                       type="button"
                       onClick={() => finish(false)}
-                      className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                      className={buttonClassName({
+                        variant: "primary",
+                        size: "md",
+                        tone: "app",
+                      })}
                     >
                       Done
                     </button>
@@ -528,9 +570,10 @@ export default function EsimSetupWizardPage() {
                   </div>
                 </div>
               ) : null}
-            </section>
-          </div>
-        ) : null}
+            </CardSection>
+          </Card>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

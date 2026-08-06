@@ -22,11 +22,15 @@ describe("AppShell", () => {
       ),
     );
 
+    assert.match(html, /app-shell/);
+    assert.match(html, /app-shell-main--default/);
+    assert.match(html, /app-shell-content/);
+    assert.match(html, /app-topbar/);
     assert.match(html, /data-testid="top-bar"/);
-    assert.match(html, /grid-cols-\[1fr_auto\]/);
+    assert.doesNotMatch(html, /grid-cols-\[1fr_auto\]/);
     assert.doesNotMatch(html, /flex-wrap/);
     assert.match(html, /data-testid="page-content"/);
-    assert.match(html, /max-w-4xl/);
+    assert.doesNotMatch(html, /bg-slate-50/);
     assert.match(html, /← Browse plans/);
     assert.match(html, /data-testid="account-cluster"/);
     assert.match(html, /Body/);
@@ -43,6 +47,6 @@ describe("AppShell", () => {
         createElement("span", null, "C"),
       ),
     );
-    assert.match(html, /max-w-2xl/);
+    assert.match(html, /app-shell-main--narrow/);
   });
 });

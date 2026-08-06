@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Component,
-  type ErrorInfo,
-  type ReactNode,
-} from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
@@ -32,7 +28,9 @@ export class VoucherRedeemErrorBoundary extends Component<Props, State> {
       return (
         this.props.fallback ?? (
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-sm">
-            <h2 className="text-lg font-semibold">Voucher redeem unavailable</h2>
+            <h2 className="text-lg font-semibold">
+              Voucher redeem unavailable
+            </h2>
             <p className="mt-2 text-sm leading-6">
               Something went wrong loading this section. You can still deposit
               using the methods below.

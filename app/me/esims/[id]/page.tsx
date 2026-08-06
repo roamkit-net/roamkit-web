@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
@@ -16,6 +17,10 @@ import {
   validityLabelFromDays,
 } from "@/components/orders/PurchaseConfirmDialog";
 import { usePurchaseTopup } from "@/components/orders/usePurchaseTopup";
+import { SHORTFALL_CTA_CLASS } from "@/components/orders/shortfallCtaClass";
+import { Alert } from "@/components/ui/Alert";
+import { buttonClassName } from "@/components/ui/Button";
+import { Card, CardSection } from "@/components/ui/Card";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
@@ -47,6 +52,11 @@ import {
 } from "@/lib/esim/telemetry";
 import { billingTelemetry } from "@/lib/billing/telemetry";
 import { hasSufficientCredits } from "@/lib/orders/canAfford";
+import {
+  computeMissingCredits,
+  shortfallCtaLabel,
+} from "@/lib/orders/insufficientCredits";
+import { restoreShortfallScroll } from "@/lib/orders/shortfallScroll";
 import { loginHref } from "@/lib/navigation/safePath";
 
 function formatMb(value: number | null | undefined): string {
@@ -68,7 +78,7 @@ function currentPathWithSearch(): string {
 
 export default function MyEsimDetailPage() {
   const router = useRouter();
-  const { balance } = useBilling();
+  const { balance, config } = useBilling();
   const params = useParams<{ id: string }>();
   const esimId = params.id;
   const detailPath = `/me/esims/${esimId}`;
@@ -97,6 +107,7 @@ export default function MyEsimDetailPage() {
     error: purchaseError,
     successTopup,
     isRetrying,
+    startDepositForShortfall,
     clearError: clearPurchaseError,
     clearSuccess,
   } = usePurchaseTopup(esimId);
@@ -104,6 +115,10 @@ export default function MyEsimDetailPage() {
   const [pendingTopup, setPendingTopup] = useState<TopupPackage | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const purchaseAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    restoreShortfallScroll(currentPathWithSearch());
+  }, []);
 
   useEffect(() => {
     if (!purchaseAttemptedRef.current) {
@@ -116,24 +131,52 @@ export default function MyEsimDetailPage() {
     purchaseAttemptedRef.current = false;
   }, [busyPackageId]);
 
+  function shortfallLabelFor(topup: TopupPackage): string | undefined {
+    if (balance == null || balance === "") {
+      return undefined;
+    }
+    const missing = computeMissingCredits(balance, topup.price_usd);
+    if (missing === null) {
+      return undefined;
+    }
+    return shortfallCtaLabel({
+      missing,
+      balance,
+      tokenSymbol: config?.tokenSymbol,
+    });
+  }
+
   function topupBuyTitle(topup: TopupPackage): string | undefined {
-    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+    if (shortfallLabelFor(topup)) {
       return INSUFFICIENT_CREDITS_TITLE;
     }
     return undefined;
   }
 
-  function topupBuyDisabled(topup: TopupPackage): boolean {
-    if (hasSufficientCredits(balance, topup.price_usd) === false) {
-      return true;
-    }
+  function topupBuyDisabled(): boolean {
     if (pendingTopup !== null) {
       return true;
     }
+    // Disable every CTA while any purchase/shortfall redirect is in flight
+    // (including the busy row — label shows "Buying…" / "Redirecting…").
     if (busyPackageId !== null) {
       return true;
     }
     return false;
+  }
+
+  function openTopupConfirm(
+    topup: TopupPackage,
+    buyButton: HTMLButtonElement,
+  ) {
+    returnFocusRef.current = buyButton;
+    purchaseAttemptedRef.current = false;
+    billingTelemetry.track("purchase_confirm_opened", {
+      kind: "topup",
+      packageId: topup.id,
+      esimId: String(esimId),
+    });
+    setPendingTopup(topup);
   }
 
   function handleTopupBuyClick(
@@ -144,14 +187,19 @@ export default function MyEsimDetailPage() {
       router.push(loginHref(currentPathWithSearch()));
       return;
     }
-    returnFocusRef.current = buyButton;
-    purchaseAttemptedRef.current = false;
-    billingTelemetry.track("purchase_confirm_opened", {
-      kind: "topup",
-      packageId: topup.id,
-      esimId: String(esimId),
-    });
-    setPendingTopup(topup);
+    if (hasSufficientCredits(balance, topup.price_usd) === false) {
+      void (async () => {
+        const outcome = await startDepositForShortfall(
+          topup.id,
+          topup.price_usd,
+        );
+        if (outcome.status === "can_afford") {
+          openTopupConfirm(topup, buyButton);
+        }
+      })();
+      return;
+    }
+    openTopupConfirm(topup, buyButton);
   }
 
   function handleConfirmTopup() {
@@ -280,16 +328,16 @@ export default function MyEsimDetailPage() {
       const liveUsage = await fetchMyEsimUsage(esimId);
       setUsage(liveUsage);
     } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
-          clearTokens();
-          router.replace(loginHref(detailPath));
-          return;
-        }
-        setUsageError("Could not refresh usage.");
-      } finally {
-        setIsRefreshingUsage(false);
+      if (err instanceof ApiError && err.status === 401) {
+        clearTokens();
+        router.replace(loginHref(detailPath));
+        return;
       }
+      setUsageError("Could not refresh usage.");
+    } finally {
+      setIsRefreshingUsage(false);
     }
+  }
 
   const returnPath = `/me/esims/${esimId}`;
 
@@ -299,48 +347,51 @@ export default function MyEsimDetailPage() {
       nav={
         <Link
           href="/me/esims"
-          className="text-sm font-medium text-sky-700 hover:text-sky-800"
+          className={appShellNavLinkClassName}
         >
           ← Back to My eSIMs
         </Link>
       }
     >
-        {isLoading ? (
-          <DetailSkeleton label="Loading eSIM…" />
-        ) : error ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-            <p className="font-medium">{error}</p>
-          </div>
-        ) : esim ? (
-          <div className="space-y-6">
-            <header>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
-                {formatEsimStatus(esim.status)}
+      {isLoading ? (
+        <DetailSkeleton label="Loading eSIM…" />
+      ) : error ? (
+        <Alert variant="warning" title={error} />
+      ) : esim ? (
+        <div className="space-y-6">
+          <header>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
+              {formatEsimStatus(esim.status)}
+            </p>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-[var(--app-chrome-text)] sm:text-3xl">
+              {esimDestinationLabel(esim)}
+            </h1>
+            {esim.location_title?.trim() && esim.package_title?.trim() ? (
+              <p className="mt-2 text-sm text-[var(--app-chrome-text-muted)]">
+                {esim.package_title}
               </p>
-              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-                {esimDestinationLabel(esim)}
-              </h1>
-              {esim.location_title?.trim() && esim.package_title?.trim() ? (
-                <p className="mt-2 text-sm text-slate-600">
-                  {esim.package_title}
-                </p>
-              ) : null}
-              {needsSetup(esim) ? (
-                <p className="mt-4">
-                  <Link
-                    href={`/me/esims/${esimId}/setup`}
-                    className="inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
-                  >
-                    Continue setup
-                  </Link>
-                </p>
-              ) : null}
-              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {activationPolicyMessage(esim.activation_policy)}
+            ) : null}
+            {needsSetup(esim) ? (
+              <p className="mt-4">
+                <Link
+                  href={`/me/esims/${esimId}/setup`}
+                  className={buttonClassName({
+                    variant: "primary",
+                    size: "md",
+                    tone: "app",
+                  })}
+                >
+                  Continue setup
+                </Link>
               </p>
-            </header>
+            ) : null}
+            <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              {activationPolicyMessage(esim.activation_policy)}
+            </p>
+          </header>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <h2 className="text-lg font-semibold text-slate-900">
                 eSIM details
               </h2>
@@ -398,22 +449,24 @@ export default function MyEsimDetailPage() {
                   </div>
                 ) : null}
               </dl>
-            </section>
+            </CardSection>
+          </Card>
 
-            <EsimNoteForm
-              key={esimId}
-              esimId={esimId}
-              savedNote={esimNote(esim)}
-              onSaved={(id, note) =>
-                setEsim((current) =>
-                  current && String(current.id) === String(id)
-                    ? { ...current, note }
-                    : current,
-                )
-              }
-            />
+          <EsimNoteForm
+            key={esimId}
+            esimId={esimId}
+            savedNote={esimNote(esim)}
+            onSaved={(id, note) =>
+              setEsim((current) =>
+                current && String(current.id) === String(id)
+                  ? { ...current, note }
+                  : current,
+              )
+            }
+          />
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">Usage</h2>
                 <button
@@ -432,7 +485,9 @@ export default function MyEsimDetailPage() {
                 <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                   <div>
                     <dt className="text-slate-500">Status</dt>
-                    <dd className="font-medium text-slate-900">{usage.status}</dd>
+                    <dd className="font-medium text-slate-900">
+                      {usage.status}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">Remaining</dt>
@@ -477,9 +532,11 @@ export default function MyEsimDetailPage() {
                   </div>
                 </dl>
               )}
-            </section>
+            </CardSection>
+          </Card>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <h2 className="text-lg font-semibold text-slate-900">
                 Installation
               </h2>
@@ -559,9 +616,11 @@ export default function MyEsimDetailPage() {
                   No installation details available yet.
                 </p>
               ) : null}
-            </section>
+            </CardSection>
+          </Card>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card as="section">
+            <CardSection>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">
@@ -639,42 +698,80 @@ export default function MyEsimDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-semibold text-slate-900">
-                          <CatalogPriceDisplay amount={topup.price_usd} />
+                          <CatalogPriceDisplay
+                            amount={topup.price_usd}
+                            listAmount={topup.list_price_usd}
+                          />
                         </p>
-                        <button
-                          type="button"
-                          onClick={(event) =>
-                            handleTopupBuyClick(topup, event.currentTarget)
-                          }
-                          disabled={topupBuyDisabled(topup)}
-                          title={topupBuyTitle(topup)}
-                          aria-label={topupBuyTitle(topup)}
-                          className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {busyPackageId === topup.id ? "Buying…" : "Buy"}
-                        </button>
+                        <span aria-live="polite">
+                          {shortfallLabelFor(topup) ? (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleTopupBuyClick(
+                                  topup,
+                                  event.currentTarget,
+                                )
+                              }
+                              disabled={topupBuyDisabled()}
+                              title={topupBuyTitle(topup)}
+                              aria-label={
+                                topupBuyTitle(topup) || shortfallLabelFor(topup)
+                              }
+                              className={SHORTFALL_CTA_CLASS}
+                            >
+                              {busyPackageId === topup.id
+                                ? "Redirecting…"
+                                : shortfallLabelFor(topup)}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleTopupBuyClick(
+                                  topup,
+                                  event.currentTarget,
+                                )
+                              }
+                              disabled={topupBuyDisabled()}
+                              title={topupBuyTitle(topup)}
+                              aria-label={topupBuyTitle(topup)}
+                              className={buttonClassName({
+                                variant: "primary",
+                                size: "sm",
+                                tone: "app",
+                                className: "min-h-11",
+                              })}
+                            >
+                              {busyPackageId === topup.id
+                                ? "Buying…"
+                                : "Buy"}
+                            </button>
+                          )}
+                        </span>
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
-          </div>
-        ) : null}
-        {pendingTopup ? (
-          <PurchaseConfirmDialog
-            summary={{
-              title: pendingTopup.title,
-              dataLabel: dataLabelFromPackage(pendingTopup),
-              validityLabel: validityLabelFromDays(pendingTopup.validity_days),
-              priceUsd: pendingTopup.price_usd,
-            }}
-            isPurchasing={busyPackageId === pendingTopup.id}
-            onCancel={handleCancelTopup}
-            onConfirm={handleConfirmTopup}
-            returnFocusRef={returnFocusRef}
-          />
-        ) : null}
+            </CardSection>
+          </Card>
+        </div>
+      ) : null}
+      {pendingTopup ? (
+        <PurchaseConfirmDialog
+          summary={{
+            title: pendingTopup.title,
+            dataLabel: dataLabelFromPackage(pendingTopup),
+            validityLabel: validityLabelFromDays(pendingTopup.validity_days),
+            priceUsd: pendingTopup.price_usd,
+          }}
+          isPurchasing={busyPackageId === pendingTopup.id}
+          onCancel={handleCancelTopup}
+          onConfirm={handleConfirmTopup}
+          returnFocusRef={returnFocusRef}
+        />
+      ) : null}
     </AppShell>
   );
 }

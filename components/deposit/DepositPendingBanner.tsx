@@ -1,6 +1,7 @@
 "use client";
 
 import { DepositTxExplorerLink } from "@/components/deposit/DepositTxExplorerLink";
+import { buttonClassName } from "@/components/ui/Button";
 import { depositCopy } from "@/lib/billing/depositCopy";
 import {
   truncateTxHash,
@@ -56,7 +57,11 @@ export function DepositPendingBanner({
           type="button"
           data-testid="deposit-pending-continue"
           onClick={onContinue}
-          className="inline-flex items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+          className={buttonClassName({
+            variant: "primary",
+            size: "lg",
+            tone: "app",
+          })}
         >
           {depositCopy.pendingContinue}
         </button>

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell, PasswordPairForm } from "@/components/AuthForm";
+import { Alert } from "@/components/ui/Alert";
 import {
   ApiError,
   confirmPasswordReset,
@@ -89,13 +90,13 @@ function ResetPasswordForm() {
       }
     >
       {!uid || !token ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" size="sm">
           This reset link is invalid or incomplete. Request a new one from{" "}
           <Link href="/forgot-password" className="font-medium underline">
             forgot password
           </Link>
           .
-        </p>
+        </Alert>
       ) : (
         <PasswordPairForm
           submitLabel="Reset password"
