@@ -7,7 +7,6 @@ import {
   DisplayCurrencyContext,
   type DisplayCurrencyContextValue,
 } from "@/components/billing/DisplayCurrencyProvider";
-import { YOUR_PRICE_LABEL } from "@/components/CatalogPriceDisplay";
 import { PackageRow } from "@/components/PackageRow";
 import { PlanCard } from "@/components/PlanCard";
 import type { Package } from "@/lib/api";
@@ -77,20 +76,22 @@ describe("PR5 dual-price wiring", () => {
     assert.match(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /List price 57\.00 USDT/);
     assert.match(html, /Your price 54\.15 USDT/);
-    assert.match(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /Vaša cijena/);
+    assert.match(html, /data-size="catalog"/);
   });
 
   it("PlanCard stays single price when list equals charge", () => {
     const html = wrap(createElement(PlanCard, { plan: retailPlan }));
     assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /aria-label="Price 57\.00 USDT"/);
-    assert.doesNotMatch(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /Vaša cijena/);
+    assert.doesNotMatch(html, /line-through/);
   });
 
   it("PackageRow shows dual price for discounted package", () => {
     const html = wrap(createElement(PackageRow, { plan: discountedPlan }));
     assert.match(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /Your price 54\.15 USDT/);
-    assert.match(html, new RegExp(YOUR_PRICE_LABEL));
+    assert.doesNotMatch(html, /Vaša cijena/);
   });
 });

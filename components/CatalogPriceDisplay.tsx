@@ -3,22 +3,27 @@
 import { useContext } from "react";
 
 import { DisplayCurrencyContext } from "@/components/billing/DisplayCurrencyProvider";
-import { TokenIcon } from "@/components/billing/TokenIcon";
+import {
+  TokenIcon,
+  type TokenIconSize,
+} from "@/components/billing/TokenIcon";
 import {
   FALLBACK_CREDIT_SYMBOL,
   formatCatalogPrice,
 } from "@/lib/billing/format";
 import type { CatalogPrice, DisplayCurrency } from "@/types/billing";
 
-/** Locked customer-price label (PR5). Do not invent synonyms. */
-export const YOUR_PRICE_LABEL = "Vaša cijena";
-
 /** Fixed width for `99.99 USDT` — avoid flashing a bare amount then symbol. */
 const SKELETON_CLASS =
   "inline-block h-[1.25em] min-w-[7.5rem] animate-pulse rounded bg-slate-200 align-middle";
 
-/** Reserve dual-line height so retail ↔ discount does not shift card layout (CLS). */
-const PRICE_BLOCK_MIN_H = "min-h-[2.75rem]";
+/** Single-line reserve — retail and dual share trailing alignment (CLS). */
+const PRICE_BLOCK_MIN_H_SINGLE = "min-h-[1.75rem]";
+/** Two-line dual (strike + charge) without label padding. */
+const PRICE_BLOCK_MIN_H_DUAL = "min-h-[2.25rem]";
+
+/** Fixed icon ↔ amount gap (4px); not font-size dependent. */
+const ICON_AMOUNT_GAP = "gap-1";
 
 const FALLBACK_CURRENCY: DisplayCurrency = {
   symbol: FALLBACK_CREDIT_SYMBOL,
@@ -49,21 +54,29 @@ export type CatalogPriceDisplayProps = {
   className?: string;
 };
 
+/**
+ * Charge (and optional list strike) amount row.
+ * Icon stays bound to the amount for RTL-friendly layout.
+ */
 function CatalogPriceContent({
   value,
   symbol,
   from,
   withIcon,
+  iconSize = "sm",
 }: {
   value: string;
   symbol: string;
   from?: boolean;
   withIcon: boolean;
+  iconSize?: TokenIconSize;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+    <span
+      className={`inline-flex items-center ${ICON_AMOUNT_GAP} whitespace-nowrap`}
+    >
       {from ? <span>from</span> : null}
-      {withIcon ? <TokenIcon size="sm" /> : null}
+      {withIcon ? <TokenIcon size={iconSize} /> : null}
       <span>
         {value} {symbol}
       </span>
@@ -71,11 +84,107 @@ function CatalogPriceContent({
   );
 }
 
+type PriceBlockProps = {
+  chargeValue: string;
+  chargeSymbol: string;
+  chargeDisplay: string;
+  from?: boolean;
+  withIcon: boolean;
+  /** Dual charge uses TokenIcon `catalog` (20px) exclusively here. */
+  chargeIconSize?: TokenIconSize;
+  listValue?: string;
+  listSymbol?: string;
+  listDisplay?: string;
+  testId?: string;
+  dualTestId?: string;
+  className?: string;
+  title?: string;
+  ariaLabel?: string;
+};
+
+/**
+ * Unified layout: optional secondary strike, then dominant charge.
+ * Dual and single share `items-end` trailing alignment.
+ */
+function PriceBlock({
+  chargeValue,
+  chargeSymbol,
+  chargeDisplay,
+  from,
+  withIcon,
+  chargeIconSize = "sm",
+  listValue,
+  listSymbol,
+  listDisplay,
+  testId = "catalog-price",
+  dualTestId = "catalog-price-dual",
+  className = "",
+  title,
+  ariaLabel,
+}: PriceBlockProps) {
+  const showStrike =
+    listValue != null &&
+    listSymbol != null &&
+    listDisplay != null;
+
+  if (showStrike) {
+    return (
+      <span
+        data-testid={dualTestId}
+        className={`inline-flex ${PRICE_BLOCK_MIN_H_DUAL} flex-col items-end justify-center gap-0.5 font-normal tabular-nums ${className}`.trim()}
+        style={{ fontVariantNumeric: "tabular-nums" }}
+        title={title}
+      >
+        <span
+          className="text-sm font-normal text-slate-500 line-through"
+          data-testid="catalog-price-list"
+        >
+          <span className="sr-only">{`List price ${listDisplay}`}</span>
+          <span aria-hidden="true">
+            <CatalogPriceContent
+              value={listValue}
+              symbol={listSymbol}
+              withIcon={false}
+            />
+          </span>
+        </span>
+        <span data-testid={testId} className="font-bold">
+          <span className="sr-only">{`Your price ${chargeDisplay}`}</span>
+          <span aria-hidden="true">
+            <CatalogPriceContent
+              value={chargeValue}
+              symbol={chargeSymbol}
+              from={from}
+              withIcon={withIcon}
+              iconSize={chargeIconSize}
+            />
+          </span>
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      data-testid={testId}
+      className={`inline-flex ${PRICE_BLOCK_MIN_H_SINGLE} items-center tabular-nums ${className}`.trim()}
+      style={{ fontVariantNumeric: "tabular-nums" }}
+      title={title}
+      aria-label={ariaLabel ?? `Price ${chargeDisplay}`}
+    >
+      <CatalogPriceContent
+        value={chargeValue}
+        symbol={chargeSymbol}
+        from={from}
+        withIcon={withIcon}
+        iconSize={chargeIconSize}
+      />
+    </span>
+  );
+}
+
 /** Compare API money strings without computing a discount. */
-function amountsDiffer(
-  customer: string,
-  list: string,
-): boolean {
+function amountsDiffer(customer: string, list: string): boolean {
   const a = Number(customer);
   const b = Number(list);
   if (Number.isFinite(a) && Number.isFinite(b)) {
@@ -131,7 +240,7 @@ export function CatalogPriceDisplay({
     return (
       <span
         data-testid="catalog-price-skeleton"
-        className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H} ${className}`.trim()}
+        className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H_SINGLE} ${className}`.trim()}
         aria-hidden="true"
       />
     );
@@ -142,82 +251,50 @@ export function CatalogPriceDisplay({
     return (
       <span
         data-testid="catalog-price-skeleton"
-        className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H} ${className}`.trim()}
+        className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H_SINGLE} ${className}`.trim()}
         aria-hidden="true"
       />
     );
   }
 
   const showDual =
-    hasAmount &&
-    hasList &&
-    amountsDiffer(amount!, String(listAmount));
-
-  if (resolvedFromContext && showDual) {
-    const currency = resolvedFromContext.currency;
-    const chargeFormatted = formatCatalogPrice(resolvedFromContext);
-    const listFormatted = formatCatalogPrice(
-      resolveCatalogPrice(String(listAmount), currency, false),
-    );
-    const withIcon = chargeFormatted.symbol !== FALLBACK_CREDIT_SYMBOL;
-    return (
-      <span
-        data-testid="catalog-price-dual"
-        className={`inline-flex ${PRICE_BLOCK_MIN_H} flex-col items-end justify-center gap-0.5 font-normal tabular-nums ${className}`.trim()}
-        style={{ fontVariantNumeric: "tabular-nums" }}
-      >
-        <span
-          className="text-sm font-normal text-slate-500 line-through"
-          data-testid="catalog-price-list"
-        >
-          <span className="sr-only">
-            {`List price ${listFormatted.display}`}
-          </span>
-          <span aria-hidden="true">
-            <CatalogPriceContent
-              value={listFormatted.value}
-              symbol={listFormatted.symbol}
-              withIcon={false}
-            />
-          </span>
-        </span>
-        <span data-testid="catalog-price" className="font-bold">
-          <span className="sr-only">
-            {`Your price ${chargeFormatted.display}`}
-          </span>
-          <span aria-hidden="true" className="inline-flex flex-col items-end">
-            <CatalogPriceContent
-              value={chargeFormatted.value}
-              symbol={chargeFormatted.symbol}
-              from={resolvedFromContext.from}
-              withIcon={withIcon}
-            />
-            <span className="text-xs font-medium text-slate-600">
-              {YOUR_PRICE_LABEL}
-            </span>
-          </span>
-        </span>
-      </span>
-    );
-  }
+    hasAmount && hasList && amountsDiffer(amount!, String(listAmount));
 
   if (resolvedFromContext) {
-    const formatted = formatCatalogPrice(resolvedFromContext);
-    const withIcon = formatted.symbol !== FALLBACK_CREDIT_SYMBOL;
-    return (
-      <span
-        data-testid="catalog-price"
-        className={`inline-flex ${PRICE_BLOCK_MIN_H} items-center tabular-nums ${className}`.trim()}
-        style={{ fontVariantNumeric: "tabular-nums" }}
-        aria-label={`Price ${formatted.display}`}
-      >
-        <CatalogPriceContent
-          value={formatted.value}
-          symbol={formatted.symbol}
+    const chargeFormatted = formatCatalogPrice(resolvedFromContext);
+    const withIcon = chargeFormatted.symbol !== FALLBACK_CREDIT_SYMBOL;
+    if (showDual) {
+      const listFormatted = formatCatalogPrice(
+        resolveCatalogPrice(
+          String(listAmount),
+          resolvedFromContext.currency,
+          false,
+        ),
+      );
+      return (
+        <PriceBlock
+          chargeValue={chargeFormatted.value}
+          chargeSymbol={chargeFormatted.symbol}
+          chargeDisplay={chargeFormatted.display}
           from={resolvedFromContext.from}
           withIcon={withIcon}
+          chargeIconSize="catalog"
+          listValue={listFormatted.value}
+          listSymbol={listFormatted.symbol}
+          listDisplay={listFormatted.display}
+          className={className}
         />
-      </span>
+      );
+    }
+    return (
+      <PriceBlock
+        chargeValue={chargeFormatted.value}
+        chargeSymbol={chargeFormatted.symbol}
+        chargeDisplay={chargeFormatted.display}
+        from={resolvedFromContext.from}
+        withIcon={withIcon}
+        className={className}
+      />
     );
   }
 
@@ -235,68 +312,41 @@ export function CatalogPriceDisplay({
         resolveCatalogPrice(String(listAmount), FALLBACK_CURRENCY, false),
       );
       return (
-        <span
-          data-testid="catalog-price-dual-degraded"
-          className={`inline-flex ${PRICE_BLOCK_MIN_H} flex-col items-end justify-center gap-0.5 tabular-nums ${className}`.trim()}
-          style={{ fontVariantNumeric: "tabular-nums" }}
+        <PriceBlock
+          chargeValue={formatted.value}
+          chargeSymbol={formatted.symbol}
+          chargeDisplay={formatted.display}
+          from={from}
+          withIcon={false}
+          listValue={listFormatted.value}
+          listSymbol={listFormatted.symbol}
+          listDisplay={listFormatted.display}
+          testId="catalog-price-degraded"
+          dualTestId="catalog-price-dual-degraded"
+          className={className}
           title={CURRENCY_UNAVAILABLE_TITLE}
-        >
-          <span
-            className="text-sm font-normal text-slate-500 line-through"
-            data-testid="catalog-price-list"
-          >
-            <span className="sr-only">
-              {`List price ${listFormatted.display}`}
-            </span>
-            <span aria-hidden="true">
-              <CatalogPriceContent
-                value={listFormatted.value}
-                symbol={listFormatted.symbol}
-                withIcon={false}
-              />
-            </span>
-          </span>
-          <span data-testid="catalog-price-degraded">
-            <span className="sr-only">
-              {`Your price ${formatted.display}. ${CURRENCY_UNAVAILABLE_TITLE}`}
-            </span>
-            <span aria-hidden="true" className="inline-flex flex-col items-end">
-              <CatalogPriceContent
-                value={formatted.value}
-                symbol={formatted.symbol}
-                from={from}
-                withIcon={false}
-              />
-              <span className="text-xs font-medium text-slate-600">
-                {YOUR_PRICE_LABEL}
-              </span>
-            </span>
-          </span>
-        </span>
+        />
       );
     }
     return (
-      <span
-        data-testid="catalog-price-degraded"
-        className={`inline-flex ${PRICE_BLOCK_MIN_H} items-center tabular-nums ${className}`.trim()}
-        style={{ fontVariantNumeric: "tabular-nums" }}
+      <PriceBlock
+        chargeValue={formatted.value}
+        chargeSymbol={formatted.symbol}
+        chargeDisplay={formatted.display}
+        from={from}
+        withIcon={false}
+        testId="catalog-price-degraded"
+        className={className}
         title={CURRENCY_UNAVAILABLE_TITLE}
-        aria-label={`Price ${formatted.display}. ${CURRENCY_UNAVAILABLE_TITLE}`}
-      >
-        <CatalogPriceContent
-          value={formatted.value}
-          symbol={formatted.symbol}
-          from={from}
-          withIcon={false}
-        />
-      </span>
+        ariaLabel={`Price ${formatted.display}. ${CURRENCY_UNAVAILABLE_TITLE}`}
+      />
     );
   }
 
   return (
     <span
       data-testid="catalog-price-skeleton"
-      className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H} ${className}`.trim()}
+      className={`${SKELETON_CLASS} ${PRICE_BLOCK_MIN_H_SINGLE} ${className}`.trim()}
       aria-hidden="true"
     />
   );
