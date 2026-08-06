@@ -430,6 +430,8 @@ export async function fetchPackages(options?: {
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
   return fetchApi<PaginatedResponse<Package>>(`/api/v1/packages/${suffix}`, {
+    // Attach JWT when present so ADR 019 profile prices apply (SSR stays anon).
+    auth: true,
     cache: "no-store",
   });
 }
