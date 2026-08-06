@@ -60,7 +60,7 @@ export function UserMenu({ email }: UserMenuProps) {
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sky-700 text-sm font-semibold text-white outline-none hover:bg-sky-800 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--app-primary)] text-sm font-semibold text-[var(--app-primary-foreground)] outline-none hover:bg-[var(--app-primary-hover)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--app-background)]"
         title={email}
         aria-label={`Account menu for ${email}`}
         aria-haspopup="menu"

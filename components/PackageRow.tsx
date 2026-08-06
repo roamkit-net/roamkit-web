@@ -1,4 +1,7 @@
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { SHORTFALL_CTA_CLASS } from "@/components/orders/shortfallCtaClass";
+import { Button } from "@/components/ui/Button";
+import { ListRow } from "@/components/ui/ListRow";
 import type { Package } from "@/lib/api";
 
 function formatValidity(days: number): string {
@@ -8,9 +11,10 @@ function formatValidity(days: number): string {
   return `${days} days`;
 }
 
-function parseAllowanceFromTitle(
-  title: string,
-): { voiceMinutes: number | null; textSms: number | null } {
+function parseAllowanceFromTitle(title: string): {
+  voiceMinutes: number | null;
+  textSms: number | null;
+} {
   const voiceMatch = title.match(/(\d+)\s*mins?\b/i);
   const textMatch = title.match(/(\d+)\s*sms\b/i);
   return {
@@ -59,6 +63,7 @@ export function PackageRow({
   isBuying = false,
   buyDisabled = false,
   buyTitle,
+  shortfallLabel,
 }: {
   plan: Package;
   showValidity?: boolean;
@@ -66,29 +71,62 @@ export function PackageRow({
   isBuying?: boolean;
   buyDisabled?: boolean;
   buyTitle?: string;
+  /** When set, render sky shortfall CTA instead of primary Buy. */
+  shortfallLabel?: string;
 }) {
+  const isShortfall = Boolean(shortfallLabel);
+  const label = isBuying
+    ? isShortfall
+      ? "Redirecting…"
+      : "Buying…"
+    : shortfallLabel || "Buy";
+
   return (
-    <article className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-      <p className="min-w-0 text-base font-medium text-slate-900">
+    <ListRow
+      as="article"
+      trailing={
+        <>
+          <p className="text-base font-bold text-slate-900">
+            <CatalogPriceDisplay
+              amount={plan.price_usd}
+              listAmount={plan.list_price_usd}
+            />
+          </p>
+          {onBuy ? (
+            <span aria-live="polite">
+              {isShortfall ? (
+                <button
+                  type="button"
+                  onClick={(event) => onBuy(plan, event.currentTarget)}
+                  disabled={isBuying || buyDisabled}
+                  title={buyTitle}
+                  aria-label={buyTitle || shortfallLabel}
+                  className={SHORTFALL_CTA_CLASS}
+                >
+                  {label}
+                </button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={(event) => onBuy(plan, event.currentTarget)}
+                  disabled={isBuying || buyDisabled}
+                  title={buyTitle}
+                  aria-label={buyTitle}
+                  className="min-h-11"
+                >
+                  {label}
+                </Button>
+              )}
+            </span>
+          ) : null}
+        </>
+      }
+    >
+      <p className="text-base font-medium text-slate-900">
         {formatLeftLabel(plan, showValidity)}
       </p>
-      <div className="flex shrink-0 items-center gap-3">
-        <p className="text-base font-bold text-slate-900">
-          <CatalogPriceDisplay amount={plan.price_usd} />
-        </p>
-        {onBuy ? (
-          <button
-            type="button"
-            onClick={(event) => onBuy(plan, event.currentTarget)}
-            disabled={isBuying || buyDisabled}
-            title={buyTitle}
-            aria-label={buyTitle}
-            className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isBuying ? "Buying…" : "Buy"}
-          </button>
-        ) : null}
-      </div>
-    </article>
+    </ListRow>
   );
 }

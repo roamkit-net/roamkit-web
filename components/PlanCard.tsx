@@ -71,7 +71,10 @@ export function PlanCard({ plan }: { plan: Package }) {
           <p className="mt-1 text-sm text-slate-600">{plan.operator_title}</p>
         </div>
         <p className="text-xl font-bold text-slate-900">
-          <CatalogPriceDisplay amount={plan.price_usd} />
+          <CatalogPriceDisplay
+            amount={plan.price_usd}
+            listAmount={plan.list_price_usd}
+          />
         </p>
       </div>
 

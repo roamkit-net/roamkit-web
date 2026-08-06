@@ -91,8 +91,8 @@ export function CoveragesSummary({
           disabled={!canOpen}
           className={
             canOpen
-              ? "mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm text-slate-700 hover:text-sky-800"
-              : "mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm text-slate-700"
+              ? "mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm text-[var(--app-chrome-text-muted)] hover:text-[var(--app-chrome-text)]"
+              : "mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm text-[var(--app-chrome-text-muted)]"
           }
         >
           <span aria-hidden className="text-base leading-none">
@@ -101,7 +101,7 @@ export function CoveragesSummary({
           <span className="truncate font-medium">{primary.name}</span>
           <NetworkTypes types={primary.types} />
           {others > 0 ? (
-            <span className="shrink-0 text-slate-500">
+            <span className="shrink-0 text-[var(--app-chrome-text-muted)] opacity-80">
               +{others} other{others === 1 ? "" : "s"}
             </span>
           ) : null}
@@ -123,7 +123,7 @@ export function CoveragesSummary({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm font-medium text-sky-700 hover:text-sky-800"
+        className="mt-3 inline-flex max-w-full items-center gap-2 text-left text-sm font-medium text-[var(--app-chrome-text-muted)] hover:text-[var(--app-chrome-text)]"
       >
         <span aria-hidden className="text-base leading-none">
           🌐

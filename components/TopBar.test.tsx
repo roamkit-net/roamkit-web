@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TopBar } from "./TopBar";
 
 describe("TopBar", () => {
-  it("uses CSS grid 1fr_auto and never flex-wrap", () => {
+  it("uses app-topbar chrome classes (grid SoT in CSS)", () => {
     const html = renderToStaticMarkup(
       createElement(TopBar, {
         nav: createElement("a", { href: "/plans" }, "← Back"),
@@ -15,7 +15,9 @@ describe("TopBar", () => {
     );
 
     assert.match(html, /data-testid="top-bar"/);
-    assert.match(html, /grid grid-cols-\[1fr_auto\]/);
+    assert.match(html, /class="app-topbar"/);
+    assert.match(html, /app-topbar-nav/);
+    assert.match(html, /app-topbar-end/);
     assert.doesNotMatch(html, /flex-wrap/);
     assert.match(html, /← Back/);
     assert.match(html, /data-testid="right"/);
@@ -31,7 +33,7 @@ describe("TopBar", () => {
 
     assert.equal(
       html,
-      '<div data-testid="top-bar" class="grid grid-cols-[1fr_auto] items-start gap-4"><div class="min-w-0"><span>Nav</span></div><div class="justify-self-end"><span>Right</span></div></div>',
+      '<div data-testid="top-bar" class="app-topbar"><div class="app-topbar-nav"><span>Nav</span></div><div class="app-topbar-end"><span>Right</span></div></div>',
     );
   });
 
@@ -43,6 +45,7 @@ describe("TopBar", () => {
     );
 
     assert.match(html, /Only right/);
-    assert.match(html, /grid-cols-\[1fr_auto\]/);
+    assert.match(html, /app-topbar/);
+    assert.match(html, /app-topbar-end/);
   });
 });

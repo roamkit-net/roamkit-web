@@ -88,6 +88,7 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /data-testid="catalog-price-degraded"/);
     assert.match(html, /19\.50 credits/);
     assert.match(html, /Currency configuration unavailable/);
+    assert.doesNotMatch(html, /data-testid="token-icon"/);
   });
 
   it("renders degraded credits when config errored and currency missing", () => {
@@ -103,6 +104,7 @@ describe("CatalogPriceDisplay", () => {
     assert.doesNotMatch(html, /data-testid="catalog-price-skeleton"/);
     assert.match(html, /data-testid="catalog-price-degraded"/);
     assert.match(html, /8\.00 credits/);
+    assert.doesNotMatch(html, /data-testid="token-icon"/);
   });
 
   it("resolves amount from DisplayCurrency context", () => {
@@ -111,7 +113,9 @@ describe("CatalogPriceDisplay", () => {
       displayCurrencyValue(),
     );
     assert.match(html, /aria-label="Price 12\.50 USDT"/);
-    assert.match(html, />12\.50 USDT</);
+    assert.match(html, /12\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
+    assert.match(html, /whitespace-nowrap/);
   });
 
   it("resolves amount with from prefix from context", () => {
@@ -120,7 +124,9 @@ describe("CatalogPriceDisplay", () => {
       displayCurrencyValue(),
     );
     assert.match(html, /aria-label="Price from 4\.50 USDT"/);
-    assert.match(html, />from 4\.50 USDT</);
+    assert.match(html, /from/);
+    assert.match(html, /4\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
   });
 
   it("renders amount with symbol and tabular-nums", () => {
@@ -133,7 +139,8 @@ describe("CatalogPriceDisplay", () => {
     assert.match(html, /tabular-nums/);
     assert.match(html, /font-variant-numeric:tabular-nums/);
     assert.match(html, /aria-label="Price 12\.50 USDT"/);
-    assert.match(html, />12\.50 USDT</);
+    assert.match(html, /12\.50 USDT/);
+    assert.match(html, /data-testid="token-icon"/);
     assert.doesNotMatch(html, /\$/);
     assert.doesNotMatch(html, /\bUSD\b/);
   });
@@ -146,7 +153,8 @@ describe("CatalogPriceDisplay", () => {
     };
     const html = render({ price });
     assert.match(html, /aria-label="Price from 4\.50 USDT"/);
-    assert.match(html, />from 4\.50 USDT</);
+    assert.match(html, /from/);
+    assert.match(html, /4\.50 USDT/);
   });
 
   it("falls back to credits when symbol is empty", () => {
@@ -159,9 +167,76 @@ describe("CatalogPriceDisplay", () => {
     try {
       const html = render({ price });
       assert.match(html, /aria-label="Price 99\.99 credits"/);
-      assert.match(html, />99\.99 credits</);
+      assert.match(html, /99\.99 credits/);
+      assert.doesNotMatch(html, /data-testid="token-icon"/);
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it("equal list and charge → single price (no dual, no strike)", () => {
+    const html = renderWithCurrency(
+      { amount: "57.00", listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /data-testid="catalog-price"/);
+    assert.match(html, /aria-label="Price 57\.00 USDT"/);
+    assert.doesNotMatch(html, /Vaša cijena/);
+    assert.doesNotMatch(html, /line-through/);
+    assert.doesNotMatch(html, /min-h-\[2\.25rem\]/);
+    assert.match(html, /min-h-\[1\.75rem\]/);
+  });
+
+  it("unequal list and charge → dual strike + charge (no visible label)", () => {
+    const html = renderWithCurrency(
+      { amount: "54.15", listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /data-testid="catalog-price-list"/);
+    // Strike on the amount text node (not a flex ancestor — CSS quirk).
+    assert.match(
+      html,
+      /line-through[^>]*>57\.00 USDT|class="line-through"[^>]*>57\.00 USDT/,
+    );
+    assert.match(html, /List price 57\.00 USDT/);
+    assert.match(html, /Your price 54\.15 USDT/);
+    assert.doesNotMatch(html, /Vaša cijena/);
+    assert.match(html, /min-h-\[2\.25rem\]/);
+    assert.match(html, /data-size="catalog"/);
+    assert.doesNotMatch(html, /aria-label="Price/);
+  });
+
+  it("missing list → customer charge only", () => {
+    const html = renderWithCurrency(
+      { amount: "54.15" },
+      displayCurrencyValue(),
+    );
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.match(html, /aria-label="Price 54\.15 USDT"/);
+    assert.doesNotMatch(html, /Vaša cijena/);
+  });
+
+  it("list without customer charge → skeleton (no broken dual)", () => {
+    const html = renderWithCurrency(
+      { listAmount: "57.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /data-testid="catalog-price-skeleton"/);
+    assert.doesNotMatch(html, /data-testid="catalog-price-dual"/);
+    assert.doesNotMatch(html, /57\.00/);
+  });
+
+  it("does not derive charge from list or percent (render-only)", () => {
+    const html = renderWithCurrency(
+      { amount: "10.00", listAmount: "100.00" },
+      displayCurrencyValue(),
+    );
+    assert.match(html, /Your price 10\.00 USDT/);
+    assert.match(html, /List price 100\.00 USDT/);
+    assert.doesNotMatch(html, /90\.00/);
+    assert.doesNotMatch(html, /discount/i);
+    assert.doesNotMatch(html, /Vaša cijena/);
   });
 });

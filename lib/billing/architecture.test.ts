@@ -189,6 +189,21 @@ describe("billing architecture guard", () => {
     assert.deepEqual(scanTree(), []);
   });
 
+  it("TokenIcon is the sole reference to usdt-polygon asset path", () => {
+    const needle = "/icons/usdt-polygon.png";
+    const hits: string[] = [];
+    for (const dir of SCAN_DIRS) {
+      for (const file of listSourceFiles(dir)) {
+        const source = fs.readFileSync(file, "utf8");
+        if (!source.includes(needle)) {
+          continue;
+        }
+        hits.push(path.relative(ROOT, file));
+      }
+    }
+    assert.deepEqual(hits, ["components/billing/TokenIcon.tsx"]);
+  });
+
   it("does not scan lib clients (billing/orders HTTP allowed only there)", () => {
     assert.ok(!(SCAN_DIRS as readonly string[]).includes("lib"));
     assert.deepEqual(

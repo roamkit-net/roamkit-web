@@ -1,13 +1,7 @@
 /** Loading placeholders for /me/deposit. */
 
-function Pulse({ className }: { className: string }) {
-  return (
-    <div
-      className={`animate-pulse rounded-lg bg-slate-200/80 ${className}`}
-      aria-hidden="true"
-    />
-  );
-}
+import { Card, CardSection } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function DepositSkeleton() {
   return (
@@ -19,34 +13,40 @@ export function DepositSkeleton() {
     >
       <span className="sr-only">Loading deposit details…</span>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Pulse className="h-3 w-28" />
-        <Pulse className="mt-3 h-9 w-40" />
-        <Pulse className="mt-6 h-4 w-36" />
-        <Pulse className="mt-2 h-11 w-full max-w-xs" />
-      </section>
+      <Card as="section">
+        <CardSection>
+          <Skeleton variant="line" className="h-3 w-28" />
+          <Skeleton className="mt-3 h-9 w-40" />
+          <Skeleton variant="line" className="mt-6 h-4 w-36" />
+          <Skeleton className="mt-2 h-11 w-full max-w-xs" />
+        </CardSection>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Pulse className="h-5 w-40" />
-        <Pulse className="mt-3 h-4 w-full max-w-md" />
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-          <Pulse className="h-[180px] w-[180px] shrink-0" />
-          <div className="min-w-0 flex-1 space-y-3">
-            <Pulse className="h-3 w-28" />
-            <Pulse className="h-4 w-full" />
-            <Pulse className="h-4 w-24" />
-            <Pulse className="mt-4 h-3 w-24" />
-            <Pulse className="h-12 w-full" />
+      <Card as="section">
+        <CardSection>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton variant="line" className="mt-3 h-4 w-full max-w-md" />
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row">
+            <Skeleton className="h-[180px] w-[180px] shrink-0" />
+            <div className="min-w-0 flex-1 space-y-3">
+              <Skeleton variant="line" className="h-3 w-28" />
+              <Skeleton variant="line" className="h-4 w-full" />
+              <Skeleton variant="line" className="h-4 w-24" />
+              <Skeleton variant="line" className="mt-4 h-3 w-24" />
+              <Skeleton className="h-12 w-full" />
+            </div>
           </div>
-        </div>
-      </section>
+        </CardSection>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Pulse className="h-5 w-44" />
-        <Pulse className="mt-3 h-4 w-full max-w-lg" />
-        <Pulse className="mt-6 h-11 w-full" />
-        <Pulse className="mt-4 h-10 w-36" />
-      </section>
+      <Card as="section">
+        <CardSection>
+          <Skeleton className="h-5 w-44" />
+          <Skeleton variant="line" className="mt-3 h-4 w-full max-w-lg" />
+          <Skeleton className="mt-6 h-11 w-full" />
+          <Skeleton className="mt-4 h-10 w-36" />
+        </CardSection>
+      </Card>
     </div>
   );
 }

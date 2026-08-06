@@ -10,6 +10,10 @@ import {
 } from "@/components/auth/TurnstileField";
 import { PasswordField } from "@/components/forms/PasswordField";
 import { Logo } from "@/components/landing/Logo";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Field, Label } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
 
 type AuthShellProps = {
   title: string;
@@ -20,31 +24,25 @@ type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="auth-page-bg min-h-screen px-6 py-16 text-slate-100">
-      <main className="auth-shell-enter mx-auto w-full max-w-md">
+    <div className="auth-page-bg">
+      <main className="auth-shell-enter">
         <Link href="/" className="inline-flex" aria-label="RoamKit home">
           <Logo />
         </Link>
-        <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">
+        <h1 className="mt-10 text-3xl font-bold tracking-tight text-[var(--auth-chrome-text)]">
           {title}
         </h1>
-        <p className="mt-3 text-base leading-7 text-slate-400">{subtitle}</p>
-        <div className="mt-8 rounded-3xl border border-white/10 bg-white/95 p-6 text-slate-900 backdrop-blur-sm">
-          {children}
-        </div>
-        <p className="mt-6 text-center text-sm text-slate-400 [&_a]:font-medium [&_a]:text-cyan-400 [&_a]:hover:text-cyan-300">
+        <p className="mt-3 text-base leading-7 text-[var(--auth-chrome-text-muted)]">
+          {subtitle}
+        </p>
+        <div className="auth-shell-panel">{children}</div>
+        <p className="auth-shell-footer mt-6 text-center text-sm text-[var(--auth-chrome-text-muted)]">
           {footer}
         </p>
       </main>
     </div>
   );
 }
-
-const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
-
-const submitButtonClassName =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 type SharedFormProps = {
   submitLabel: string;
@@ -58,14 +56,14 @@ function AuthError({ error }: { error: string | null }) {
     return null;
   }
   return (
-    <p
-      role="alert"
+    <Alert
+      variant="error"
+      size="sm"
       aria-live="polite"
       aria-atomic="true"
-      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
     >
       {error}
-    </p>
+    </Alert>
   );
 }
 
@@ -73,7 +71,7 @@ function SubmitSpinner() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--auth-primary-foreground)]/30 border-t-[var(--auth-primary-foreground)]"
     />
   );
 }
@@ -91,15 +89,18 @@ function AuthSubmitButton({
 }) {
   const isDisabled = Boolean(disabled) || isLoading;
   return (
-    <button
+    <Button
       type="submit"
+      tone="auth"
+      size="md"
+      variant="primary"
       disabled={isDisabled}
       aria-busy={isLoading}
-      className={submitButtonClassName}
+      className="w-full"
     >
       {isLoading ? <SubmitSpinner /> : null}
       {isLoading ? loadingLabel : submitLabel}
-    </button>
+    </Button>
   );
 }
 
@@ -182,23 +183,16 @@ export function AuthForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Email
-        </label>
-        <input
-          id="email"
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
           name="email"
           type="email"
           autoComplete="email"
           autoFocus
           required
-          className={fieldClassName}
         />
-      </div>
+      </Field>
       <PasswordField
         id="password"
         name="password"
@@ -215,11 +209,11 @@ export function AuthForm({
             type="checkbox"
             checked={rememberMe}
             onChange={(event) => onRememberMeChange?.(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-cyan-600 outline-none ring-cyan-500 focus-visible:ring-2"
+            className="h-4 w-4 rounded border-slate-300 text-[var(--auth-primary)] outline-none ring-[var(--auth-focus-ring)] focus-visible:ring-2"
           />
           <label
             htmlFor="remember_me"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-[var(--auth-text)]"
           >
             Remember me
           </label>
@@ -278,23 +272,16 @@ export function EmailOnlyForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-slate-700"
-        >
-          Email
-        </label>
-        <input
-          id="email"
+      <Field id="email" tone="auth">
+        <Label required>Email</Label>
+        <Input
           name="email"
           type="email"
           autoComplete="email"
           autoFocus
           required
-          className={fieldClassName}
         />
-      </div>
+      </Field>
 
       <TurnstileField
         onTokenChange={setTurnstileToken}

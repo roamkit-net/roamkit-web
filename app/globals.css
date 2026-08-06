@@ -1,41 +1,162 @@
 @import "tailwindcss";
 
+/*
+ * RoamKit design tokens (Cap1 / ADR 016)
+ *
+ * Consumption (locked):
+ *   Brand tokens → Theme aliases → Components → Pages
+ *
+ * Ownership:
+ *   Brand tokens are the only source of truth. Theme aliases may reference
+ *   brand tokens; component and page styles must never redefine brand colors.
+ *
+ * Forbidden:
+ *   Components and pages must not reference brand tokens (--color-*, --motion-*,
+ *   --radius-*, --shadow-*, --z-*, --font-*, --icon-size-*, --focus-ring) directly.
+ *   Always go through a theme alias or a Cap2+ primitive bound to a theme.
+ *
+ * Deprecation:
+ *   --landing-* is a legacy marketing API (still supported, backed by brand).
+ *   No new usages in new components. Remove after Cap3/Cap4 migration.
+ *
+ * Future light/dark: keep semantic names (--color-surface), never --light-surface.
+ */
+
 :root {
-  --background: #05070a;
-  --foreground: #f0f4f8;
-  --muted: #94a3b8;
-  --accent-cyan: #22d3ee;
+  /* -------------------------------------------------------------------------
+   * Brand tokens (source of truth) — semantic names only, no hue names.
+   * Values match pre-Cap1 pixels (landing / dark default).
+   * ------------------------------------------------------------------------- */
+  --color-background: #05070a;
+  --color-surface: #0d1117;
+  --color-surface-elevated: #12171f;
+  --color-text: #f0f4f8;
+  --color-text-muted: #94a3b8;
+  --color-primary: #22d3ee;
+  --color-primary-hover: #67e8f9;
+  --color-primary-foreground: #020617;
+  --focus-ring: color-mix(in srgb, var(--color-primary) 60%, transparent);
+
+  --motion-fast: 200ms;
+  --motion-normal: 200ms;
+  --motion-slow: 450ms;
+  --motion-ease: ease-out;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --z-header: 20;
+  --z-dropdown: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* next/font sets --font-geist-sans / --font-landing-display on <body> */
+  --font-body: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-landing-display), ui-serif, Georgia, serif;
+
+  --icon-size-sm: 1rem; /* 16px */
+  --icon-size-md: 1.25rem; /* 20px */
+  --icon-size-lg: 1.5rem; /* 24px */
+  --icon-size-xl: 2rem; /* 32px */
+
+  /* -------------------------------------------------------------------------
+   * Legacy :root aliases (pre-Cap1) — equal to brand; do not invent new ones.
+   * ------------------------------------------------------------------------- */
+  --background: var(--color-background);
+  --foreground: var(--color-text);
+  --muted: var(--color-text-muted);
+  --accent-cyan: var(--color-primary);
+  /* Decorative mesh accents only — not brand primary identity. */
   --accent-purple: #a855f7;
   --accent-pink: #ec4899;
-  --surface: #0d1117;
+  --surface: var(--color-surface);
   --surface-border: rgba(148, 163, 184, 0.12);
 
-  /*
-   * Landing-scoped tokens (marketing homepage only).
-   * Do not repurpose these for /plans, auth shell, or AppShell —
-   * change global tokens above only when the whole app should shift.
-   */
-  --landing-ink: #05070a;
-  --landing-foreground: #f0f4f8;
-  --landing-muted: #94a3b8;
-  /* ≥ 4.5:1 on --landing-ink (AA for 14px body text); #64748b was 4.23:1 */
+  /* -------------------------------------------------------------------------
+   * Landing theme (legacy public API — @deprecated for new code)
+   * Existing .landing-* utilities and marketing components keep using these.
+   * Backed by brand; removal after Cap3/Cap4 only.
+   * ------------------------------------------------------------------------- */
+  --landing-ink: var(--color-background);
+  --landing-foreground: var(--color-text);
+  --landing-muted: var(--color-text-muted);
+  /* ≥ 4.5:1 on brand background (AA for 14px body); landing-only soft mute */
   --landing-muted-soft: #6b7c93;
-  --landing-cta: #22d3ee;
-  --landing-cta-hover: #67e8f9;
-  --landing-cta-foreground: #020617;
-  --landing-focus-ring: color-mix(in srgb, var(--landing-cta) 60%, transparent);
+  --landing-cta: var(--color-primary);
+  --landing-cta-hover: var(--color-primary-hover);
+  --landing-cta-foreground: var(--color-primary-foreground);
+  --landing-focus-ring: var(--focus-ring);
   --landing-border: rgba(255, 255, 255, 0.15);
   --landing-surface: rgba(255, 255, 255, 0.03);
-  --landing-motion-duration: 200ms;
-  --landing-motion-duration-enter: 450ms;
-  --landing-motion-ease: ease-out;
+  --landing-motion-duration: var(--motion-fast);
+  --landing-motion-duration-enter: var(--motion-slow);
+  --landing-motion-ease: var(--motion-ease);
+
+  /* -------------------------------------------------------------------------
+   * App theme — Cap3 Variant A (dark shell + light elevated cards).
+   * Brand tokens remain source of truth; app aliases consume them.
+   * ------------------------------------------------------------------------- */
+  --app-background: var(--color-background);
+  --app-surface: var(--color-surface);
+  --app-surface-elevated: #ffffff;
+  --app-text: #0f172a;
+  --app-text-muted: #475569;
+  --app-chrome-text: var(--color-text);
+  --app-chrome-text-muted: var(--color-text-muted);
+  --app-primary: var(--color-primary);
+  --app-primary-hover: var(--color-primary-hover);
+  --app-primary-foreground: var(--color-primary-foreground);
+  --app-focus-ring: color-mix(in srgb, var(--app-primary) 60%, transparent);
+  --app-border: #e2e8f0;
+  --app-border-chrome: rgba(148, 163, 184, 0.18);
+
+  /* Spacing SoT — AppShell owns these; pages must not fork layout padding. */
+  --app-gutter-x: 1.5rem;
+  --app-page-padding-y: 4rem;
+  --app-header-gap: 2rem;
+  --app-topbar-height: 2.5rem;
+  --app-content-max: 56rem;
+  --app-content-max-mid: 48rem;
+  --app-content-max-narrow: 42rem;
+
+  /* -------------------------------------------------------------------------
+   * Auth theme — Cap4.1 AuthShell chrome (dark frame + light elevated panel).
+   * Brand tokens remain source of truth; auth aliases consume them.
+   * ------------------------------------------------------------------------- */
+  --auth-background: var(--color-background);
+  --auth-surface: rgba(255, 255, 255, 0.95);
+  --auth-text: #0f172a; /* slate-900 on elevated panel */
+  --auth-text-muted: #64748b; /* muted on elevated panel */
+  --auth-chrome-text: var(--color-text);
+  --auth-chrome-text-muted: var(--color-text-muted);
+  --auth-primary: var(--color-primary);
+  --auth-primary-hover: var(--color-primary-hover);
+  --auth-primary-foreground: var(--color-primary-foreground);
+  --auth-focus-ring: var(--focus-ring);
+  --auth-mesh-secondary: var(--accent-purple);
+  --auth-border: rgba(255, 255, 255, 0.1);
+
+  /* Spacing SoT — AuthShell owns these; same pixels as Cap4.1 baseline. */
+  --auth-gutter-x: 1.5rem;
+  --auth-page-padding-y: 4rem;
+  --auth-content-max: 28rem;
 }
 
+/*
+ * Tailwind v4 theme bridge. Use literals equal to brand — do not write
+ * --color-background: var(--background) (that overwrites brand and cycles
+ * with --background: var(--color-background)).
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-surface: var(--surface);
+  --color-background: #05070a;
+  --color-foreground: #f0f4f8;
+  --color-muted: #94a3b8;
+  --color-surface: #0d1117;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -43,7 +164,87 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+
+/*
+ * Cap3.1 AppShell frame — layout SoT. Pages must not fork these paddings.
+ * Ownership: AppShell owns layout; pages own content.
+ */
+.app-shell {
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: var(--app-background);
+  color: var(--app-chrome-text);
+  padding-inline: max(var(--app-gutter-x), env(safe-area-inset-left, 0px))
+    max(var(--app-gutter-x), env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--app-page-padding-y) + env(safe-area-inset-top, 0px))
+    calc(var(--app-page-padding-y) + env(safe-area-inset-bottom, 0px));
+}
+
+.app-shell-main {
+  margin-inline: auto;
+  width: 100%;
+}
+
+.app-shell-main--default {
+  max-width: var(--app-content-max);
+}
+
+.app-shell-main--mid {
+  max-width: var(--app-content-max-mid);
+}
+
+.app-shell-main--narrow {
+  max-width: var(--app-content-max-narrow);
+}
+
+.app-shell-content {
+  margin-top: var(--app-header-gap);
+}
+
+/* Cap3.2 — TopBar is shell chrome: static, always visible, one height SoT. */
+.app-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: var(--app-topbar-height);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--app-border-chrome);
+  color: var(--app-chrome-text);
+}
+
+.app-topbar-nav {
+  min-width: 0;
+}
+
+.app-topbar-end {
+  justify-self: end;
+}
+
+.app-shell-nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-chrome-text-muted);
+  text-decoration: none;
+  transition: color var(--app-motion-duration, var(--motion-normal))
+    var(--app-motion-ease, var(--motion-ease));
+}
+
+.app-shell-nav-link:hover {
+  color: var(--app-chrome-text);
+}
+
+.app-shell-nav-link:focus-visible {
+  outline: 2px solid var(--app-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-nav-link {
+    transition: none;
+  }
 }
 
 /* Decorative accent only — not brand identity (was cyan→purple→pink). */
@@ -86,7 +287,7 @@ body {
 }
 
 .landing-display {
-  font-family: var(--font-landing-display), ui-serif, Georgia, serif;
+  font-family: var(--font-display);
 }
 
 /* Consistent vertical rhythm for post-hero sections (existing spacing scale). */
@@ -266,18 +467,26 @@ body {
   }
 }
 
-/* Auth shell: dark frame + soft radial mesh (no landing hero image). */
+/* Auth shell: dark frame + soft radial mesh (no landing hero image). Cap4.1. */
 .auth-page-bg {
-  background-color: #05070a;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding-inline: max(var(--auth-gutter-x), env(safe-area-inset-left, 0px))
+    max(var(--auth-gutter-x), env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--auth-page-padding-y) + env(safe-area-inset-top, 0px))
+    calc(var(--auth-page-padding-y) + env(safe-area-inset-bottom, 0px));
+  background-color: var(--auth-background);
+  color: var(--auth-chrome-text);
+  font-family: var(--font-body);
   background-image:
     radial-gradient(
       ellipse 55% 45% at 20% 15%,
-      color-mix(in srgb, var(--accent-cyan) 8%, transparent),
+      color-mix(in srgb, var(--auth-primary) 8%, transparent),
       transparent 70%
     ),
     radial-gradient(
       ellipse 60% 50% at 85% 75%,
-      color-mix(in srgb, var(--accent-purple) 7%, transparent),
+      color-mix(in srgb, var(--auth-mesh-secondary) 7%, transparent),
       transparent 70%
     );
 }
@@ -294,7 +503,29 @@ body {
 }
 
 .auth-shell-enter {
-  animation: auth-shell-enter 0.45s ease-out both;
+  width: 100%;
+  max-width: var(--auth-content-max);
+  margin-inline: auto;
+  animation: auth-shell-enter var(--motion-slow) var(--motion-ease) both;
+}
+
+.auth-shell-panel {
+  margin-top: 2rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--auth-border);
+  background-color: var(--auth-surface);
+  padding: 1.5rem;
+  color: var(--auth-text);
+  backdrop-filter: blur(4px);
+}
+
+.auth-shell-footer a {
+  font-weight: 500;
+  color: var(--auth-primary);
+}
+
+.auth-shell-footer a:hover {
+  color: var(--auth-primary-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {

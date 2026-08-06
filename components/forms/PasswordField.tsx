@@ -7,8 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
-const fieldClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-slate-900 shadow-sm outline-none ring-cyan-500 focus:border-cyan-500 focus:ring-2";
+import { Label } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
 
 export type PasswordFieldProps = {
   label: ReactNode;
@@ -57,6 +57,10 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
+/**
+ * Domain composition: password visibility toggle on top of ui/Input.
+ * Not a Cap2 primitive (No Domain Logic).
+ */
 export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   function PasswordField(
     {
@@ -75,44 +79,37 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   ) {
     const [visible, setVisible] = useState(false);
     const inputId = id ?? "password";
-    const inputClassName = className
-      ? `${fieldClassName} ${className}`
-      : fieldClassName;
 
     return (
       <div>
         <div className="flex items-center justify-between gap-3">
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-slate-700"
-          >
-            {label}
-          </label>
+          <Label htmlFor={inputId}>{label}</Label>
           {hint ? <div className="text-sm">{hint}</div> : null}
         </div>
-        <div className="relative">
-          <input
-            {...rest}
-            ref={ref}
-            id={inputId}
-            type={visible ? "text" : "password"}
-            spellCheck={spellCheck}
-            autoCorrect={autoCorrect}
-            autoCapitalize={autoCapitalize}
-            minLength={minLength}
-            required={required}
-            className={inputClassName}
-          />
-          <button
-            type="button"
-            onClick={() => setVisible((value) => !value)}
-            aria-label={visible ? "Hide password" : "Show password"}
-            aria-pressed={visible}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700"
-          >
-            <EyeIcon open={visible} />
-          </button>
-        </div>
+        <Input
+          {...rest}
+          ref={ref}
+          id={inputId}
+          type={visible ? "text" : "password"}
+          tone="auth"
+          spellCheck={spellCheck}
+          autoCorrect={autoCorrect}
+          autoCapitalize={autoCapitalize}
+          minLength={minLength}
+          required={required}
+          className={className}
+          endAdornment={
+            <button
+              type="button"
+              onClick={() => setVisible((value) => !value)}
+              aria-label={visible ? "Hide password" : "Show password"}
+              aria-pressed={visible}
+              className="flex items-center px-3 text-slate-500 hover:text-slate-700"
+            >
+              <EyeIcon open={visible} />
+            </button>
+          }
+        />
       </div>
     );
   },
