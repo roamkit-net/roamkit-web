@@ -195,7 +195,11 @@ describe("CatalogPriceDisplay", () => {
     );
     assert.match(html, /data-testid="catalog-price-dual"/);
     assert.match(html, /data-testid="catalog-price-list"/);
-    assert.match(html, /line-through/);
+    // Strike on the amount text node (not a flex ancestor — CSS quirk).
+    assert.match(
+      html,
+      /line-through[^>]*>57\.00 USDT|class="line-through"[^>]*>57\.00 USDT/,
+    );
     assert.match(html, /List price 57\.00 USDT/);
     assert.match(html, /Your price 54\.15 USDT/);
     assert.doesNotMatch(html, /Vaša cijena/);
