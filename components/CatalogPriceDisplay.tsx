@@ -57,6 +57,9 @@ export type CatalogPriceDisplayProps = {
 /**
  * Charge (and optional list strike) amount row.
  * Icon stays bound to the amount for RTL-friendly layout.
+ *
+ * Strike must live on the text node, not a flex ancestor — browsers often
+ * omit text-decoration through nested `inline-flex` formatting contexts.
  */
 function CatalogPriceContent({
   value,
@@ -64,12 +67,14 @@ function CatalogPriceContent({
   from,
   withIcon,
   iconSize = "sm",
+  struck = false,
 }: {
   value: string;
   symbol: string;
   from?: boolean;
   withIcon: boolean;
   iconSize?: TokenIconSize;
+  struck?: boolean;
 }) {
   return (
     <span
@@ -77,7 +82,7 @@ function CatalogPriceContent({
     >
       {from ? <span>from</span> : null}
       {withIcon ? <TokenIcon size={iconSize} /> : null}
-      <span>
+      <span className={struck ? "line-through" : undefined}>
         {value} {symbol}
       </span>
     </span>
@@ -136,7 +141,7 @@ function PriceBlock({
         title={title}
       >
         <span
-          className="text-sm font-normal text-slate-500 line-through"
+          className="text-sm font-normal text-slate-500"
           data-testid="catalog-price-list"
         >
           <span className="sr-only">{`List price ${listDisplay}`}</span>
@@ -145,6 +150,7 @@ function PriceBlock({
               value={listValue}
               symbol={listSymbol}
               withIcon={false}
+              struck
             />
           </span>
         </span>
