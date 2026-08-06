@@ -61,7 +61,8 @@ jobs:
           PRODUCTION_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY_PRODUCTION }}
           STAGING_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
           PRODUCTION_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID_PRODUCTION }}
-          ANDROID_LPA_DEEP_LINK: ${{ vars.NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK }}
+          STAGING_ANDROID_LPA_DEEP_LINK: ${{ vars.NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK }}
+          PRODUCTION_ANDROID_LPA_DEEP_LINK: ${{ vars.NEXT_PUBLIC_ANDROID_LPA_DEEP_LINK_PRODUCTION }}
         run: |
           set -euo pipefail
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
@@ -72,8 +73,8 @@ jobs:
             echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${PRODUCTION_SITE_KEY:-}"
             GOOGLE_CLIENT_ID="${PRODUCTION_GOOGLE_CLIENT_ID:-}"
-            # Never bake Android LPA deep link into production images.
-            ANDROID_LPA=""
+            # Production Android LPA CTA: explicit PRODUCTION var (empty = off / kill switch).
+            ANDROID_LPA="${PRODUCTION_ANDROID_LPA_DEEP_LINK:-}"
             # Fail closed if main would bake the staging sitekey.
             if [ -n "${STAGING_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${STAGING_SITE_KEY}" ]; then
               echo "ERROR: main must not bake staging Turnstile sitekey" >&2
@@ -95,7 +96,7 @@ jobs:
             echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${STAGING_SITE_KEY:-}"
             GOOGLE_CLIENT_ID="${STAGING_GOOGLE_CLIENT_ID:-}"
-            ANDROID_LPA="${ANDROID_LPA_DEEP_LINK:-}"
+            ANDROID_LPA="${STAGING_ANDROID_LPA_DEEP_LINK:-}"
             if [ -n "${PRODUCTION_SITE_KEY:-}" ] && [ -n "${SITE_KEY}" ] && [ "${SITE_KEY}" = "${PRODUCTION_SITE_KEY}" ]; then
               echo "ERROR: develop/non-main must not bake production Turnstile sitekey" >&2
               exit 1
