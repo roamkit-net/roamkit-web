@@ -56,8 +56,15 @@ type Draft = {
   remainingCount: string;
 };
 
-function usageModeFromDraft(draft: Draft): AutoTopupUsageMode {
-  if (!draft.remainingDataEnabled) {
+function usageTriggersAllowed(pkg: TopupPackage | undefined): boolean {
+  return pkg != null && !pkg.is_unlimited;
+}
+
+function usageModeFromDraft(
+  draft: Draft,
+  canUseRemainingData: boolean,
+): AutoTopupUsageMode {
+  if (!canUseRemainingData || !draft.remainingDataEnabled) {
     return "disabled";
   }
   return draft.usageKind;
@@ -173,6 +180,8 @@ export function AutoTopupControls({
   const [showSaved, setShowSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+  const expiryCheckboxRef = useRef<HTMLInputElement>(null);
+  const packageSelectRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -224,16 +233,41 @@ export function AutoTopupControls({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- topups[0]?.id covers list identity
   }, [esimId, topups[0]?.id]);
 
+  // Clear Remaining-data when selected package is (or becomes) unlimited —
+  // covers select change, policy load, and topups refetch/reload.
+  useEffect(() => {
+    const pkg = topups.find((item) => item.id === draft.packageId);
+    if (usageTriggersAllowed(pkg)) {
+      return;
+    }
+    setDraft((prev) => {
+      if (!prev.remainingDataEnabled) {
+        return prev;
+      }
+      queueMicrotask(() => {
+        const target =
+          expiryCheckboxRef.current ?? packageSelectRef.current;
+        target?.focus();
+      });
+      return { ...prev, remainingDataEnabled: false };
+    });
+  }, [draft.packageId, draft.remainingDataEnabled, topups]);
+
   if (topups.length === 0) {
     return null;
   }
 
   const banner = statusBanner(policy);
+  const selectedPackage = topups.find((pkg) => pkg.id === draft.packageId);
+  const canUseRemainingData = usageTriggersAllowed(selectedPackage);
+  const remainingDataActive =
+    canUseRemainingData && draft.remainingDataEnabled;
+  const hasValidCondition =
+    draft.expiryEnabled || remainingDataActive;
   const packageMissing =
-    Boolean(draft.packageId) &&
-    !topups.some((pkg) => pkg.id === draft.packageId);
-  const showOrHelper =
-    draft.expiryEnabled && draft.remainingDataEnabled;
+    Boolean(draft.packageId) && selectedPackage == null;
+  const showOrHelper = draft.expiryEnabled && remainingDataActive;
+  const saveBlockedForConditions = draft.enabled && !hasValidCondition;
 
   async function handleSave() {
     setError(null);
@@ -244,13 +278,9 @@ export function AutoTopupControls({
       return;
     }
 
-    const usageMode = usageModeFromDraft(draft);
-    if (
-      draft.enabled &&
-      !draft.expiryEnabled &&
-      usageMode === "disabled"
-    ) {
-      setError("Select at least one condition: expiry and/or remaining data.");
+    const usageMode = usageModeFromDraft(draft, canUseRemainingData);
+    if (draft.enabled && !hasValidCondition) {
+      setError("Select at least one condition.");
       return;
     }
 
@@ -394,6 +424,7 @@ export function AutoTopupControls({
               <Label htmlFor={`${formId}-package`}>Package</Label>
               <select
                 id={`${formId}-package`}
+                ref={packageSelectRef}
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 value={draft.packageId}
                 onChange={(event) =>
@@ -430,6 +461,7 @@ export function AutoTopupControls({
               </legend>
               <label className="flex items-start gap-2 text-sm text-slate-800">
                 <input
+                  ref={expiryCheckboxRef}
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                   checked={draft.expiryEnabled}
@@ -443,85 +475,95 @@ export function AutoTopupControls({
                 />
                 <span>Current plan expires</span>
               </label>
-              <div className="space-y-2">
-                <label className="flex items-start gap-2 text-sm text-slate-800">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                    checked={draft.remainingDataEnabled}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        remainingDataEnabled: event.target.checked,
-                      }))
-                    }
-                    disabled={isSaving}
-                  />
-                  <span>Remaining data</span>
-                </label>
-                {draft.remainingDataEnabled ? (
-                  <div className="ml-6 space-y-2">
-                    <label className="flex items-start gap-2 text-sm text-slate-800">
-                      <input
-                        type="radio"
-                        name={`${formId}-usage-kind`}
-                        className="mt-0.5"
-                        checked={draft.usageKind === "threshold"}
-                        onChange={() =>
-                          setDraft((prev) => ({
-                            ...prev,
-                            usageKind: "threshold",
-                          }))
-                        }
-                        disabled={isSaving}
-                      />
-                      <span>Below threshold</span>
-                    </label>
-                    {draft.usageKind === "threshold" ? (
-                      <Field className="ml-6">
-                        <Label htmlFor={`${formId}-threshold`}>
-                          Threshold (MB)
-                        </Label>
-                        <Input
-                          id={`${formId}-threshold`}
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={draft.thresholdMb}
-                          onChange={(event) =>
+              {canUseRemainingData ? (
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 text-sm text-slate-800">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                      checked={draft.remainingDataEnabled}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          remainingDataEnabled: event.target.checked,
+                        }))
+                      }
+                      disabled={isSaving}
+                    />
+                    <span>Remaining data</span>
+                  </label>
+                  {draft.remainingDataEnabled ? (
+                    <div className="ml-6 space-y-2">
+                      <label className="flex items-start gap-2 text-sm text-slate-800">
+                        <input
+                          type="radio"
+                          name={`${formId}-usage-kind`}
+                          className="mt-0.5"
+                          checked={draft.usageKind === "threshold"}
+                          onChange={() =>
                             setDraft((prev) => ({
                               ...prev,
-                              thresholdMb: event.target.value,
+                              usageKind: "threshold",
                             }))
                           }
                           disabled={isSaving}
                         />
-                        <HelpText>Default is 500 MB.</HelpText>
-                      </Field>
-                    ) : null}
-                    <label className="flex items-start gap-2 text-sm text-slate-800">
-                      <input
-                        type="radio"
-                        name={`${formId}-usage-kind`}
-                        className="mt-0.5"
-                        checked={draft.usageKind === "zero"}
-                        onChange={() =>
-                          setDraft((prev) => ({
-                            ...prev,
-                            usageKind: "zero",
-                          }))
-                        }
-                        disabled={isSaving}
-                      />
-                      <span>Reaches zero</span>
-                    </label>
-                  </div>
-                ) : null}
-              </div>
+                        <span>Below threshold</span>
+                      </label>
+                      {draft.usageKind === "threshold" ? (
+                        <Field className="ml-6">
+                          <Label htmlFor={`${formId}-threshold`}>
+                            Threshold (MB)
+                          </Label>
+                          <Input
+                            id={`${formId}-threshold`}
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={draft.thresholdMb}
+                            onChange={(event) =>
+                              setDraft((prev) => ({
+                                ...prev,
+                                thresholdMb: event.target.value,
+                              }))
+                            }
+                            disabled={isSaving}
+                          />
+                          <HelpText>Default is 500 MB.</HelpText>
+                        </Field>
+                      ) : null}
+                      <label className="flex items-start gap-2 text-sm text-slate-800">
+                        <input
+                          type="radio"
+                          name={`${formId}-usage-kind`}
+                          className="mt-0.5"
+                          checked={draft.usageKind === "zero"}
+                          onChange={() =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              usageKind: "zero",
+                            }))
+                          }
+                          disabled={isSaving}
+                        />
+                        <span>Reaches zero</span>
+                      </label>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <Alert variant="info" size="sm">
+                  This package is unlimited. Remaining-data triggers aren&apos;t
+                  available.
+                </Alert>
+              )}
               {showOrHelper ? (
                 <HelpText>
                   Auto top-up will occur when any selected condition is met.
                 </HelpText>
+              ) : null}
+              {saveBlockedForConditions ? (
+                <HelpText>Select at least one condition.</HelpText>
               ) : null}
             </fieldset>
 
@@ -601,7 +643,7 @@ export function AutoTopupControls({
           variant="secondary"
           size="sm"
           tone="app"
-          disabled={isSaving}
+          disabled={isSaving || saveBlockedForConditions}
           onClick={() => {
             void handleSave();
           }}
