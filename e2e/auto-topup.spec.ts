@@ -75,8 +75,19 @@ const mockTopups = {
       validity_days: 15,
       price_usd: "19.99",
     },
+    {
+      id: "topup-unlimited",
+      title: "Unlimited Top-up",
+      data_allowance: "Unlimited",
+      is_unlimited: true,
+      validity_days: 7,
+      price_usd: "14.99",
+    },
   ],
 };
+
+const unlimitedInfoCopy =
+  "This package is unlimited. Remaining-data triggers aren't available.";
 
 const mockPolicy = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -342,5 +353,150 @@ test.describe("eSIM auto top-up controls", () => {
       page.getByRole("heading", { name: "Auto top-up" }),
     ).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Buy" }).first()).toBeVisible();
+  });
+
+  test("hides Remaining data for unlimited package and restores on limited", async ({
+    page,
+  }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page);
+    await mockEsimDetailRoutes(page);
+
+    await page.route(isAutoTopupUrl, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Not found." }),
+      });
+    });
+
+    await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { name: "Auto top-up" }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page
+      .getByLabel("Enable auto top-up for a package below")
+      .check();
+    await page.getByLabel("Package", { exact: true }).selectOption("topup-pkg-1");
+    await page.getByLabel("Remaining data", { exact: true }).check();
+    await expect(page.getByLabel("Below threshold")).toBeVisible();
+
+    await page
+      .getByLabel("Package", { exact: true })
+      .selectOption("topup-unlimited");
+    await expect(
+      page.getByLabel("Remaining data", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText(unlimitedInfoCopy)).toBeVisible();
+    await expect(page.getByLabel("Current plan expires")).toBeVisible();
+
+    await page.getByLabel("Current plan expires").uncheck();
+    await expect(
+      page.getByRole("button", { name: "Save auto top-up" }),
+    ).toBeDisabled();
+    await expect(page.getByText("Select at least one condition.")).toBeVisible();
+
+    await page.getByLabel("Current plan expires").check();
+    await page
+      .getByLabel("Package", { exact: true })
+      .selectOption("topup-pkg-2");
+    await expect(
+      page.getByLabel("Remaining data", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Remaining data", { exact: true }),
+    ).not.toBeChecked();
+    await expect(page.getByText(unlimitedInfoCopy)).toHaveCount(0);
+  });
+
+  test("corrects stale usage policy when package is unlimited", async ({
+    page,
+  }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page);
+
+    const unlimitedTopups = {
+      results: [
+        {
+          id: "topup-pkg-1",
+          title: "1 GB Top-up (now unlimited)",
+          data_allowance: "Unlimited",
+          is_unlimited: true,
+          validity_days: 7,
+          price_usd: "9.99",
+        },
+      ],
+    };
+
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/usage/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          remaining_mb: 1000,
+          total_mb: 1000,
+          expired_at: null,
+          is_unlimited: false,
+          status: "active",
+          remaining_voice: 0,
+          remaining_text: 0,
+          total_voice: 0,
+          total_text: 0,
+        }),
+      });
+    });
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/topups/**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(unlimitedTopups),
+      });
+    });
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/`, async (route) => {
+      const url = route.request().url();
+      if (
+        url.includes("/auto-topup") ||
+        url.includes("/topups") ||
+        url.includes("/usage")
+      ) {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockEsim),
+      });
+    });
+
+    await page.route(isAutoTopupUrl, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...mockPolicy,
+          package_id: "topup-pkg-1",
+          expiry_enabled: true,
+          usage_mode: "threshold",
+          threshold_mb: 500,
+          version: 3,
+        }),
+      });
+    });
+
+    await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { name: "Auto top-up" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByLabel("Enable auto top-up for a package below")).toBeChecked();
+    await expect(
+      page.getByLabel("Remaining data", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText(unlimitedInfoCopy)).toBeVisible();
+    await expect(page.getByLabel("Current plan expires")).toBeChecked();
+    await expect(
+      page.getByRole("button", { name: "Save auto top-up" }),
+    ).toBeEnabled();
   });
 });
