@@ -9,6 +9,7 @@ import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
 import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
+import { AutoTopupControls } from "@/components/esim/AutoTopupControls";
 import { EsimNoteForm } from "@/components/esim/EsimNoteForm";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import {
@@ -754,6 +755,7 @@ export default function MyEsimDetailPage() {
                   ))}
                 </ul>
               )}
+              <AutoTopupControls esimId={esimId} topups={topups} />
             </CardSection>
           </Card>
         </div>

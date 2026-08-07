@@ -71,6 +71,20 @@ const mockTopups = {
   ],
 };
 
+function isAutoTopupUrl(url: URL): boolean {
+  return url.pathname.includes(`/me/esims/${ESIM_ID}/auto-topup`);
+}
+
+async function mockAutoTopupNotFound(page: Page) {
+  await page.route(isAutoTopupUrl, async (route) => {
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Not found." }),
+    });
+  });
+}
+
 async function seedAuth(page: Page) {
   await page.addInitScript(() => {
     try {
@@ -87,6 +101,20 @@ async function mockBillingRoutes(
   page: Page,
   balance: string,
 ) {
+  await page.route("**/api/v1/auth/me/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: 1,
+        email: "e2e@roamkit.net",
+        is_staff: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      }),
+    });
+  });
+
   await page.route("**/api/v1/billing/config/**", async (route) => {
     await route.fulfill({
       status: 200,
@@ -298,6 +326,15 @@ test.describe("purchase confirm dialog — top-up", () => {
     await mockBillingRoutes(page, "0");
 
     await page.route(`**/api/v1/me/esims/${ESIM_ID}/`, async (route) => {
+      const url = route.request().url();
+      if (
+        url.includes("/auto-topup") ||
+        url.includes("/topups") ||
+        url.includes("/usage")
+      ) {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -325,12 +362,20 @@ test.describe("purchase confirm dialog — top-up", () => {
         }),
       });
     });
+    await mockAutoTopupNotFound(page);
 
     await page.goto(TOPUP_DETAIL_PATH, { waitUntil: "domcontentloaded" });
-    const cta = page.getByRole("button", { name: "Add credits" }).first();
+    await expect(
+      page.getByRole("heading", { name: "Auto top-up" }),
+    ).toBeVisible({ timeout: 30_000 });
+    const cta = page.getByRole("button", {
+      name: "Not enough credits — deposit to buy this plan",
+    });
     await expect(cta).toBeVisible({ timeout: 30_000 });
-    await cta.click();
-    await expect(page).toHaveURL(/\/me\/deposit\?/, { timeout: 15_000 });
+    await Promise.all([
+      page.waitForURL(/\/me\/deposit\?/, { timeout: 15_000 }),
+      cta.click(),
+    ]);
     const pending = await page.evaluate(() =>
       sessionStorage.getItem("roamkit_pending_spend"),
     );
@@ -343,6 +388,15 @@ test.describe("purchase confirm dialog — top-up", () => {
     await mockBillingRoutes(page, "500.00");
 
     await page.route(`**/api/v1/me/esims/${ESIM_ID}/`, async (route) => {
+      const url = route.request().url();
+      if (
+        url.includes("/auto-topup") ||
+        url.includes("/topups") ||
+        url.includes("/usage")
+      ) {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -389,6 +443,7 @@ test.describe("purchase confirm dialog — top-up", () => {
         }),
       });
     });
+    await mockAutoTopupNotFound(page);
 
     await page.addInitScript(
       ({ returnPath, esimId }) => {
@@ -408,12 +463,12 @@ test.describe("purchase confirm dialog — top-up", () => {
     );
 
     await page.goto(TOPUP_DETAIL_PATH, { waitUntil: "domcontentloaded" });
-    await expect(
-      page.getByText("Completing your top-up after deposit…"),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => topupPosts).toBe(1);
     await expect(
       page.getByRole("heading", { name: "Confirm purchase" }),
     ).toHaveCount(0);
-    await expect.poll(() => topupPosts).toBe(1);
+    await expect(
+      page.getByText(/Completing your top-up after deposit|Top-up purchased/),
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

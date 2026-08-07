@@ -1,5 +1,9 @@
 import { clearPendingDeposit } from "@/lib/billing/pendingDeposit";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
+import type {
+  AutoTopupPolicy,
+  AutoTopupPolicyWrite,
+} from "@/types/autoTopup";
 
 const DEFAULT_API_URL = "http://localhost:8000";
 
@@ -885,6 +889,46 @@ export async function fetchMyEsimTopups(
   id: number | string,
 ): Promise<{ results: TopupPackage[] }> {
   return fetchApi<{ results: TopupPackage[] }>(`/api/v1/me/esims/${id}/topups/`, {
+    auth: true,
+    cache: "no-store",
+  });
+}
+
+export async function fetchMyEsimAutoTopup(
+  id: number | string,
+): Promise<AutoTopupPolicy> {
+  return fetchApi<AutoTopupPolicy>(`/api/v1/me/esims/${id}/auto-topup/`, {
+    auth: true,
+    cache: "no-store",
+  });
+}
+
+export async function putMyEsimAutoTopup(
+  id: number | string,
+  body: AutoTopupPolicyWrite,
+  options?: { ifMatch?: number | null },
+): Promise<AutoTopupPolicy> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (options?.ifMatch != null) {
+    headers["If-Match"] = String(options.ifMatch);
+  }
+  return fetchApi<AutoTopupPolicy>(`/api/v1/me/esims/${id}/auto-topup/`, {
+    method: "PUT",
+    auth: true,
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+}
+
+export async function deleteMyEsimAutoTopup(
+  id: number | string,
+  version: number,
+): Promise<void> {
+  await fetchApi(`/api/v1/me/esims/${id}/auto-topup/?version=${version}`, {
+    method: "DELETE",
     auth: true,
     cache: "no-store",
   });
