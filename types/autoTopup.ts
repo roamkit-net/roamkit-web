@@ -1,9 +1,6 @@
-/** Auto top-up policy types (me API). */
+/** Auto top-up policy types (me API v2). */
 
-export type AutoTopupTriggerMode =
-  | "usage_zero"
-  | "usage_threshold"
-  | "expiry";
+export type AutoTopupUsageMode = "disabled" | "threshold" | "zero";
 
 export type AutoTopupRenewMode = "until_funds" | "fixed_count";
 
@@ -19,7 +16,8 @@ export type AutoTopupPolicy = {
   enabled: boolean;
   status: AutoTopupStatus;
   reason: string;
-  trigger_mode: AutoTopupTriggerMode;
+  expiry_enabled: boolean;
+  usage_mode: AutoTopupUsageMode;
   threshold_mb: number | null;
   renew_mode: AutoTopupRenewMode;
   remaining_count: number | null;
@@ -33,7 +31,8 @@ export type AutoTopupPolicy = {
 export type AutoTopupPolicyWrite = {
   package_id: string;
   enabled: boolean;
-  trigger_mode: AutoTopupTriggerMode;
+  expiry_enabled: boolean;
+  usage_mode: AutoTopupUsageMode;
   threshold_mb?: number | null;
   renew_mode: AutoTopupRenewMode;
   remaining_count?: number | null;

@@ -84,7 +84,8 @@ const mockPolicy = {
   enabled: true,
   status: "active",
   reason: "",
-  trigger_mode: "expiry",
+  expiry_enabled: true,
+  usage_mode: "disabled",
   threshold_mb: null,
   renew_mode: "until_funds",
   remaining_count: null,
@@ -192,9 +193,7 @@ function isAutoTopupUrl(url: URL): boolean {
 }
 
 test.describe("eSIM auto top-up controls", () => {
-  test("creates policy via PUT with selected package and trigger", async ({
-    page,
-  }) => {
+  test("creates policy via PUT with usage_mode zero", async ({ page }) => {
     await seedAuth(page);
     await mockBillingRoutes(page);
     await mockEsimDetailRoutes(page);
@@ -212,21 +211,27 @@ test.describe("eSIM auto top-up controls", () => {
       if (method === "PUT") {
         const body = route.request().postDataJSON() as {
           package_id: string;
-          trigger_mode: string;
+          expiry_enabled: boolean;
+          usage_mode: string;
           renew_mode: string;
           enabled: boolean;
         };
         expect(body.package_id).toBe("topup-pkg-2");
-        expect(body.trigger_mode).toBe("usage_zero");
+        expect(body.expiry_enabled).toBe(false);
+        expect(body.usage_mode).toBe("zero");
         expect(body.renew_mode).toBe("until_funds");
         expect(body.enabled).toBe(true);
+        expect(
+          Object.prototype.hasOwnProperty.call(body, "trigger_mode"),
+        ).toBe(false);
         await route.fulfill({
           status: 201,
           contentType: "application/json",
           body: JSON.stringify({
             ...mockPolicy,
             package_id: body.package_id,
-            trigger_mode: body.trigger_mode,
+            expiry_enabled: body.expiry_enabled,
+            usage_mode: body.usage_mode,
             renew_mode: body.renew_mode,
             version: 0,
           }),
@@ -248,9 +253,9 @@ test.describe("eSIM auto top-up controls", () => {
       .getByLabel("Enable auto top-up for a package below")
       .check();
     await page.getByLabel("Package", { exact: true }).selectOption("topup-pkg-2");
-    await page
-      .getByLabel("When remaining data reaches 0")
-      .check();
+    await page.getByLabel("Current plan expires").uncheck();
+    await page.getByLabel("Remaining data", { exact: true }).check();
+    await page.getByLabel("Reaches zero").check();
     await page.getByRole("button", { name: "Save auto top-up" }).click();
 
     await expect(page.getByText("Auto top-up saved.")).toBeVisible({
@@ -258,6 +263,38 @@ test.describe("eSIM auto top-up controls", () => {
     });
     await expect(
       page.getByText("Auto top-up is on for this eSIM."),
+    ).toBeVisible();
+  });
+
+  test("shows OR helper when expiry and remaining data are both selected", async ({
+    page,
+  }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page);
+    await mockEsimDetailRoutes(page);
+
+    await page.route(isAutoTopupUrl, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Not found." }),
+      });
+    });
+
+    await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { name: "Auto top-up" }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page
+      .getByLabel("Enable auto top-up for a package below")
+      .check();
+    await expect(page.getByLabel("Current plan expires")).toBeChecked();
+    await page.getByLabel("Remaining data", { exact: true }).check();
+    await expect(
+      page.getByText(
+        "Auto top-up will occur when any selected condition is met.",
+      ),
     ).toBeVisible();
   });
 
