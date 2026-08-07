@@ -21,7 +21,7 @@ import {
 import type {
   AutoTopupPolicy,
   AutoTopupRenewMode,
-  AutoTopupTriggerMode,
+  AutoTopupUsageMode,
 } from "@/types/autoTopup";
 
 const DEFAULT_THRESHOLD_MB = 500;
@@ -46,11 +46,22 @@ type AutoTopupControlsProps = {
 type Draft = {
   enabled: boolean;
   packageId: string;
-  triggerMode: AutoTopupTriggerMode;
+  expiryEnabled: boolean;
+  /** UI: remaining-data condition selected (maps to usage_mode ≠ disabled). */
+  remainingDataEnabled: boolean;
+  /** threshold | zero when remainingDataEnabled; ignored otherwise. */
+  usageKind: "threshold" | "zero";
   thresholdMb: string;
   renewMode: AutoTopupRenewMode;
   remainingCount: string;
 };
+
+function usageModeFromDraft(draft: Draft): AutoTopupUsageMode {
+  if (!draft.remainingDataEnabled) {
+    return "disabled";
+  }
+  return draft.usageKind;
+}
 
 function draftFromPolicy(
   policy: AutoTopupPolicy | null,
@@ -60,16 +71,22 @@ function draftFromPolicy(
     return {
       enabled: false,
       packageId: fallbackPackageId,
-      triggerMode: "expiry",
+      expiryEnabled: true,
+      remainingDataEnabled: false,
+      usageKind: "threshold",
       thresholdMb: String(DEFAULT_THRESHOLD_MB),
       renewMode: "until_funds",
       remainingCount: String(DEFAULT_REMAINING_COUNT),
     };
   }
+  const usageMode = policy.usage_mode;
+  const remainingDataEnabled = usageMode !== "disabled";
   return {
     enabled: policy.enabled && policy.status !== "disabled",
     packageId: policy.package_id,
-    triggerMode: policy.trigger_mode,
+    expiryEnabled: policy.expiry_enabled,
+    remainingDataEnabled,
+    usageKind: usageMode === "zero" ? "zero" : "threshold",
     thresholdMb: String(policy.threshold_mb ?? DEFAULT_THRESHOLD_MB),
     renewMode: policy.renew_mode,
     remainingCount: String(
@@ -118,6 +135,13 @@ function formatApiError(error: unknown, fallback: string): string {
     return "Auto top-up is not available yet.";
   }
   if (error.status === 409) {
+    const body = error.body;
+    if (body && typeof body === "object") {
+      const record = body as Record<string, unknown>;
+      if (record.code === "SPEND_IN_PROGRESS") {
+        return "A top-up is still in progress. Try again in a moment.";
+      }
+    }
     return "This policy changed elsewhere. Reload and try again.";
   }
   if (error.status === 403) {
@@ -208,6 +232,8 @@ export function AutoTopupControls({
   const packageMissing =
     Boolean(draft.packageId) &&
     !topups.some((pkg) => pkg.id === draft.packageId);
+  const showOrHelper =
+    draft.expiryEnabled && draft.remainingDataEnabled;
 
   async function handleSave() {
     setError(null);
@@ -218,12 +244,22 @@ export function AutoTopupControls({
       return;
     }
 
+    const usageMode = usageModeFromDraft(draft);
+    if (
+      draft.enabled &&
+      !draft.expiryEnabled &&
+      usageMode === "disabled"
+    ) {
+      setError("Select at least one condition: expiry and/or remaining data.");
+      return;
+    }
+
     const thresholdMb =
-      draft.triggerMode === "usage_threshold"
+      usageMode === "threshold"
         ? Number.parseInt(draft.thresholdMb, 10)
         : null;
     if (
-      draft.triggerMode === "usage_threshold" &&
+      usageMode === "threshold" &&
       (!Number.isFinite(thresholdMb) || (thresholdMb as number) < 1)
     ) {
       setError("Enter a threshold of at least 1 MB.");
@@ -255,7 +291,8 @@ export function AutoTopupControls({
         const body = {
           package_id: draft.packageId,
           enabled: true,
-          trigger_mode: draft.triggerMode,
+          expiry_enabled: draft.expiryEnabled,
+          usage_mode: usageMode,
           threshold_mb: thresholdMb,
           renew_mode: draft.renewMode,
           remaining_count: remainingCount,
@@ -387,59 +424,106 @@ export function AutoTopupControls({
               )}
             </Field>
 
-            <fieldset className="space-y-2">
+            <fieldset className="space-y-3">
               <legend className="text-sm font-medium text-slate-900">
-                Trigger
+                When to auto top-up
               </legend>
-              {(
-                [
-                  ["expiry", "When the current plan expires"],
-                  ["usage_threshold", "When remaining data is below threshold"],
-                  ["usage_zero", "When remaining data reaches 0"],
-                ] as const
-              ).map(([value, label]) => (
-                <label
-                  key={value}
-                  className="flex items-start gap-2 text-sm text-slate-800"
-                >
-                  <input
-                    type="radio"
-                    name={`${formId}-trigger`}
-                    className="mt-0.5"
-                    checked={draft.triggerMode === value}
-                    onChange={() =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        triggerMode: value,
-                      }))
-                    }
-                    disabled={isSaving}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </fieldset>
-
-            {draft.triggerMode === "usage_threshold" ? (
-              <Field>
-                <Label htmlFor={`${formId}-threshold`}>Threshold (MB)</Label>
-                <Input
-                  id={`${formId}-threshold`}
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={draft.thresholdMb}
+              <label className="flex items-start gap-2 text-sm text-slate-800">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  checked={draft.expiryEnabled}
                   onChange={(event) =>
                     setDraft((prev) => ({
                       ...prev,
-                      thresholdMb: event.target.value,
+                      expiryEnabled: event.target.checked,
                     }))
                   }
                   disabled={isSaving}
                 />
-                <HelpText>Default is 500 MB.</HelpText>
-              </Field>
-            ) : null}
+                <span>Current plan expires</span>
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm text-slate-800">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    checked={draft.remainingDataEnabled}
+                    onChange={(event) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        remainingDataEnabled: event.target.checked,
+                      }))
+                    }
+                    disabled={isSaving}
+                  />
+                  <span>Remaining data</span>
+                </label>
+                {draft.remainingDataEnabled ? (
+                  <div className="ml-6 space-y-2">
+                    <label className="flex items-start gap-2 text-sm text-slate-800">
+                      <input
+                        type="radio"
+                        name={`${formId}-usage-kind`}
+                        className="mt-0.5"
+                        checked={draft.usageKind === "threshold"}
+                        onChange={() =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            usageKind: "threshold",
+                          }))
+                        }
+                        disabled={isSaving}
+                      />
+                      <span>Below threshold</span>
+                    </label>
+                    {draft.usageKind === "threshold" ? (
+                      <Field className="ml-6">
+                        <Label htmlFor={`${formId}-threshold`}>
+                          Threshold (MB)
+                        </Label>
+                        <Input
+                          id={`${formId}-threshold`}
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={draft.thresholdMb}
+                          onChange={(event) =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              thresholdMb: event.target.value,
+                            }))
+                          }
+                          disabled={isSaving}
+                        />
+                        <HelpText>Default is 500 MB.</HelpText>
+                      </Field>
+                    ) : null}
+                    <label className="flex items-start gap-2 text-sm text-slate-800">
+                      <input
+                        type="radio"
+                        name={`${formId}-usage-kind`}
+                        className="mt-0.5"
+                        checked={draft.usageKind === "zero"}
+                        onChange={() =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            usageKind: "zero",
+                          }))
+                        }
+                        disabled={isSaving}
+                      />
+                      <span>Reaches zero</span>
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+              {showOrHelper ? (
+                <HelpText>
+                  Auto top-up will occur when any selected condition is met.
+                </HelpText>
+              ) : null}
+            </fieldset>
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-slate-900">
