@@ -36,6 +36,17 @@ describe("Cap3.3a /me/esims Golden Route", () => {
     assert.match(source, /ListSkeleton/);
   });
 
+  it("groups list into Active / Expired / Archived with Archive and Restore", () => {
+    assert.match(source, /title="Active"/);
+    assert.match(source, /title="Expired"/);
+    assert.match(source, /title="Archived"/);
+    assert.match(source, /Archive/);
+    assert.match(source, /Restore/);
+    assert.match(source, /includeArchived:\s*true/);
+    assert.match(source, /archiveMyEsim/);
+    assert.match(source, /unarchiveMyEsim/);
+  });
+
   it("does not introduce a local layout wrapper class", () => {
     assert.doesNotMatch(source, /className="[^"]*min-h-screen/);
     assert.doesNotMatch(source, /bg-slate-50/);

@@ -20,16 +20,19 @@ import {
   ApiError,
   Esim,
   User,
+  archiveMyEsim,
   clearTokens,
   fetchMe,
   fetchMyEsims,
   flagImageUrl,
   isAuthenticated,
+  unarchiveMyEsim,
 } from "@/lib/api";
 import {
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
+  partitionMyEsims,
   truncateNote,
 } from "@/lib/esim/display";
 import { needsSetup } from "@/lib/esim/telemetry";
@@ -51,12 +54,151 @@ function formatUsage(esim: Esim): string {
   return `${esim.usage_remaining_mb} / ${esim.usage_total_mb} MB`;
 }
 
+type RowAction = "archive" | "restore";
+
+function EsimListRow({
+  esim,
+  action,
+  pending,
+  onAction,
+}: {
+  esim: Esim;
+  action?: RowAction;
+  pending: boolean;
+  onAction?: (esim: Esim) => void;
+}) {
+  const destination = esimDestinationLabel(esim);
+  const validity = esimValidityLabel(esim);
+  const statusLabel = formatEsimStatus(esim.status);
+  const notePreview = truncateNote(esim.note);
+  const flagSrc = esim.country_code
+    ? flagImageUrl(esim.country_code)
+    : null;
+  const href = needsSetup(esim)
+    ? `/me/esims/${esim.id}/setup`
+    : `/me/esims/${esim.id}`;
+
+  return (
+    <li>
+      <div className={listRowClassName({ interactive: true })}>
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-4 outline-none"
+        >
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
+            {flagSrc ? (
+              <Image
+                src={flagSrc}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="40px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
+                {destination.slice(0, 2)}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h2 className="text-base font-semibold text-slate-900">
+                {destination}
+              </h2>
+              {validity ? (
+                <span className="text-sm text-slate-600">{validity}</span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 truncate text-sm text-slate-500">
+              {esim.data_allowance
+                ? `${esim.data_allowance} · ${formatUsage(esim)}`
+                : formatUsage(esim)}
+            </p>
+            {notePreview ? (
+              <p className="mt-0.5 truncate text-sm text-slate-500">
+                {notePreview}
+              </p>
+            ) : null}
+          </div>
+        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {action && onAction ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onAction(esim)}
+              className={buttonClassName({
+                variant: "ghost",
+                size: "sm",
+                tone: "app",
+                className: "shrink-0",
+              })}
+            >
+              {pending
+                ? action === "archive"
+                  ? "Archiving…"
+                  : "Restoring…"
+                : action === "archive"
+                  ? "Archive"
+                  : "Restore"}
+            </button>
+          ) : null}
+          <Badge variant="default" className="shrink-0">
+            {statusLabel}
+          </Badge>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function EsimSection({
+  title,
+  esims,
+  action,
+  pendingId,
+  onAction,
+}: {
+  title: string;
+  esims: Esim[];
+  action?: RowAction;
+  pendingId: number | null;
+  onAction?: (esim: Esim) => void;
+}) {
+  if (esims.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="grid gap-3">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--app-chrome-text-muted)]">
+        {title}
+      </h2>
+      <ul className="grid gap-3">
+        {esims.map((esim) => (
+          <EsimListRow
+            key={esim.id}
+            esim={esim}
+            action={action}
+            pending={pendingId === esim.id}
+            onAction={onAction}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function MyEsimsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [esims, setEsims] = useState<Esim[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const sections = partitionMyEsims(esims);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -70,7 +212,10 @@ export default function MyEsimsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [me, list] = await Promise.all([fetchMe(), fetchMyEsims()]);
+        const [me, list] = await Promise.all([
+          fetchMe(),
+          fetchMyEsims({ includeArchived: true }),
+        ]);
         if (cancelled) {
           return;
         }
@@ -102,6 +247,46 @@ export default function MyEsimsPage() {
       cancelled = true;
     };
   }, [router]);
+
+  async function handleArchive(esim: Esim) {
+    setPendingId(esim.id);
+    setActionError(null);
+    try {
+      const updated = await archiveMyEsim(esim.id);
+      setEsims((prev) =>
+        prev.map((row) => (row.id === updated.id ? updated : row)),
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        clearTokens();
+        router.replace(loginHref("/me/esims"));
+        return;
+      }
+      setActionError("Unable to archive this eSIM right now.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleRestore(esim: Esim) {
+    setPendingId(esim.id);
+    setActionError(null);
+    try {
+      const updated = await unarchiveMyEsim(esim.id);
+      setEsims((prev) =>
+        prev.map((row) => (row.id === updated.id ? updated : row)),
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        clearTokens();
+        router.replace(loginHref("/me/esims"));
+        return;
+      }
+      setActionError("Unable to restore this eSIM right now.");
+    } finally {
+      setPendingId(null);
+    }
+  }
 
   return (
     <AppShell
@@ -191,71 +376,30 @@ export default function MyEsimsPage() {
           </CardSection>
         </Card>
       ) : (
-        <ul className="grid gap-3">
-          {esims.map((esim) => {
-            const destination = esimDestinationLabel(esim);
-            const validity = esimValidityLabel(esim);
-            const statusLabel = formatEsimStatus(esim.status);
-            const notePreview = truncateNote(esim.note);
-            const flagSrc = esim.country_code
-              ? flagImageUrl(esim.country_code)
-              : null;
-
-            return (
-              <li key={esim.id}>
-                <Link
-                  href={
-                    needsSetup(esim)
-                      ? `/me/esims/${esim.id}/setup`
-                      : `/me/esims/${esim.id}`
-                  }
-                  className={listRowClassName({ interactive: true })}
-                >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
-                    {flagSrc ? (
-                      <Image
-                        src={flagSrc}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
-                        {destination.slice(0, 2)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <h2 className="text-base font-semibold text-slate-900">
-                        {destination}
-                      </h2>
-                      {validity ? (
-                        <span className="text-sm text-slate-600">
-                          {validity}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 truncate text-sm text-slate-500">
-                      {esim.data_allowance
-                        ? `${esim.data_allowance} · ${formatUsage(esim)}`
-                        : formatUsage(esim)}
-                    </p>
-                    {notePreview ? (
-                      <p className="mt-0.5 truncate text-sm text-slate-500">
-                        {notePreview}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Badge variant="default" className="shrink-0">
-                    {statusLabel}
-                  </Badge>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="grid gap-8">
+          {actionError ? (
+            <Alert variant="warning" title={actionError} />
+          ) : null}
+          <EsimSection
+            title="Active"
+            esims={sections.active}
+            pendingId={pendingId}
+          />
+          <EsimSection
+            title="Expired"
+            esims={sections.expired}
+            action="archive"
+            pendingId={pendingId}
+            onAction={handleArchive}
+          />
+          <EsimSection
+            title="Archived"
+            esims={sections.archived}
+            action="restore"
+            pendingId={pendingId}
+            onAction={handleRestore}
+          />
+        </div>
       )}
     </AppShell>
   );
