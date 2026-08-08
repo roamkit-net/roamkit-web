@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { ApiError, setTokens } from "@/lib/api";
 import {
   acceptOrganizationInvite,
+  createOrganization,
   createOrganizationInvite,
   listOrganizations,
 } from "@/lib/org/client";
@@ -35,6 +36,46 @@ describe("org API client", () => {
     assert.deepEqual(result, []);
     assert.match(calledPath, /\/api\/v1\/orgs\/$/);
     assert.equal(auth, "Bearer test-access");
+  });
+
+  it("createOrganization POSTs trimmed name payload", async () => {
+    let method = "";
+    let body = "";
+    globalThis.fetch = async (input, init) => {
+      method = String(init?.method ?? "GET");
+      body = String(init?.body ?? "");
+      assert.match(String(input), /\/api\/v1\/orgs\/$/);
+      return new Response(
+        JSON.stringify({
+          id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          name: "Fleet",
+          status: "active",
+          account_id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+          my_role: "owner",
+          permissions: {
+            can_view: true,
+            can_spend: true,
+            can_manage_members: true,
+            can_invite: true,
+            can_transfer_ownership: true,
+            can_archive_org: true,
+            can_assign_esim: true,
+            can_device_bind: true,
+          },
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    };
+
+    const org = await createOrganization("Fleet");
+    assert.equal(method, "POST");
+    assert.equal(body, JSON.stringify({ name: "Fleet" }));
+    assert.equal(org.my_role, "owner");
   });
 
   it("createOrganizationInvite returns one-shot token from response body", async () => {

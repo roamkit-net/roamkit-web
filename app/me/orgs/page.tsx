@@ -106,17 +106,30 @@ export default function OrganizationsPage() {
           </p>
         }
         actions={
-          <Link
-            href={routes.orgInviteAccept}
-            className={buttonClassName({
-              variant: "secondary",
-              size: "sm",
-              tone: "app",
-            })}
-            data-testid="orgs-accept-cta"
-          >
-            Accept invite
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={routes.orgCreate}
+              className={buttonClassName({
+                variant: "primary",
+                size: "sm",
+                tone: "app",
+              })}
+              data-testid="orgs-create-cta"
+            >
+              Create organization
+            </Link>
+            <Link
+              href={routes.orgInviteAccept}
+              className={buttonClassName({
+                variant: "secondary",
+                size: "sm",
+                tone: "app",
+              })}
+              data-testid="orgs-accept-cta"
+            >
+              Accept invite
+            </Link>
+          </div>
         }
       />
 
@@ -129,18 +142,31 @@ export default function OrganizationsPage() {
           <CardSection padding="lg">
             <Empty
               title="No organizations yet"
-              description="When someone invites you, accept the invite token to join a team."
+              description="Create a team to invite members, or accept an invite token you already have."
               action={
-                <Link
-                  href={routes.orgInviteAccept}
-                  className={buttonClassName({
-                    variant: "primary",
-                    size: "sm",
-                    tone: "app",
-                  })}
-                >
-                  Accept invite
-                </Link>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href={routes.orgCreate}
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "sm",
+                      tone: "app",
+                    })}
+                    data-testid="orgs-create-cta-empty"
+                  >
+                    Create organization
+                  </Link>
+                  <Link
+                    href={routes.orgInviteAccept}
+                    className={buttonClassName({
+                      variant: "secondary",
+                      size: "sm",
+                      tone: "app",
+                    })}
+                  >
+                    Accept invite
+                  </Link>
+                </div>
               }
             />
           </CardSection>

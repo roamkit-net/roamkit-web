@@ -29,6 +29,24 @@ export async function listOrganizations(
   }
 }
 
+/** POST /api/v1/orgs/ — creates org + team Account + owner membership. */
+export async function createOrganization(
+  name: string,
+  options?: OrgRequestOptions,
+): Promise<Organization> {
+  try {
+    return await fetchApi<Organization>("/api/v1/orgs/", {
+      method: "POST",
+      ...NO_STORE,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+      signal: options?.signal,
+    });
+  } catch (error) {
+    rethrowOrgApiError(error, "Unable to create organization.");
+  }
+}
+
 /** GET /api/v1/orgs/{id}/ */
 export async function getOrganization(
   organizationId: string,
