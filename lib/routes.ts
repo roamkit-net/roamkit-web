@@ -8,6 +8,7 @@ export const routes = {
   deposit: "/me/deposit",
   esims: "/me/esims",
   orgs: "/me/orgs",
+  orgCreate: "/me/orgs/new",
   orgInviteAccept: "/me/orgs/invites/accept",
   adminDashboard: "/admin/dashboard",
   adminMembers: "/admin/members",
