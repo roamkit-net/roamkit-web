@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { canInvite, hasPermission } from "@/lib/org/permissions";
+import {
+  canInvite,
+  canManageMembers,
+  hasPermission,
+} from "@/lib/org/permissions";
 import type { Organization, OrgPermissions } from "@/types/org";
 
 function perms(overrides: Partial<OrgPermissions> = {}): OrgPermissions {
@@ -36,6 +40,17 @@ describe("org permissions UX gates", () => {
     assert.equal(canInvite(org(perms({ can_invite: true }))), true);
     assert.equal(canInvite(org(perms({ can_invite: false }))), false);
     assert.equal(canInvite(null), false);
+  });
+
+  it("canManageMembers is true only when permissions.can_manage_members", () => {
+    assert.equal(
+      canManageMembers(org(perms({ can_manage_members: true }))),
+      true,
+    );
+    assert.equal(
+      canManageMembers(org(perms({ can_manage_members: false }))),
+      false,
+    );
   });
 
   it("hasPermission reads a single flag", () => {

@@ -80,6 +80,49 @@ export async function listOrganizationMembers(
   }
 }
 
+/** PATCH /api/v1/orgs/{id}/members/{membershipId}/ */
+export async function updateOrganizationMemberRole(
+  organizationId: string,
+  membershipId: string,
+  role: "admin" | "member" | "viewer",
+  options?: OrgRequestOptions,
+): Promise<Membership> {
+  try {
+    return await fetchApi<Membership>(
+      `/api/v1/orgs/${organizationId}/members/${membershipId}/`,
+      {
+        method: "PATCH",
+        ...NO_STORE,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+        signal: options?.signal,
+      },
+    );
+  } catch (error) {
+    rethrowOrgApiError(error, "Unable to update member role.");
+  }
+}
+
+/** POST /api/v1/orgs/{id}/members/{membershipId}/revoke/ */
+export async function revokeOrganizationMember(
+  organizationId: string,
+  membershipId: string,
+  options?: OrgRequestOptions,
+): Promise<Membership> {
+  try {
+    return await fetchApi<Membership>(
+      `/api/v1/orgs/${organizationId}/members/${membershipId}/revoke/`,
+      {
+        method: "POST",
+        ...NO_STORE,
+        signal: options?.signal,
+      },
+    );
+  } catch (error) {
+    rethrowOrgApiError(error, "Unable to revoke membership.");
+  }
+}
+
 /** GET /api/v1/orgs/{id}/invites/ */
 export async function listPendingInvites(
   organizationId: string,

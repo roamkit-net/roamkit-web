@@ -7,6 +7,8 @@ import {
   createOrganization,
   createOrganizationInvite,
   listOrganizations,
+  revokeOrganizationMember,
+  updateOrganizationMemberRole,
 } from "@/lib/org/client";
 
 const originalFetch = globalThis.fetch;
@@ -111,6 +113,70 @@ describe("org API client", () => {
     );
     assert.equal(result.token, "plaintext-token-once");
     assert.equal(result.created, true);
+  });
+
+  it("updateOrganizationMemberRole PATCHes role", async () => {
+    let method = "";
+    let body = "";
+    globalThis.fetch = async (input, init) => {
+      method = String(init?.method ?? "GET");
+      body = String(init?.body ?? "");
+      assert.match(String(input), /\/members\/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb\/$/);
+      return new Response(
+        JSON.stringify({
+          id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          user_id: 2,
+          user_email: "m@example.com",
+          role: "admin",
+          status: "active",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    };
+
+    const row = await updateOrganizationMemberRole(
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "admin",
+    );
+    assert.equal(method, "PATCH");
+    assert.equal(body, JSON.stringify({ role: "admin" }));
+    assert.equal(row.role, "admin");
+  });
+
+  it("revokeOrganizationMember POSTs revoke", async () => {
+    let method = "";
+    globalThis.fetch = async (input, init) => {
+      method = String(init?.method ?? "GET");
+      assert.match(String(input), /\/revoke\/$/);
+      return new Response(
+        JSON.stringify({
+          id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          user_id: 2,
+          user_email: "m@example.com",
+          role: "member",
+          status: "revoked",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    };
+
+    const row = await revokeOrganizationMember(
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    );
+    assert.equal(method, "POST");
+    assert.equal(row.status, "revoked");
   });
 
   it("acceptOrganizationInvite posts token to accept endpoint", async () => {
