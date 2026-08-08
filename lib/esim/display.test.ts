@@ -6,6 +6,7 @@ import {
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
+  partitionMyEsims,
   truncateNote,
 } from "@/lib/esim/display";
 
@@ -28,6 +29,7 @@ function baseEsim(overrides: Partial<Esim> = {}): Esim {
     usage_is_unlimited: null,
     usage_expired_at: null,
     usage_synced_at: null,
+    archived_at: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -73,5 +75,57 @@ describe("esim display helpers", () => {
       `${"x".repeat(48)}…`,
     );
     assert.equal(truncateNote("  short  "), "short");
+  });
+
+  it("partitions Active / Expired / Archived with locked sort", () => {
+    const sections = partitionMyEsims([
+      baseEsim({
+        id: 1,
+        status: "in_use",
+        issued_at: "2026-01-01T00:00:00Z",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+      baseEsim({
+        id: 2,
+        status: "exhausted",
+        issued_at: "2026-02-01T00:00:00Z",
+        created_at: "2026-02-01T00:00:00Z",
+      }),
+      baseEsim({
+        id: 3,
+        status: "expired",
+        usage_expired_at: "2026-03-01T00:00:00Z",
+        issued_at: "2026-01-15T00:00:00Z",
+      }),
+      baseEsim({
+        id: 4,
+        status: "expired",
+        usage_expired_at: "2026-04-01T00:00:00Z",
+        issued_at: "2026-01-10T00:00:00Z",
+      }),
+      baseEsim({
+        id: 5,
+        status: "expired",
+        archived_at: "2026-05-01T00:00:00Z",
+      }),
+      baseEsim({
+        id: 6,
+        status: "in_use",
+        archived_at: "2026-06-01T00:00:00Z",
+      }),
+    ]);
+
+    assert.deepEqual(
+      sections.active.map((e) => e.id),
+      [2, 1],
+    );
+    assert.deepEqual(
+      sections.expired.map((e) => e.id),
+      [4, 3],
+    );
+    assert.deepEqual(
+      sections.archived.map((e) => e.id),
+      [6, 5],
+    );
   });
 });
