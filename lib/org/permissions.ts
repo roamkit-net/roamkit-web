@@ -7,6 +7,12 @@ export function canInvite(
   return Boolean(org?.permissions?.can_invite);
 }
 
+export function canManageMembers(
+  org: Pick<Organization, "permissions"> | null | undefined,
+): boolean {
+  return Boolean(org?.permissions?.can_manage_members);
+}
+
 export function hasPermission(
   permissions: OrgPermissions | null | undefined,
   key: keyof OrgPermissions,

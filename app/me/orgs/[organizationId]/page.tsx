@@ -7,10 +7,9 @@ import { useEffect, useState } from "react";
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { OrgInviteSection } from "@/components/org/OrgInviteSection";
+import { OrgMembersSection } from "@/components/org/OrgMembersSection";
 import { appShellNavLinkClassName } from "@/components/TopBar";
 import { Alert } from "@/components/ui/Alert";
-import { Badge } from "@/components/ui/Badge";
-import { ListRow } from "@/components/ui/ListRow";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ApiError, clearTokens, isAuthenticated } from "@/lib/api";
 import {
@@ -18,7 +17,7 @@ import {
   listOrganizationMembers,
   listPendingInvites,
 } from "@/lib/org/client";
-import { canInvite } from "@/lib/org/permissions";
+import { canInvite, canManageMembers } from "@/lib/org/permissions";
 import { loginHref } from "@/lib/navigation/safePath";
 import { organizationPath, routes } from "@/lib/routes";
 import type { Membership, Organization, OrganizationInvite } from "@/types/org";
@@ -72,7 +71,6 @@ export default function OrganizationDetailPage() {
             if (cancelled) {
               return;
             }
-            // Members without can_invite should never hit this; treat as soft fail.
             if (
               inviteErr instanceof ApiError &&
               (inviteErr.status === 403 || inviteErr.status === 404)
@@ -148,38 +146,12 @@ export default function OrganizationDetailPage() {
         <Alert variant="warning" title={error} />
       ) : org ? (
         <div className="grid gap-10">
-          <section data-testid="org-members-section" className="grid gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Members</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Active and historical membership rows for this organization.
-              </p>
-            </div>
-            <ul className="grid gap-3" data-testid="org-members-list">
-              {members.map((member) => (
-                <ListRow
-                  key={member.id}
-                  as="li"
-                  trailing={
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="primary">{member.role}</Badge>
-                      <Badge
-                        variant={
-                          member.status === "active" ? "success" : "neutral"
-                        }
-                      >
-                        {member.status}
-                      </Badge>
-                    </div>
-                  }
-                >
-                  <p className="truncate font-medium text-slate-900">
-                    {member.user_email}
-                  </p>
-                </ListRow>
-              ))}
-            </ul>
-          </section>
+          <OrgMembersSection
+            organizationId={org.id}
+            members={members}
+            canManageMembers={canManageMembers(org)}
+            onMembersChange={setMembers}
+          />
 
           {showInvites ? (
             <OrgInviteSection
