@@ -92,6 +92,15 @@ export function UserMenu({ email }: UserMenuProps) {
             My eSIMs
           </Link>
           <Link
+            href="/me/orgs"
+            role="menuitem"
+            className="block px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            onClick={() => setOpen(false)}
+            data-testid="user-menu-organizations"
+          >
+            Organizations
+          </Link>
+          <Link
             href="/me/deposit"
             role="menuitem"
             className="block px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
