@@ -14,6 +14,7 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 const { window } = dom;
 
 setGlobal("window", window);
+setGlobal("self", window);
 setGlobal("document", window.document);
 setGlobal("HTMLElement", window.HTMLElement);
 setGlobal("HTMLTextAreaElement", window.HTMLTextAreaElement);
