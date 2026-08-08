@@ -566,6 +566,11 @@ export type Esim = {
   activated_at?: string | null;
   /** User-local metadata; optional during API rollout. Never synced to Airalo. */
   note?: string;
+  /**
+   * Presentation-only visibility timestamp. Null = not archived.
+   * Never gates lifecycle, top-up, billing, or provider sync.
+   */
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -851,8 +856,16 @@ export async function fetchMe(): Promise<User> {
   return fetchApi<User>("/api/v1/auth/me/", { auth: true, cache: "no-store" });
 }
 
-export async function fetchMyEsims(): Promise<PaginatedResponse<Esim>> {
-  return fetchApi<PaginatedResponse<Esim>>("/api/v1/me/esims/", {
+export async function fetchMyEsims(options?: {
+  includeArchived?: boolean;
+}): Promise<PaginatedResponse<Esim>> {
+  const params = new URLSearchParams();
+  if (options?.includeArchived) {
+    params.set("include_archived", "true");
+  }
+  const query = params.toString();
+  const suffix = query ? `?${query}` : "";
+  return fetchApi<PaginatedResponse<Esim>>(`/api/v1/me/esims/${suffix}`, {
     auth: true,
     cache: "no-store",
   });
@@ -874,6 +887,24 @@ export async function patchMyEsim(
     auth: true,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
+  });
+}
+
+/** Archive eSIM (presentation-only). Returns full Esim for local replace. */
+export async function archiveMyEsim(id: number | string): Promise<Esim> {
+  return fetchApi<Esim>(`/api/v1/me/esims/${id}/archive/`, {
+    method: "POST",
+    auth: true,
+    cache: "no-store",
+  });
+}
+
+/** Unarchive eSIM (presentation-only). Returns full Esim for local replace. */
+export async function unarchiveMyEsim(id: number | string): Promise<Esim> {
+  return fetchApi<Esim>(`/api/v1/me/esims/${id}/unarchive/`, {
+    method: "POST",
+    auth: true,
     cache: "no-store",
   });
 }
