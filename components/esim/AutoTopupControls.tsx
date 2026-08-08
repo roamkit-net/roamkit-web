@@ -18,6 +18,10 @@ import {
   putMyEsimAutoTopup,
   type TopupPackage,
 } from "@/lib/api";
+import {
+  activeUntilFromUiDate,
+  uiDateFromActiveUntil,
+} from "@/lib/esim/autoTopupActiveUntil";
 import type {
   AutoTopupPolicy,
   AutoTopupRenewMode,
@@ -36,6 +40,7 @@ const REASON_LABEL: Record<string, string> = {
   provider_error: "Paused — the provider returned an error.",
   manual_pause: "Disabled by you.",
   count_exhausted: "Paused — renewal count reached.",
+  schedule_ended: "Paused — policy end date reached.",
 };
 
 type AutoTopupControlsProps = {
@@ -54,6 +59,8 @@ type Draft = {
   thresholdMb: string;
   renewMode: AutoTopupRenewMode;
   remainingCount: string;
+  /** UI calendar date YYYY-MM-DD; empty = no schedule limit. */
+  activeUntilDate: string;
 };
 
 function usageTriggersAllowed(pkg: TopupPackage | undefined): boolean {
@@ -84,6 +91,7 @@ function draftFromPolicy(
       thresholdMb: String(DEFAULT_THRESHOLD_MB),
       renewMode: "until_funds",
       remainingCount: String(DEFAULT_REMAINING_COUNT),
+      activeUntilDate: "",
     };
   }
   const usageMode = policy.usage_mode;
@@ -99,6 +107,7 @@ function draftFromPolicy(
     remainingCount: String(
       policy.remaining_count ?? DEFAULT_REMAINING_COUNT,
     ),
+    activeUntilDate: uiDateFromActiveUntil(policy.active_until),
   };
 }
 
@@ -159,6 +168,16 @@ function formatApiError(error: unknown, fallback: string): string {
     const record = body as Record<string, unknown>;
     if (typeof record.detail === "string") {
       return record.detail;
+    }
+    const activeUntilErr = record.active_until;
+    if (typeof activeUntilErr === "string") {
+      return activeUntilErr;
+    }
+    if (
+      Array.isArray(activeUntilErr) &&
+      typeof activeUntilErr[0] === "string"
+    ) {
+      return activeUntilErr[0];
     }
   }
   return error.message || fallback;
@@ -308,6 +327,19 @@ export function AutoTopupControls({
       return;
     }
 
+    let activeUntil: string | null = null;
+    if (draft.activeUntilDate.trim()) {
+      activeUntil = activeUntilFromUiDate(draft.activeUntilDate);
+      if (activeUntil == null) {
+        setError("Enter a valid policy end date.");
+        return;
+      }
+      if (Date.now() >= Date.parse(activeUntil)) {
+        setError("Policy end date must be today or in the future.");
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       if (!draft.enabled && policy) {
@@ -326,6 +358,7 @@ export function AutoTopupControls({
           threshold_mb: thresholdMb,
           renew_mode: draft.renewMode,
           remaining_count: remainingCount,
+          active_until: activeUntil,
           version: policy?.version ?? null,
         };
         const saved = await putMyEsimAutoTopup(esimId, body, {
@@ -624,6 +657,25 @@ export function AutoTopupControls({
                 />
               </Field>
             ) : null}
+
+            <Field>
+              <Label htmlFor={`${formId}-active-until`}>
+                Policy active until
+              </Label>
+              <Input
+                id={`${formId}-active-until`}
+                type="date"
+                value={draft.activeUntilDate}
+                onChange={(event) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    activeUntilDate: event.target.value,
+                  }))
+                }
+                disabled={isSaving}
+              />
+              <HelpText>Leave empty for no end date.</HelpText>
+            </Field>
           </>
         ) : null}
 
