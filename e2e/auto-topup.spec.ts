@@ -100,6 +100,7 @@ const mockPolicy = {
   threshold_mb: null,
   renew_mode: "until_funds",
   remaining_count: null,
+  active_until: null as string | null,
   cooldown_until: null,
   last_triggered_at: null,
   version: 0,
@@ -498,5 +499,93 @@ test.describe("eSIM auto top-up controls", () => {
     await expect(
       page.getByRole("button", { name: "Save auto top-up" }),
     ).toBeEnabled();
+  });
+
+  test("sends active_until exclusive UTC bound from Policy active until date", async ({
+    page,
+  }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page);
+    await mockEsimDetailRoutes(page);
+
+    await page.route(isAutoTopupUrl, async (route) => {
+      const method = route.request().method();
+      if (method === "GET") {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ detail: "Not found." }),
+        });
+        return;
+      }
+      if (method === "PUT") {
+        const body = route.request().postDataJSON() as {
+          active_until: string | null;
+          enabled: boolean;
+        };
+        expect(body.enabled).toBe(true);
+        expect(body.active_until).toBe("2026-08-21T00:00:00.000Z");
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...mockPolicy,
+            active_until: body.active_until,
+            version: 0,
+          }),
+        });
+        return;
+      }
+      await route.fulfill({ status: 405 });
+    });
+
+    await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { name: "Auto top-up" }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page
+      .getByLabel("Enable auto top-up for a package below")
+      .check();
+    await page.getByLabel("Policy active until").fill("2026-08-20");
+    await expect(
+      page.getByText("Leave empty for no end date."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Save auto top-up" }).click();
+
+    await expect(page.getByText("Auto top-up saved.")).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByLabel("Policy active until")).toHaveValue(
+      "2026-08-20",
+    );
+  });
+
+  test("shows schedule_ended banner", async ({ page }) => {
+    await seedAuth(page);
+    await mockBillingRoutes(page);
+    await mockEsimDetailRoutes(page);
+
+    await page.route(isAutoTopupUrl, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...mockPolicy,
+          status: "paused",
+          reason: "schedule_ended",
+          active_until: "2026-08-01T00:00:00.000Z",
+          version: 2,
+        }),
+      });
+    });
+
+    await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByText("Paused — policy end date reached."),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByLabel("Policy active until")).toHaveValue(
+      "2026-07-31",
+    );
   });
 });

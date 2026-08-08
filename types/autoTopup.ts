@@ -1,4 +1,4 @@
-/** Auto top-up policy types (me API v2). */
+/** Auto top-up policy types (me API v2 triggers + v3 lifetime). */
 
 export type AutoTopupUsageMode = "disabled" | "threshold" | "zero";
 
@@ -21,6 +21,8 @@ export type AutoTopupPolicy = {
   threshold_mb: number | null;
   renew_mode: AutoTopupRenewMode;
   remaining_count: number | null;
+  /** UTC exclusive lifetime bound; null = no schedule limit. */
+  active_until: string | null;
   cooldown_until: string | null;
   last_triggered_at: string | null;
   version: number;
@@ -36,5 +38,6 @@ export type AutoTopupPolicyWrite = {
   threshold_mb?: number | null;
   renew_mode: AutoTopupRenewMode;
   remaining_count?: number | null;
+  active_until?: string | null;
   version?: number | null;
 };
