@@ -4,9 +4,11 @@ import { describe, it } from "node:test";
 import {
   canInvite,
   canManageMembers,
+  canTransferOwnership,
   hasPermission,
+  transferOwnershipCandidates,
 } from "@/lib/org/permissions";
-import type { Organization, OrgPermissions } from "@/types/org";
+import type { Membership, Organization, OrgPermissions } from "@/types/org";
 
 function perms(overrides: Partial<OrgPermissions> = {}): OrgPermissions {
   return {
@@ -51,6 +53,52 @@ describe("org permissions UX gates", () => {
       canManageMembers(org(perms({ can_manage_members: false }))),
       false,
     );
+  });
+
+  it("canTransferOwnership is true only when permissions.can_transfer_ownership", () => {
+    assert.equal(
+      canTransferOwnership(org(perms({ can_transfer_ownership: true }))),
+      true,
+    );
+    assert.equal(
+      canTransferOwnership(org(perms({ can_transfer_ownership: false }))),
+      false,
+    );
+  });
+
+  it("transferOwnershipCandidates keeps active non-owners only", () => {
+    const members: Membership[] = [
+      {
+        id: "1",
+        user_id: 1,
+        user_email: "o@example.com",
+        role: "owner",
+        status: "active",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "2",
+        user_id: 2,
+        user_email: "a@example.com",
+        role: "admin",
+        status: "active",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "3",
+        user_id: 3,
+        user_email: "r@example.com",
+        role: "member",
+        status: "revoked",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const candidates = transferOwnershipCandidates(members);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0]?.user_id, 2);
   });
 
   it("hasPermission reads a single flag", () => {

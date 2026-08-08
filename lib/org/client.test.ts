@@ -8,6 +8,7 @@ import {
   createOrganizationInvite,
   listOrganizations,
   revokeOrganizationMember,
+  transferOrganizationOwnership,
   updateOrganizationMemberRole,
 } from "@/lib/org/client";
 
@@ -177,6 +178,61 @@ describe("org API client", () => {
     );
     assert.equal(method, "POST");
     assert.equal(row.status, "revoked");
+  });
+
+  it("transferOrganizationOwnership POSTs new_owner_user_id", async () => {
+    let method = "";
+    let body = "";
+    globalThis.fetch = async (input, init) => {
+      method = String(init?.method ?? "GET");
+      body = String(init?.body ?? "");
+      assert.match(String(input), /\/transfer-ownership\/$/);
+      return new Response(
+        JSON.stringify({
+          organization: {
+            id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            name: "Fleet",
+            status: "active",
+            account_id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            my_role: "admin",
+            permissions: {
+              can_view: true,
+              can_spend: true,
+              can_manage_members: true,
+              can_invite: true,
+              can_transfer_ownership: false,
+              can_archive_org: false,
+              can_assign_esim: true,
+              can_device_bind: true,
+            },
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          new_owner_membership: {
+            id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            user_id: 9,
+            user_email: "new@example.com",
+            role: "owner",
+            status: "active",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    };
+
+    const result = await transferOrganizationOwnership(
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      9,
+    );
+    assert.equal(method, "POST");
+    assert.equal(body, JSON.stringify({ new_owner_user_id: 9 }));
+    assert.equal(result.new_owner_membership.role, "owner");
+    assert.equal(result.organization.permissions.can_transfer_ownership, false);
   });
 
   it("acceptOrganizationInvite posts token to accept endpoint", async () => {

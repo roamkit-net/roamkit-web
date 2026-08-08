@@ -8,6 +8,7 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { OrgInviteSection } from "@/components/org/OrgInviteSection";
 import { OrgMembersSection } from "@/components/org/OrgMembersSection";
+import { OrgTransferOwnershipSection } from "@/components/org/OrgTransferOwnershipSection";
 import { appShellNavLinkClassName } from "@/components/TopBar";
 import { Alert } from "@/components/ui/Alert";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
@@ -151,6 +152,15 @@ export default function OrganizationDetailPage() {
             members={members}
             canManageMembers={canManageMembers(org)}
             onMembersChange={setMembers}
+          />
+
+          <OrgTransferOwnershipSection
+            organization={org}
+            members={members}
+            onTransferred={(nextOrg, nextMembers) => {
+              setOrg(nextOrg);
+              setMembers(nextMembers);
+            }}
           />
 
           {showInvites ? (
