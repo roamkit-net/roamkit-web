@@ -12,6 +12,10 @@ describe("Cap3.3a /me/esims Golden Route", () => {
     join(process.cwd(), "app/me/esims/page.tsx"),
     "utf8",
   );
+  const sectionSource = readFileSync(
+    join(process.cwd(), "components/esim/EsimListSection.tsx"),
+    "utf8",
+  );
 
   it("uses chrome text tokens on the page header (dark shell)", () => {
     assert.match(
@@ -30,7 +34,8 @@ describe("Cap3.3a /me/esims Golden Route", () => {
 
   it("keeps Cap2 elevated surfaces (Card / ListRow / Empty / Alert)", () => {
     assert.match(source, /from "@\/components\/ui\/Card"/);
-    assert.match(source, /listRowClassName/);
+    assert.match(source, /from "@\/components\/esim\/EsimListSection"/);
+    assert.match(sectionSource, /listRowClassName/);
     assert.match(source, /from "@\/components\/ui\/Empty"/);
     assert.match(source, /from "@\/components\/ui\/Alert"/);
     assert.match(source, /ListSkeleton/);
@@ -40,11 +45,27 @@ describe("Cap3.3a /me/esims Golden Route", () => {
     assert.match(source, /title="Active"/);
     assert.match(source, /title="Expired"/);
     assert.match(source, /title="Archived"/);
-    assert.match(source, /Archive/);
-    assert.match(source, /Restore/);
+    assert.match(source, /listId="esim-section-active"/);
+    assert.match(source, /listId="esim-section-expired"/);
+    assert.match(source, /listId="esim-section-archived"/);
+    assert.match(source, /defaultOpen=\{false\}/);
+    assert.match(sectionSource, /Archive/);
+    assert.match(sectionSource, /Restore/);
     assert.match(source, /includeArchived:\s*true/);
     assert.match(source, /archiveMyEsim/);
     assert.match(source, /unarchiveMyEsim/);
+  });
+
+  it("uses h2 wrapping button collapse with aria-controls", () => {
+    assert.match(sectionSource, /<h2[\s\S]*?<button[\s\S]*?aria-controls=\{listId\}/);
+    assert.doesNotMatch(
+      sectionSource,
+      /<button[\s\S]*?<h2[\s\S]*?<\/h2>[\s\S]*?<\/button>/,
+    );
+    assert.match(sectionSource, /aria-expanded=\{open\}/);
+    assert.match(sectionSource, /aria-hidden/);
+    assert.doesNotMatch(sectionSource, /onKeyDown/);
+    assert.doesNotMatch(sectionSource, /useEffect\(\s*\(\)\s*=>\s*setOpen/);
   });
 
   it("does not introduce a local layout wrapper class", () => {

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,13 +8,12 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { EsimListSection } from "@/components/esim/EsimListSection";
 import { buttonClassName } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardSection } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
-import { listRowClassName } from "@/components/ui/ListRow";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
-import { Badge } from "@/components/ui/Badge";
 import {
   ApiError,
   Esim,
@@ -24,18 +22,10 @@ import {
   clearTokens,
   fetchMe,
   fetchMyEsims,
-  flagImageUrl,
   isAuthenticated,
   unarchiveMyEsim,
 } from "@/lib/api";
-import {
-  esimDestinationLabel,
-  esimValidityLabel,
-  formatEsimStatus,
-  partitionMyEsims,
-  truncateNote,
-} from "@/lib/esim/display";
-import { needsSetup } from "@/lib/esim/telemetry";
+import { partitionMyEsims } from "@/lib/esim/display";
 import { loginHref } from "@/lib/navigation/safePath";
 
 /**
@@ -43,151 +33,6 @@ import { loginHref } from "@/lib/navigation/safePath";
  * (dark shell chrome text + Cap2 elevated Card / ListRow).
  * After pilot smoke: Pilot Freeze — prefer propagate over further edits here.
  */
-
-function formatUsage(esim: Esim): string {
-  if (esim.usage_is_unlimited) {
-    return "Unlimited";
-  }
-  if (esim.usage_remaining_mb == null || esim.usage_total_mb == null) {
-    return "Usage not synced";
-  }
-  return `${esim.usage_remaining_mb} / ${esim.usage_total_mb} MB`;
-}
-
-type RowAction = "archive" | "restore";
-
-function EsimListRow({
-  esim,
-  action,
-  pending,
-  onAction,
-}: {
-  esim: Esim;
-  action?: RowAction;
-  pending: boolean;
-  onAction?: (esim: Esim) => void;
-}) {
-  const destination = esimDestinationLabel(esim);
-  const validity = esimValidityLabel(esim);
-  const statusLabel = formatEsimStatus(esim.status);
-  const notePreview = truncateNote(esim.note);
-  const flagSrc = esim.country_code
-    ? flagImageUrl(esim.country_code)
-    : null;
-  const href = needsSetup(esim)
-    ? `/me/esims/${esim.id}/setup`
-    : `/me/esims/${esim.id}`;
-
-  return (
-    <li>
-      <div className={listRowClassName({ interactive: true })}>
-        <Link
-          href={href}
-          className="flex min-w-0 flex-1 items-center gap-4 outline-none"
-        >
-          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
-            {flagSrc ? (
-              <Image
-                src={flagSrc}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="40px"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
-                {destination.slice(0, 2)}
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h2 className="text-base font-semibold text-slate-900">
-                {destination}
-              </h2>
-              {validity ? (
-                <span className="text-sm text-slate-600">{validity}</span>
-              ) : null}
-            </div>
-            <p className="mt-0.5 truncate text-sm text-slate-500">
-              {esim.data_allowance
-                ? `${esim.data_allowance} · ${formatUsage(esim)}`
-                : formatUsage(esim)}
-            </p>
-            {notePreview ? (
-              <p className="mt-0.5 truncate text-sm text-slate-500">
-                {notePreview}
-              </p>
-            ) : null}
-          </div>
-        </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          {action && onAction ? (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => onAction(esim)}
-              className={buttonClassName({
-                variant: "ghost",
-                size: "sm",
-                tone: "app",
-                className: "shrink-0",
-              })}
-            >
-              {pending
-                ? action === "archive"
-                  ? "Archiving…"
-                  : "Restoring…"
-                : action === "archive"
-                  ? "Archive"
-                  : "Restore"}
-            </button>
-          ) : null}
-          <Badge variant="default" className="shrink-0">
-            {statusLabel}
-          </Badge>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function EsimSection({
-  title,
-  esims,
-  action,
-  pendingId,
-  onAction,
-}: {
-  title: string;
-  esims: Esim[];
-  action?: RowAction;
-  pendingId: number | null;
-  onAction?: (esim: Esim) => void;
-}) {
-  if (esims.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="grid gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--app-chrome-text-muted)]">
-        {title}
-      </h2>
-      <ul className="grid gap-3">
-        {esims.map((esim) => (
-          <EsimListRow
-            key={esim.id}
-            esim={esim}
-            action={action}
-            pending={pendingId === esim.id}
-            onAction={onAction}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 export default function MyEsimsPage() {
   const router = useRouter();
@@ -380,20 +225,26 @@ export default function MyEsimsPage() {
           {actionError ? (
             <Alert variant="warning" title={actionError} />
           ) : null}
-          <EsimSection
+          <EsimListSection
             title="Active"
+            listId="esim-section-active"
+            defaultOpen
             esims={sections.active}
             pendingId={pendingId}
           />
-          <EsimSection
+          <EsimListSection
             title="Expired"
+            listId="esim-section-expired"
+            defaultOpen
             esims={sections.expired}
             action="archive"
             pendingId={pendingId}
             onAction={handleArchive}
           />
-          <EsimSection
+          <EsimListSection
             title="Archived"
+            listId="esim-section-archived"
+            defaultOpen={false}
             esims={sections.archived}
             action="restore"
             pendingId={pendingId}
