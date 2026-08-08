@@ -7,6 +7,7 @@ import type {
   OrganizationInviteAcceptResponse,
   OrganizationInviteCreatePayload,
   OrganizationInviteCreateResponse,
+  OrganizationTransferOwnershipResponse,
 } from "@/types/org";
 
 const NO_STORE = { auth: true as const, cache: "no-store" as RequestCache };
@@ -77,6 +78,28 @@ export async function listOrganizationMembers(
     );
   } catch (error) {
     rethrowOrgApiError(error, "Unable to load members.");
+  }
+}
+
+/** POST /api/v1/orgs/{id}/transfer-ownership/ */
+export async function transferOrganizationOwnership(
+  organizationId: string,
+  newOwnerUserId: number,
+  options?: OrgRequestOptions,
+): Promise<OrganizationTransferOwnershipResponse> {
+  try {
+    return await fetchApi<OrganizationTransferOwnershipResponse>(
+      `/api/v1/orgs/${organizationId}/transfer-ownership/`,
+      {
+        method: "POST",
+        ...NO_STORE,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_owner_user_id: newOwnerUserId }),
+        signal: options?.signal,
+      },
+    );
+  } catch (error) {
+    rethrowOrgApiError(error, "Unable to transfer ownership.");
   }
 }
 

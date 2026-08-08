@@ -75,3 +75,8 @@ export type OrganizationInviteAcceptResponse = {
   organization_id: string;
   already_accepted: boolean;
 };
+
+export type OrganizationTransferOwnershipResponse = {
+  organization: Organization;
+  new_owner_membership: Membership;
+};
