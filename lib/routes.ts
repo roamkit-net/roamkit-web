@@ -7,6 +7,9 @@ export const routes = {
   register: "/register",
   deposit: "/me/deposit",
   esims: "/me/esims",
+  orgs: "/me/orgs",
+  orgCreate: "/me/orgs/new",
+  orgInviteAccept: "/me/orgs/invites/accept",
   adminDashboard: "/admin/dashboard",
   adminMembers: "/admin/members",
   adminForbidden: "/admin/forbidden",
@@ -14,6 +17,17 @@ export const routes = {
 
 export function adminMemberPath(id: number | string): string {
   return `/admin/members/${id}`;
+}
+
+export function organizationPath(organizationId: string): string {
+  return `/me/orgs/${organizationId}`;
+}
+
+export function organizationInviteAcceptPath(token?: string): string {
+  if (!token) {
+    return routes.orgInviteAccept;
+  }
+  return `${routes.orgInviteAccept}?token=${encodeURIComponent(token)}`;
 }
 
 /** Store URL for a catalog location slug (`europe` → `/europe-esim`). */
