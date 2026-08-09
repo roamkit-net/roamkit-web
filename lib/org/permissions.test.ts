@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import {
+  canInvite,
+  canManageMembers,
+  canTransferOwnership,
+  hasPermission,
+  transferOwnershipCandidates,
+} from "@/lib/org/permissions";
+import type { Membership, Organization, OrgPermissions } from "@/types/org";
+
+function perms(overrides: Partial<OrgPermissions> = {}): OrgPermissions {
+  return {
+    can_view: true,
+    can_spend: false,
+    can_manage_members: false,
+    can_invite: false,
+    can_transfer_ownership: false,
+    can_archive_org: false,
+    can_assign_esim: false,
+    can_device_bind: false,
+    ...overrides,
+  };
+}
+
+function org(permissions: OrgPermissions): Organization {
+  return {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "Fleet",
+    status: "active",
+    account_id: "22222222-2222-2222-2222-222222222222",
+    my_role: "member",
+    permissions,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+describe("org permissions UX gates", () => {
+  it("canInvite is true only when permissions.can_invite", () => {
+    assert.equal(canInvite(org(perms({ can_invite: true }))), true);
+    assert.equal(canInvite(org(perms({ can_invite: false }))), false);
+    assert.equal(canInvite(null), false);
+  });
+
+  it("canManageMembers is true only when permissions.can_manage_members", () => {
+    assert.equal(
+      canManageMembers(org(perms({ can_manage_members: true }))),
+      true,
+    );
+    assert.equal(
+      canManageMembers(org(perms({ can_manage_members: false }))),
+      false,
+    );
+  });
+
+  it("canTransferOwnership is true only when permissions.can_transfer_ownership", () => {
+    assert.equal(
+      canTransferOwnership(org(perms({ can_transfer_ownership: true }))),
+      true,
+    );
+    assert.equal(
+      canTransferOwnership(org(perms({ can_transfer_ownership: false }))),
+      false,
+    );
+  });
+
+  it("transferOwnershipCandidates keeps active non-owners only", () => {
+    const members: Membership[] = [
+      {
+        id: "1",
+        user_id: 1,
+        user_email: "o@example.com",
+        role: "owner",
+        status: "active",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "2",
+        user_id: 2,
+        user_email: "a@example.com",
+        role: "admin",
+        status: "active",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "3",
+        user_id: 3,
+        user_email: "r@example.com",
+        role: "member",
+        status: "revoked",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const candidates = transferOwnershipCandidates(members);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0]?.user_id, 2);
+  });
+
+  it("hasPermission reads a single flag", () => {
+    const permissions = perms({ can_view: true, can_spend: false });
+    assert.equal(hasPermission(permissions, "can_view"), true);
+    assert.equal(hasPermission(permissions, "can_spend"), false);
+  });
+});
