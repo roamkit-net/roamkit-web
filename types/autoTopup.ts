@@ -10,6 +10,13 @@ export type AutoTopupStatus =
   | "blocked"
   | "disabled";
 
+/** Read-only summary on GET /me/esims/ (Action required). */
+export type EsimAutoTopupSnapshot = {
+  enabled: boolean;
+  status: AutoTopupStatus | string;
+  reason: string;
+};
+
 export type AutoTopupPolicy = {
   id: string;
   package_id: string;
