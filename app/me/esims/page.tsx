@@ -8,6 +8,7 @@ import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
 import { appShellNavLinkClassName } from "@/components/TopBar";
 import { DepositCta } from "@/components/billing/DepositCta";
+import { EsimActionRequired } from "@/components/esim/EsimActionRequired";
 import { EsimListSection } from "@/components/esim/EsimListSection";
 import { buttonClassName } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -25,7 +26,7 @@ import {
   isAuthenticated,
   unarchiveMyEsim,
 } from "@/lib/api";
-import { partitionMyEsims } from "@/lib/esim/display";
+import { actionRequiredEsims, partitionMyEsims } from "@/lib/esim/display";
 import { loginHref } from "@/lib/navigation/safePath";
 
 /**
@@ -44,6 +45,7 @@ export default function MyEsimsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const sections = partitionMyEsims(esims);
+  const actionRequired = actionRequiredEsims(esims);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -225,6 +227,7 @@ export default function MyEsimsPage() {
           {actionError ? (
             <Alert variant="warning" title={actionError} />
           ) : null}
+          <EsimActionRequired esims={actionRequired} />
           <EsimListSection
             title="Active"
             listId="esim-section-active"

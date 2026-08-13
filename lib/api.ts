@@ -3,6 +3,7 @@ import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 import type {
   AutoTopupPolicy,
   AutoTopupPolicyWrite,
+  EsimAutoTopupSnapshot,
 } from "@/types/autoTopup";
 
 const DEFAULT_API_URL = "http://localhost:8000";
@@ -571,6 +572,8 @@ export type Esim = {
    * Never gates lifecycle, top-up, billing, or provider sync.
    */
   archived_at?: string | null;
+  /** Read-only Auto top-up summary from GET /me/esims/; null if no policy. */
+  auto_topup?: EsimAutoTopupSnapshot | null;
   created_at: string;
   updated_at: string;
 };

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import type { Esim } from "@/lib/api";
 import {
+  actionRequiredEsims,
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
@@ -126,6 +127,61 @@ describe("esim display helpers", () => {
     assert.deepEqual(
       sections.archived.map((e) => e.id),
       [6, 5],
+    );
+  });
+
+  it("includes expired paused-funds eSIMs in Action required, not archived", () => {
+    const pausedFunds = {
+      enabled: true,
+      status: "paused",
+      reason: "insufficient_funds",
+    } as const;
+
+    const items = actionRequiredEsims([
+      baseEsim({
+        id: 1,
+        status: "in_use",
+        auto_topup: pausedFunds,
+      }),
+      baseEsim({
+        id: 2,
+        status: "expired",
+        auto_topup: pausedFunds,
+      }),
+      baseEsim({
+        id: 3,
+        status: "expired",
+        archived_at: "2026-05-01T00:00:00Z",
+        auto_topup: pausedFunds,
+      }),
+      baseEsim({
+        id: 4,
+        status: "in_use",
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "package_unavailable",
+        },
+      }),
+      baseEsim({
+        id: 5,
+        status: "in_use",
+        auto_topup: null,
+      }),
+      baseEsim({
+        id: 6,
+        status: "in_use",
+        auto_topup: {
+          enabled: false,
+          status: "paused",
+          reason: "insufficient_funds",
+        },
+      }),
+    ]);
+
+    assert.deepEqual(
+      items.map((e) => e.id),
+      [1, 2],
     );
   });
 });
