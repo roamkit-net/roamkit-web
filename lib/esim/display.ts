@@ -122,3 +122,27 @@ export function partitionMyEsims(esims: Esim[]): EsimListSections {
 
   return { active, expired, archived };
 }
+
+/**
+ * v1 Action required: paused Auto top-up for insufficient funds.
+ * Archived eSIMs never appear, even if the policy is still paused.
+ * Expired eSIMs are included in this slice.
+ */
+export function isActionRequiredEsim(esim: Esim): boolean {
+  if (esim.archived_at) {
+    return false;
+  }
+  const snapshot = esim.auto_topup;
+  if (!snapshot) {
+    return false;
+  }
+  return (
+    snapshot.enabled === true &&
+    snapshot.status === "paused" &&
+    snapshot.reason === "insufficient_funds"
+  );
+}
+
+export function actionRequiredEsims(esims: Esim[]): Esim[] {
+  return esims.filter(isActionRequiredEsim);
+}

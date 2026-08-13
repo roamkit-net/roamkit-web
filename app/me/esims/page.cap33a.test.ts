@@ -35,6 +35,7 @@ describe("Cap3.3a /me/esims Golden Route", () => {
   it("keeps Cap2 elevated surfaces (Card / ListRow / Empty / Alert)", () => {
     assert.match(source, /from "@\/components\/ui\/Card"/);
     assert.match(source, /from "@\/components\/esim\/EsimListSection"/);
+    assert.match(source, /from "@\/components\/esim\/EsimActionRequired"/);
     assert.match(sectionSource, /listRowClassName/);
     assert.match(source, /from "@\/components\/ui\/Empty"/);
     assert.match(source, /from "@\/components\/ui\/Alert"/);
@@ -42,6 +43,7 @@ describe("Cap3.3a /me/esims Golden Route", () => {
   });
 
   it("groups list into Active / Expired / Archived with Archive and Restore", () => {
+    assert.match(source, /EsimActionRequired/);
     assert.match(source, /title="Active"/);
     assert.match(source, /title="Expired"/);
     assert.match(source, /title="Archived"/);

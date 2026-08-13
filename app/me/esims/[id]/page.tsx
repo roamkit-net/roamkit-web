@@ -35,6 +35,11 @@ import {
   isAuthenticated,
 } from "@/lib/api";
 import {
+  AUTO_TOPUP_SECTION_ID,
+  focusAutoTopupSection,
+  isAutoTopupHash,
+} from "@/lib/esim/autoTopupHash";
+import {
   canUseAppleInstallLink,
   detectInstallDevice,
   type InstallDeviceClass,
@@ -93,6 +98,7 @@ export default function MyEsimDetailPage() {
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false);
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const installSessionId = useRef(createSetupSessionId());
+  const autoTopupRef = useRef<HTMLElement>(null);
   const installTelemetry = useMemo(
     () => createEsimTelemetry(esimId, installSessionId.current),
     [esimId],
@@ -120,6 +126,22 @@ export default function MyEsimDetailPage() {
   useEffect(() => {
     restoreShortfallScroll(currentPathWithSearch());
   }, []);
+
+  useEffect(() => {
+    if (isLoading || error || !esim) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!isAutoTopupHash(window.location.hash)) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      focusAutoTopupSection(autoTopupRef.current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [error, esim, isLoading]);
 
   useEffect(() => {
     if (!purchaseAttemptedRef.current) {
@@ -755,7 +777,14 @@ export default function MyEsimDetailPage() {
                   ))}
                 </ul>
               )}
-              <AutoTopupControls esimId={esimId} topups={topups} />
+              <section
+                id={AUTO_TOPUP_SECTION_ID}
+                ref={autoTopupRef}
+                tabIndex={-1}
+                className="scroll-mt-6 outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--app-background)]"
+              >
+                <AutoTopupControls esimId={esimId} topups={topups} />
+              </section>
             </CardSection>
           </Card>
         </div>
