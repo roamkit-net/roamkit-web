@@ -49,8 +49,8 @@ import {
 } from "@/lib/esim/device";
 import {
   esimDestinationLabel,
+  esimDetailsLabels,
   esimNote,
-  formatEsimDateTime,
   formatEsimStatus,
 } from "@/lib/esim/display";
 import {
@@ -381,6 +381,7 @@ export default function MyEsimDetailPage() {
   }, [esimId, refreshUsageAndPackages, successTopup]);
 
   const returnPath = `/me/esims/${esimId}`;
+  const details = esim ? esimDetailsLabels(esim, usage) : null;
 
   return (
     <AppShell
@@ -437,24 +438,18 @@ export default function MyEsimDetailPage() {
                 eSIM details
               </h2>
               <dl className="mt-4 space-y-3 text-sm">
-                {esim.data_allowance ? (
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt className="text-slate-500">Data</dt>
-                    <dd className="font-medium text-slate-900">
-                      {esim.data_allowance}
-                    </dd>
-                  </div>
-                ) : null}
-                {esim.validity_days != null ? (
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt className="text-slate-500">Validity</dt>
-                    <dd className="font-medium text-slate-900">
-                      {esim.validity_days === 1
-                        ? "1 day"
-                        : `${esim.validity_days} days`}
-                    </dd>
-                  </div>
-                ) : null}
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-500">Data</dt>
+                  <dd className="font-medium text-slate-900">
+                    {details?.data}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-500">Validity</dt>
+                  <dd className="font-medium text-slate-900">
+                    {details?.validity}
+                  </dd>
+                </div>
                 {esim.paid_usd != null && esim.paid_usd !== "" ? (
                   <div className="flex flex-wrap justify-between gap-2">
                     <dt className="text-slate-500">Paid</dt>
@@ -463,18 +458,6 @@ export default function MyEsimDetailPage() {
                     </dd>
                   </div>
                 ) : null}
-                <div className="flex flex-wrap justify-between gap-2">
-                  <dt className="text-slate-500">Issued at</dt>
-                  <dd className="font-medium text-slate-900">
-                    {formatEsimDateTime(esim.issued_at ?? esim.created_at)}
-                  </dd>
-                </div>
-                <div className="flex flex-wrap justify-between gap-2">
-                  <dt className="text-slate-500">Activated at</dt>
-                  <dd className="font-medium text-slate-900">
-                    {formatEsimDateTime(esim.activated_at)}
-                  </dd>
-                </div>
                 <div className="flex flex-wrap justify-between gap-2">
                   <dt className="text-slate-500">ICCID</dt>
                   <dd className="font-mono font-medium text-slate-900">
