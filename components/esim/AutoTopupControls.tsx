@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 
+import { DisplayCurrencyContext } from "@/components/billing/DisplayCurrencyProvider";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import {
@@ -22,6 +23,10 @@ import {
   activeUntilFromUiDate,
   uiDateFromActiveUntil,
 } from "@/lib/esim/autoTopupActiveUntil";
+import {
+  AUTO_TOPUP_FALLBACK_CURRENCY,
+  autoTopupPackageOptionLabel,
+} from "@/lib/esim/autoTopupPackageLabel";
 import type {
   AutoTopupPolicy,
   AutoTopupRenewMode,
@@ -188,6 +193,9 @@ export function AutoTopupControls({
   topups,
 }: AutoTopupControlsProps) {
   const formId = useId();
+  const displayCurrency = useContext(DisplayCurrencyContext);
+  const optionCurrency =
+    displayCurrency?.currency ?? AUTO_TOPUP_FALLBACK_CURRENCY;
   const [policy, setPolicy] = useState<AutoTopupPolicy | null>(null);
   const [draft, setDraft] = useState<Draft>(() =>
     draftFromPolicy(null, topups[0]?.id ?? ""),
@@ -475,7 +483,7 @@ export function AutoTopupControls({
                 ) : null}
                 {topups.map((pkg) => (
                   <option key={pkg.id} value={pkg.id}>
-                    {pkg.title} · {pkg.validity_days} days
+                    {autoTopupPackageOptionLabel(pkg, optionCurrency)}
                   </option>
                 ))}
               </select>

@@ -7,6 +7,7 @@ import {
   esimActionRequiredSubtitle,
   esimDestinationLabel,
   esimDetailsLabels,
+  esimPaidTotal,
   esimValidityLabel,
   formatEsimStatus,
   getEsimActionRequiredReason,
@@ -425,5 +426,66 @@ describe("esim display helpers", () => {
       assert.equal(getEsimActionRequiredReason(esim), null);
       assert.equal(isActionRequiredEsim(esim), false);
     }
+  });
+});
+
+describe("esimPaidTotal", () => {
+  it("sums original plus two identical top-up charges", () => {
+    assert.equal(
+      esimPaidTotal(
+        [
+          { paid_usd: "1.00" },
+          { paid_usd: "3.20" },
+          { paid_usd: "3.20" },
+        ],
+        "1.00",
+      ),
+      "7.40",
+    );
+  });
+
+  it("does not dedupe identical package charges", () => {
+    assert.equal(
+      esimPaidTotal([{ paid_usd: "3.20" }, { paid_usd: "3.20" }], "1.00"),
+      "6.40",
+    );
+  });
+
+  it("skips null, empty, invalid, and negative amounts", () => {
+    assert.equal(
+      esimPaidTotal(
+        [
+          { paid_usd: "1.00" },
+          { paid_usd: null },
+          { paid_usd: "" },
+          { paid_usd: "nope" },
+          { paid_usd: "-1.00" },
+        ],
+        "9.99",
+      ),
+      "1.00",
+    );
+  });
+
+  it("skips exponent and extra decimals without rounding", () => {
+    assert.equal(
+      esimPaidTotal([{ paid_usd: "1e2" }, { paid_usd: "3.201" }], "1.00"),
+      "1.00",
+    );
+  });
+
+  it("treats 0.00 as a valid charge", () => {
+    assert.equal(esimPaidTotal([{ paid_usd: "0.00" }], "1.00"), "0.00");
+  });
+
+  it("falls back to esim.paid_usd when no package amounts sum", () => {
+    assert.equal(esimPaidTotal([], "1.00"), "1.00");
+    assert.equal(esimPaidTotal(null, "1.00"), "1.00");
+    assert.equal(esimPaidTotal(undefined, "1.00"), "1.00");
+  });
+
+  it("returns null when packages and fallback are both unusable", () => {
+    assert.equal(esimPaidTotal([], null), null);
+    assert.equal(esimPaidTotal([{ paid_usd: null }], ""), null);
   });
 });

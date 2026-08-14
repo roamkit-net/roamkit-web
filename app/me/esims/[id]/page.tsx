@@ -51,6 +51,7 @@ import {
   esimDestinationLabel,
   esimDetailsLabels,
   esimNote,
+  esimPaidTotal,
   formatEsimStatus,
 } from "@/lib/esim/display";
 import {
@@ -382,6 +383,7 @@ export default function MyEsimDetailPage() {
 
   const returnPath = `/me/esims/${esimId}`;
   const details = esim ? esimDetailsLabels(esim, usage) : null;
+  const paidTotal = esim ? esimPaidTotal(packages, esim.paid_usd) : null;
 
   return (
     <AppShell
@@ -450,11 +452,11 @@ export default function MyEsimDetailPage() {
                     {details?.validity}
                   </dd>
                 </div>
-                {esim.paid_usd != null && esim.paid_usd !== "" ? (
+                {paidTotal != null && paidTotal !== "" ? (
                   <div className="flex flex-wrap justify-between gap-2">
                     <dt className="text-slate-500">Paid</dt>
                     <dd className="font-medium text-slate-900">
-                      <CatalogPriceDisplay amount={esim.paid_usd} />
+                      <CatalogPriceDisplay amount={paidTotal} />
                     </dd>
                   </div>
                 ) : null}
