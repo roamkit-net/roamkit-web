@@ -6,6 +6,7 @@ import {
   actionRequiredEsims,
   esimActionRequiredSubtitle,
   esimDestinationLabel,
+  esimDetailsLabels,
   esimValidityLabel,
   formatEsimStatus,
   getEsimActionRequiredReason,
@@ -64,6 +65,106 @@ describe("esim display helpers", () => {
     assert.equal(esimValidityLabel(baseEsim({ validity_days: 7 })), "7 days");
     assert.equal(esimValidityLabel(baseEsim({ validity_days: 1 })), "1 day");
     assert.equal(esimValidityLabel(baseEsim({ validity_days: null })), null);
+  });
+
+  describe("esimDetailsLabels", () => {
+    const now = Date.parse("2026-08-14T11:32:00Z");
+    const expiry = "2026-08-26T08:50:16Z";
+    const snapshot = {
+      data_allowance: "300 MB",
+      validity_days: 3,
+    } as const;
+
+    it("uses live usage total and remaining days to expiry", () => {
+      const labels = esimDetailsLabels(
+        baseEsim({
+          ...snapshot,
+          usage_total_mb: 100,
+          usage_expired_at: "2026-08-20T00:00:00Z",
+        }),
+        {
+          total_mb: 2048,
+          is_unlimited: false,
+          expired_at: expiry,
+        },
+        now,
+      );
+      assert.deepEqual(labels, { data: "2 GB", validity: "12 days" });
+    });
+
+    it("shows Unlimited when live is_unlimited is true", () => {
+      const labels = esimDetailsLabels(
+        baseEsim({ ...snapshot, usage_total_mb: 2048 }),
+        { is_unlimited: true, total_mb: 2048, expired_at: expiry },
+        now,
+      );
+      assert.equal(labels.data, "Unlimited");
+      assert.equal(labels.validity, "12 days");
+    });
+
+    it("keeps live fields and fills only missing ones from cache", () => {
+      const labels = esimDetailsLabels(
+        baseEsim({
+          ...snapshot,
+          usage_total_mb: 512,
+          usage_expired_at: expiry,
+        }),
+        { total_mb: 2048, is_unlimited: false },
+        now,
+      );
+      assert.deepEqual(labels, { data: "2 GB", validity: "12 days" });
+    });
+
+    it("treats 0 MB as a real total and does not fall back to snapshot", () => {
+      const labels = esimDetailsLabels(
+        baseEsim(snapshot),
+        { total_mb: 0, is_unlimited: false, expired_at: expiry },
+        now,
+      );
+      assert.equal(labels.data, "0 MB");
+      assert.equal(labels.validity, "12 days");
+    });
+
+    it("clamps past expiry to 0 days", () => {
+      const labels = esimDetailsLabels(
+        baseEsim(snapshot),
+        {
+          total_mb: 2048,
+          is_unlimited: false,
+          expired_at: "2026-08-01T00:00:00Z",
+        },
+        now,
+      );
+      assert.equal(labels.validity, "0 days");
+    });
+
+    it("skips invalid live expiry and uses cache, then snapshot", () => {
+      const fromCache = esimDetailsLabels(
+        baseEsim({ ...snapshot, usage_expired_at: expiry }),
+        { total_mb: 2048, expired_at: "not-a-date" },
+        now,
+      );
+      assert.equal(fromCache.validity, "12 days");
+      assert.equal(fromCache.data, "2 GB");
+
+      const fromSnapshot = esimDetailsLabels(
+        baseEsim({ ...snapshot, usage_expired_at: "also-bad" }),
+        { total_mb: 2048, expired_at: "not-a-date" },
+        now,
+      );
+      assert.equal(fromSnapshot.validity, "3 days");
+      assert.doesNotMatch(fromSnapshot.validity, /NaN|Invalid Date/);
+    });
+
+    it("falls back to purchase snapshot when usage is missing", () => {
+      const labels = esimDetailsLabels(baseEsim(snapshot), null, now);
+      assert.deepEqual(labels, { data: "300 MB", validity: "3 days" });
+    });
+
+    it("uses a neutral dash when no valid source exists", () => {
+      const labels = esimDetailsLabels(baseEsim(), null, now);
+      assert.deepEqual(labels, { data: "—", validity: "—" });
+    });
   });
 
   it("truncates notes for list preview", () => {
