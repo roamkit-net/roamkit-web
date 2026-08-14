@@ -44,7 +44,7 @@ const TAB_COPY: Record<
   },
   all: {
     title: "All destinations",
-    description: "Browse every location in the RoamKit catalog.",
+    description: "Browse every location in the RoamKit.net catalog.",
   },
 };
 

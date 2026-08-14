@@ -26,7 +26,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   return (
     <div className="auth-page-bg">
       <main className="auth-shell-enter">
-        <Link href="/" className="inline-flex" aria-label="RoamKit home">
+        <Link href="/" className="inline-flex" aria-label="RoamKit.net home">
           <Logo />
         </Link>
         <h1 className="mt-10 text-3xl font-bold tracking-tight text-[var(--auth-chrome-text)]">

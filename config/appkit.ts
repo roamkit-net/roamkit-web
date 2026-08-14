@@ -7,7 +7,7 @@ export function isWalletConnectConfigured(): boolean {
 }
 
 export const metadata = {
-  name: "RoamKit",
+  name: "RoamKit.net",
   description: "Deposit Polygon USDT credits",
   url:
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
