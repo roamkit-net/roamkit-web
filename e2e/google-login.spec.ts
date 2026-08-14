@@ -100,6 +100,14 @@ test.describe("Google OAuth login", () => {
       });
     });
 
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/packages/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ results: [] }),
+      });
+    });
+
     await page.goto(`/login?next=${encodeURIComponent(DETAIL_PATH)}`);
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { appShellNavLinkClassName } from "@/components/TopBar";
@@ -11,6 +11,7 @@ import { useBilling } from "@/components/billing/useBilling";
 import { CatalogPriceDisplay } from "@/components/CatalogPriceDisplay";
 import { AutoTopupControls } from "@/components/esim/AutoTopupControls";
 import { EsimNoteForm } from "@/components/esim/EsimNoteForm";
+import { EsimPackagesCard } from "@/components/esim/EsimPackagesCard";
 import { ManualInstallTips } from "@/components/esim/ManualInstallTips";
 import {
   dataLabelFromPackage,
@@ -25,11 +26,13 @@ import { Card, CardSection } from "@/components/ui/Card";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import {
   ApiError,
+  AppliedPackage,
   Esim,
   EsimUsage,
   TopupPackage,
   clearTokens,
   fetchMyEsim,
+  fetchMyEsimPackages,
   fetchMyEsimTopups,
   fetchMyEsimUsage,
   isAuthenticated,
@@ -65,13 +68,6 @@ import {
 import { restoreShortfallScroll } from "@/lib/orders/shortfallScroll";
 import { loginHref } from "@/lib/navigation/safePath";
 
-function formatMb(value: number | null | undefined): string {
-  if (value == null) {
-    return "—";
-  }
-  return `${value} MB`;
-}
-
 const INSUFFICIENT_CREDITS_TITLE =
   "Not enough credits — deposit to buy this plan";
 
@@ -91,11 +87,14 @@ export default function MyEsimDetailPage() {
 
   const [esim, setEsim] = useState<Esim | null>(null);
   const [usage, setUsage] = useState<EsimUsage | null>(null);
+  const [packages, setPackages] = useState<AppliedPackage[]>([]);
   const [topups, setTopups] = useState<TopupPackage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
+  const [packagesError, setPackagesError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false);
+  const refreshInFlightRef = useRef(false);
   const [device, setDevice] = useState<InstallDeviceClass>("desktop");
   const installSessionId = useRef(createSetupSessionId());
   const autoTopupRef = useRef<HTMLElement>(null);
@@ -122,6 +121,55 @@ export default function MyEsimDetailPage() {
   const [pendingTopup, setPendingTopup] = useState<TopupPackage | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const purchaseAttemptedRef = useRef(false);
+
+  const refreshUsageAndPackages = useCallback(
+    async (options?: { cancelled?: () => boolean }) => {
+      if (refreshInFlightRef.current) {
+        return;
+      }
+      refreshInFlightRef.current = true;
+      setIsRefreshingUsage(true);
+      setUsageError(null);
+      setPackagesError(null);
+      try {
+        const [usageResult, packagesResult] = await Promise.allSettled([
+          fetchMyEsimUsage(esimId),
+          fetchMyEsimPackages(esimId),
+        ]);
+        if (options?.cancelled?.()) {
+          return;
+        }
+        if (usageResult.status === "fulfilled") {
+          setUsage(usageResult.value);
+        } else {
+          const err = usageResult.reason;
+          if (err instanceof ApiError && err.status === 401) {
+            clearTokens();
+            router.replace(loginHref(detailPath));
+            return;
+          }
+          setUsageError("Could not refresh usage.");
+        }
+        if (packagesResult.status === "fulfilled") {
+          setPackages(packagesResult.value.results);
+        } else {
+          const err = packagesResult.reason;
+          if (err instanceof ApiError && err.status === 401) {
+            clearTokens();
+            router.replace(loginHref(detailPath));
+            return;
+          }
+          setPackagesError("Could not load packages.");
+        }
+      } finally {
+        refreshInFlightRef.current = false;
+        if (!options?.cancelled?.()) {
+          setIsRefreshingUsage(false);
+        }
+      }
+    },
+    [detailPath, esimId, router],
+  );
 
   useEffect(() => {
     restoreShortfallScroll(currentPathWithSearch());
@@ -268,6 +316,7 @@ export default function MyEsimDetailPage() {
       setIsLoading(true);
       setError(null);
       setUsageError(null);
+      setPackagesError(null);
       try {
         const [detail, topupList] = await Promise.all([
           fetchMyEsim(esimId),
@@ -278,17 +327,7 @@ export default function MyEsimDetailPage() {
         }
         setEsim(detail);
         setTopups(topupList.results);
-
-        try {
-          const liveUsage = await fetchMyEsimUsage(esimId);
-          if (!cancelled) {
-            setUsage(liveUsage);
-          }
-        } catch {
-          if (!cancelled) {
-            setUsageError("Live usage is unavailable right now.");
-          }
-        }
+        await refreshUsageAndPackages({ cancelled: () => cancelled });
       } catch (err) {
         if (cancelled) {
           return;
@@ -314,7 +353,7 @@ export default function MyEsimDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [detailPath, esimId, router]);
+  }, [detailPath, esimId, refreshUsageAndPackages, router]);
 
   useEffect(() => {
     if (!successTopup) {
@@ -323,17 +362,14 @@ export default function MyEsimDetailPage() {
     let cancelled = false;
     async function refreshAfterTopup() {
       try {
-        const [topupList, liveUsage] = await Promise.all([
+        const [topupList] = await Promise.all([
           fetchMyEsimTopups(esimId),
-          fetchMyEsimUsage(esimId).catch(() => null),
+          refreshUsageAndPackages({ cancelled: () => cancelled }),
         ]);
         if (cancelled) {
           return;
         }
         setTopups(topupList.results);
-        if (liveUsage) {
-          setUsage(liveUsage);
-        }
       } catch {
         // Listing refresh is best-effort after purchase.
       }
@@ -342,25 +378,7 @@ export default function MyEsimDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [esimId, successTopup]);
-
-  async function refreshUsage() {
-    setIsRefreshingUsage(true);
-    setUsageError(null);
-    try {
-      const liveUsage = await fetchMyEsimUsage(esimId);
-      setUsage(liveUsage);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        clearTokens();
-        router.replace(loginHref(detailPath));
-        return;
-      }
-      setUsageError("Could not refresh usage.");
-    } finally {
-      setIsRefreshingUsage(false);
-    }
-  }
+  }, [esimId, refreshUsageAndPackages, successTopup]);
 
   const returnPath = `/me/esims/${esimId}`;
 
@@ -488,75 +506,17 @@ export default function MyEsimDetailPage() {
             }
           />
 
-          <Card as="section">
-            <CardSection>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-slate-900">Usage</h2>
-                <button
-                  type="button"
-                  onClick={() => void refreshUsage()}
-                  disabled={isRefreshingUsage}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {isRefreshingUsage ? "Refreshing…" : "Refresh"}
-                </button>
-              </div>
-              {usageError ? (
-                <p className="mt-3 text-sm text-amber-800">{usageError}</p>
-              ) : null}
-              {usage ? (
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-                  <div>
-                    <dt className="text-slate-500">Status</dt>
-                    <dd className="font-medium text-slate-900">
-                      {usage.status}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Remaining</dt>
-                    <dd className="font-medium text-slate-900">
-                      {usage.is_unlimited
-                        ? "Unlimited"
-                        : formatMb(usage.remaining_mb)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Total</dt>
-                    <dd className="font-medium text-slate-900">
-                      {usage.is_unlimited
-                        ? "Unlimited"
-                        : formatMb(usage.total_mb)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Expires</dt>
-                    <dd className="font-medium text-slate-900">
-                      {usage.expired_at ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <dt className="text-slate-500">Cached remaining</dt>
-                    <dd className="font-medium text-slate-900">
-                      {esim.usage_is_unlimited
-                        ? "Unlimited"
-                        : formatMb(esim.usage_remaining_mb)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Cached total</dt>
-                    <dd className="font-medium text-slate-900">
-                      {esim.usage_is_unlimited
-                        ? "Unlimited"
-                        : formatMb(esim.usage_total_mb)}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-            </CardSection>
-          </Card>
+          <EsimPackagesCard
+            packages={packages}
+            packagesError={packagesError}
+            usageError={usageError}
+            usage={usage}
+            cachedRemainingMb={esim.usage_remaining_mb}
+            cachedTotalMb={esim.usage_total_mb}
+            cachedUnlimited={esim.usage_is_unlimited}
+            isRefreshing={isRefreshingUsage}
+            onRefresh={() => void refreshUsageAndPackages()}
+          />
 
           <Card as="section">
             <CardSection>
