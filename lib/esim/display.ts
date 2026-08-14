@@ -1,6 +1,6 @@
 /** Display helpers for My eSIMs list/detail (order product snapshot). */
 
-import type { Esim } from "@/lib/api";
+import type { AppliedPackage, Esim } from "@/lib/api";
 import { formatDataMb } from "@/lib/esim/packages";
 
 const MS_PER_DAY = 86_400_000;
@@ -250,4 +250,61 @@ export function isActionRequiredEsim(esim: Esim): boolean {
 
 export function actionRequiredEsims(esims: Esim[]): Esim[] {
   return esims.filter(isActionRequiredEsim);
+}
+
+/** Canonical non-negative decimal with at most two fraction digits. */
+const CANONICAL_PAID_USD = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
+
+/**
+ * Parse a customer-charge string into integer cents.
+ * Rejects exponent, extra decimals, negatives, and implicit rounding.
+ */
+export function parsePaidUsdCents(value: string | null | undefined): number | null {
+  if (value == null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!CANONICAL_PAID_USD.test(trimmed)) {
+    return null;
+  }
+  const [whole, frac = ""] = trimmed.split(".");
+  const wholeCents = Number(whole) * 100;
+  const fracCents = Number(frac.padEnd(2, "0"));
+  if (!Number.isSafeInteger(wholeCents) || !Number.isSafeInteger(fracCents)) {
+    return null;
+  }
+  return wholeCents + fracCents;
+}
+
+function centsToPaidUsd(cents: number): string {
+  const whole = Math.trunc(cents / 100);
+  const frac = Math.abs(cents % 100);
+  return `${whole}.${String(frac).padStart(2, "0")}`;
+}
+
+/**
+ * Details Paid = sum of each package charge, or esim.paid_usd when none sum.
+ * Does not dedupe by package id. Missing/invalid packages payload falls back.
+ */
+export function esimPaidTotal(
+  packages: ReadonlyArray<Pick<AppliedPackage, "paid_usd">> | null | undefined,
+  fallbackPaidUsd?: string | null,
+): string | null {
+  let cents = 0;
+  let counted = 0;
+  if (packages) {
+    for (const row of packages) {
+      const parsed = parsePaidUsdCents(row.paid_usd);
+      if (parsed === null) {
+        continue;
+      }
+      cents += parsed;
+      counted += 1;
+    }
+  }
+  if (counted > 0) {
+    return centsToPaidUsd(cents);
+  }
+  const fallback = parsePaidUsdCents(fallbackPaidUsd);
+  return fallback === null ? null : centsToPaidUsd(fallback);
 }
