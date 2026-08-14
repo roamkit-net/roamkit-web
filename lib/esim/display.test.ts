@@ -4,9 +4,12 @@ import { describe, it } from "node:test";
 import type { Esim } from "@/lib/api";
 import {
   actionRequiredEsims,
+  esimActionRequiredSubtitle,
   esimDestinationLabel,
   esimValidityLabel,
   formatEsimStatus,
+  getEsimActionRequiredReason,
+  isActionRequiredEsim,
   partitionMyEsims,
   truncateNote,
 } from "@/lib/esim/display";
@@ -130,11 +133,16 @@ describe("esim display helpers", () => {
     );
   });
 
-  it("includes expired paused-funds eSIMs in Action required, not archived", () => {
+  it("includes exact Action required pairs, including expired, not archived", () => {
     const pausedFunds = {
       enabled: true,
       status: "paused",
       reason: "insufficient_funds",
+    } as const;
+    const blockedPackage = {
+      enabled: true,
+      status: "blocked",
+      reason: "package_unavailable",
     } as const;
 
     const items = actionRequiredEsims([
@@ -177,11 +185,144 @@ describe("esim display helpers", () => {
           reason: "insufficient_funds",
         },
       }),
+      baseEsim({
+        id: 7,
+        status: "in_use",
+        auto_topup: blockedPackage,
+      }),
+      baseEsim({
+        id: 8,
+        status: "expired",
+        auto_topup: blockedPackage,
+      }),
+      baseEsim({
+        id: 9,
+        status: "in_use",
+        archived_at: "2026-05-01T00:00:00Z",
+        auto_topup: blockedPackage,
+      }),
     ]);
 
     assert.deepEqual(
       items.map((e) => e.id),
-      [1, 2],
+      [1, 2, 7, 8],
     );
+  });
+
+  it("resolves Action required copy from exact pairs and fails closed otherwise", () => {
+    const pausedFunds = baseEsim({
+      auto_topup: {
+        enabled: true,
+        status: "paused",
+        reason: "insufficient_funds",
+      },
+    });
+    const blockedPackage = baseEsim({
+      auto_topup: {
+        enabled: true,
+        status: "blocked",
+        reason: "package_unavailable",
+      },
+    });
+
+    assert.equal(getEsimActionRequiredReason(pausedFunds), "insufficient_funds");
+    assert.equal(getEsimActionRequiredReason(blockedPackage), "package_unavailable");
+    assert.equal(isActionRequiredEsim(pausedFunds), true);
+    assert.equal(isActionRequiredEsim(blockedPackage), true);
+    assert.equal(
+      esimActionRequiredSubtitle("insufficient_funds"),
+      "Auto top-up paused · Insufficient funds",
+    );
+    assert.equal(
+      esimActionRequiredSubtitle("package_unavailable"),
+      "Auto top-up blocked · Package unavailable",
+    );
+
+    const negatives = [
+      baseEsim({ auto_topup: null }),
+      baseEsim({
+        auto_topup: {
+          enabled: false,
+          status: "paused",
+          reason: "insufficient_funds",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: false,
+          status: "blocked",
+          reason: "package_unavailable",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "package_unavailable",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "blocked",
+          reason: "insufficient_funds",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "count_exhausted",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "schedule_ended",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "disabled",
+          reason: "manual_pause",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "usage_unknown",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "provider_error",
+        },
+      }),
+      baseEsim({
+        auto_topup: {
+          enabled: true,
+          status: "active",
+          reason: "",
+        },
+      }),
+      baseEsim({
+        archived_at: "2026-05-01T00:00:00Z",
+        auto_topup: {
+          enabled: true,
+          status: "paused",
+          reason: "insufficient_funds",
+        },
+      }),
+    ];
+
+    for (const esim of negatives) {
+      assert.equal(getEsimActionRequiredReason(esim), null);
+      assert.equal(isActionRequiredEsim(esim), false);
+    }
   });
 });

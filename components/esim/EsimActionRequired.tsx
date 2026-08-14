@@ -7,7 +7,11 @@ import { buttonClassName } from "@/components/ui/Button";
 import { listRowClassName } from "@/components/ui/ListRow";
 import type { Esim } from "@/lib/api";
 import { AUTO_TOPUP_HASH } from "@/lib/esim/autoTopupHash";
-import { esimDestinationLabel } from "@/lib/esim/display";
+import {
+  esimActionRequiredSubtitle,
+  esimDestinationLabel,
+  getEsimActionRequiredReason,
+} from "@/lib/esim/display";
 
 export function EsimActionRequired({ esims }: { esims: Esim[] }) {
   if (esims.length === 0) {
@@ -27,6 +31,10 @@ export function EsimActionRequired({ esims }: { esims: Esim[] }) {
     >
       <ul className="grid gap-3 pt-2">
         {esims.map((esim) => {
+          const reason = getEsimActionRequiredReason(esim);
+          if (!reason) {
+            return null;
+          }
           const destination = esimDestinationLabel(esim);
           return (
             <li key={esim.id}>
@@ -36,7 +44,7 @@ export function EsimActionRequired({ esims }: { esims: Esim[] }) {
                     {destination}
                   </p>
                   <p className="mt-0.5 text-sm text-slate-600">
-                    Auto top-up paused · Insufficient funds
+                    {esimActionRequiredSubtitle(reason)}
                   </p>
                 </div>
                 <Link
