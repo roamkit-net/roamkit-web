@@ -615,6 +615,32 @@ export type TopupPackage = {
   plan_type: string;
 };
 
+/** Applied package instance from GET /me/esims/{id}/packages/. */
+export type AppliedPackageStatus =
+  | "active"
+  | "not_active"
+  | "expired"
+  | "finished"
+  | "unknown";
+
+export type AppliedPackageKind = "esim" | "topup";
+
+export type AppliedPackage = {
+  id: string;
+  kind: AppliedPackageKind | string;
+  status: AppliedPackageStatus | string;
+  data_allowance: string;
+  validity_days: number;
+  is_unlimited: boolean;
+  remaining_mb: number | null;
+  created_at: string | null;
+  activated_at: string | null;
+  expires_at: string | null;
+  /** Customer charge; null when the local match is ambiguous. */
+  paid_usd: string | null;
+  currency: string;
+};
+
 function formatApiValidationMessage(body: unknown, fallback: string): string {
   if (!body || typeof body !== "object") {
     return fallback;
@@ -926,6 +952,18 @@ export async function fetchMyEsimTopups(
     auth: true,
     cache: "no-store",
   });
+}
+
+export async function fetchMyEsimPackages(
+  id: number | string,
+): Promise<{ results: AppliedPackage[] }> {
+  return fetchApi<{ results: AppliedPackage[] }>(
+    `/api/v1/me/esims/${id}/packages/`,
+    {
+      auth: true,
+      cache: "no-store",
+    },
+  );
 }
 
 export async function fetchMyEsimAutoTopup(

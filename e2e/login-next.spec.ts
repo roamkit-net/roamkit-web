@@ -99,6 +99,14 @@ test.describe("login next redirect", () => {
       });
     });
 
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/packages/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ results: [] }),
+      });
+    });
+
     await page.goto(DETAIL_PATH, { waitUntil: "domcontentloaded" });
 
     await expect(page).toHaveURL(
