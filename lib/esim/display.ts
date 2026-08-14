@@ -123,24 +123,53 @@ export function partitionMyEsims(esims: Esim[]): EsimListSections {
   return { active, expired, archived };
 }
 
+/** Exact Action required pairs only. Unknown combinations fail closed. */
+export type EsimActionRequiredReason =
+  | "insufficient_funds"
+  | "package_unavailable";
+
+const ACTION_REQUIRED_SUBTITLE: Record<EsimActionRequiredReason, string> = {
+  insufficient_funds: "Auto top-up paused · Insufficient funds",
+  package_unavailable: "Auto top-up blocked · Package unavailable",
+};
+
 /**
- * v1 Action required: paused Auto top-up for insufficient funds.
- * Archived eSIMs never appear, even if the policy is still paused.
- * Expired eSIMs are included in this slice.
+ * Source of truth for Action required membership and list copy.
+ * Archived never qualify. Expired eSIMs with an exact pair do.
  */
-export function isActionRequiredEsim(esim: Esim): boolean {
+export function getEsimActionRequiredReason(
+  esim: Esim,
+): EsimActionRequiredReason | null {
   if (esim.archived_at) {
-    return false;
+    return null;
   }
   const snapshot = esim.auto_topup;
-  if (!snapshot) {
-    return false;
+  if (!snapshot || snapshot.enabled !== true) {
+    return null;
   }
-  return (
-    snapshot.enabled === true &&
+  if (
     snapshot.status === "paused" &&
     snapshot.reason === "insufficient_funds"
-  );
+  ) {
+    return "insufficient_funds";
+  }
+  if (
+    snapshot.status === "blocked" &&
+    snapshot.reason === "package_unavailable"
+  ) {
+    return "package_unavailable";
+  }
+  return null;
+}
+
+export function esimActionRequiredSubtitle(
+  reason: EsimActionRequiredReason,
+): string {
+  return ACTION_REQUIRED_SUBTITLE[reason];
+}
+
+export function isActionRequiredEsim(esim: Esim): boolean {
+  return getEsimActionRequiredReason(esim) !== null;
 }
 
 export function actionRequiredEsims(esims: Esim[]): Esim[] {
