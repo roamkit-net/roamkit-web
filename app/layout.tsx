@@ -25,7 +25,7 @@ const sourceSerif = Source_Serif_4({
 
 const siteUrl = siteOrigin();
 
-const title = "RoamKit – Global eSIM Plans & Prepaid Connectivity";
+const title = "RoamKit.net – Global eSIM Plans & Prepaid Connectivity";
 const description =
   "Buy eSIM data plans worldwide. Top up prepaid credits, activate instantly, and stay connected wherever you travel.";
 
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title,
     description,
     url: "/",
-    siteName: "RoamKit",
+    siteName: "RoamKit.net",
     type: "website",
   },
   twitter: {

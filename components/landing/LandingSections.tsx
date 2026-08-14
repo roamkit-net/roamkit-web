@@ -52,7 +52,7 @@ export function WhyRoamKit() {
     <section className="landing-section relative px-6 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-2xl font-semibold tracking-tight text-[var(--landing-foreground)] sm:text-3xl">
-          Why RoamKit
+          Why RoamKit.net
         </h2>
         <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:max-w-3xl">
           {BENEFITS.map((benefit) => (

@@ -33,7 +33,7 @@ export function HeroSection() {
           <div className="landing-hero-enter flex max-w-xl flex-col gap-8 lg:max-w-2xl">
             <div className="flex flex-col gap-6">
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--landing-muted)]">
-                RoamKit
+                RoamKit.net
               </p>
               <h1 className="landing-display text-4xl font-bold leading-[1.15] tracking-tight text-[var(--landing-foreground)] sm:text-5xl lg:text-[3.25rem] lg:leading-[1.12]">
                 Stay connected before you land.

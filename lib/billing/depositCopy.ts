@@ -31,7 +31,7 @@ export const depositCopy = {
 
   walletHeading: "Pay with wallet",
   walletDescription: (tokenSymbol: string) =>
-    `Connect a wallet and send ${tokenSymbol}. After you approve the transfer we capture the transaction hash and verify it with RoamKit.`,
+    `Connect a wallet and send ${tokenSymbol}. After you approve the transfer we capture the transaction hash and verify it with RoamKit.net.`,
   walletMisconfiguredHeading: "Pay with wallet",
   walletMisconfiguredBody:
     "Wallet deposits are enabled on the API, but this web build is missing a WalletConnect project id. Use Send using QR or Deposit from exchange instead.",
