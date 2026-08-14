@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="relative border-t border-[var(--landing-border)] px-6 py-10 sm:px-10 lg:px-16">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <p className="text-center text-sm text-[var(--landing-muted-soft)] sm:text-left">
-          © 2026 RoamKit.
+          © 2026 RoamKit.net
           <br className="sm:hidden" />{" "}
           All rights reserved.
         </p>

@@ -241,7 +241,7 @@ function DepositPageContent() {
       <AppPageHeader
         eyebrow={
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--app-chrome-text-muted)]">
-            RoamKit
+            RoamKit.net
           </p>
         }
         title={

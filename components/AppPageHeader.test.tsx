@@ -49,7 +49,7 @@ describe("AppPageHeader scenarios", () => {
       createElement(
         AppPageHeader,
         {
-          eyebrow: createElement("p", null, "RoamKit"),
+          eyebrow: createElement("p", null, "RoamKit.net"),
           title: createElement("h1", null, "My eSIMs"),
           description: createElement("p", null, "Manage your plans."),
           actions: createElement("div", null, "Actions"),
@@ -58,7 +58,7 @@ describe("AppPageHeader scenarios", () => {
       ),
     );
 
-    assert.match(html, /RoamKit/);
+    assert.match(html, /RoamKit\.net/);
     assert.match(html, /My eSIMs/);
     assert.match(html, /Manage your plans/);
     assert.match(html, /Actions/);

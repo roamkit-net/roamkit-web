@@ -79,7 +79,7 @@ function ResetPasswordForm() {
   return (
     <AuthShell
       title="Reset password"
-      subtitle="Choose a new password for your RoamKit account."
+      subtitle="Choose a new password for your RoamKit.net account."
       footer={
         <>
           Remembered your password?{" "}

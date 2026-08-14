@@ -60,7 +60,7 @@ function SetPasswordForm() {
   return (
     <AuthShell
       title="Set your password"
-      subtitle="Choose a password to activate your RoamKit account."
+      subtitle="Choose a password to activate your RoamKit.net account."
       footer={
         <>
           Already activated?{" "}
