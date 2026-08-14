@@ -55,10 +55,20 @@ describe("EsimActionRequired", () => {
           baseEsim({
             id: 19,
             location_title: "Croatia",
+            auto_topup: {
+              enabled: true,
+              status: "paused",
+              reason: "insufficient_funds",
+            },
           }),
           baseEsim({
             id: 20,
             location_title: "Discover Global",
+            auto_topup: {
+              enabled: true,
+              status: "paused",
+              reason: "insufficient_funds",
+            },
           }),
         ],
       }),
@@ -74,5 +84,64 @@ describe("EsimActionRequired", () => {
     assert.equal(links.length, 2);
     assert.equal(links[0]?.getAttribute("href"), "/me/esims/19#auto-topup");
     assert.equal(links[1]?.getAttribute("href"), "/me/esims/20#auto-topup");
+  });
+
+  it("renders funds and package rows once each with their own copy and Resolve href", () => {
+    render(
+      createElement(EsimActionRequired, {
+        esims: [
+          baseEsim({
+            id: 19,
+            location_title: "Croatia",
+            auto_topup: {
+              enabled: true,
+              status: "paused",
+              reason: "insufficient_funds",
+            },
+          }),
+          baseEsim({
+            id: 21,
+            location_title: "Japan",
+            auto_topup: {
+              enabled: true,
+              status: "blocked",
+              reason: "package_unavailable",
+            },
+          }),
+        ],
+      }),
+    );
+
+    const region = screen.getByRole("region");
+    assert.match(region.textContent ?? "", /Action required \(2\)/);
+    assert.match(region.textContent ?? "", /Croatia/);
+    assert.match(region.textContent ?? "", /Japan/);
+    assert.match(
+      region.textContent ?? "",
+      /Auto top-up paused · Insufficient funds/,
+    );
+    assert.match(
+      region.textContent ?? "",
+      /Auto top-up blocked · Package unavailable/,
+    );
+    assert.equal(
+      (region.textContent ?? "").match(/Auto top-up paused · Insufficient funds/g)
+        ?.length,
+      1,
+    );
+    assert.equal(
+      (region.textContent ?? "").match(/Auto top-up blocked · Package unavailable/g)
+        ?.length,
+      1,
+    );
+
+    const links = screen.getAllByRole("link", { name: "Resolve" });
+    assert.equal(links.length, 2);
+    assert.equal(links[0]?.getAttribute("href"), "/me/esims/19#auto-topup");
+    assert.equal(links[1]?.getAttribute("href"), "/me/esims/21#auto-topup");
+    const items = region.querySelectorAll("li");
+    assert.equal(items.length, 2);
+    assert.match(items[0]?.textContent ?? "", /Croatia/);
+    assert.match(items[1]?.textContent ?? "", /Japan/);
   });
 });
