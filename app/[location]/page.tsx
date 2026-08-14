@@ -30,17 +30,17 @@ export async function generateMetadata({
   const { location: locationParam } = await params;
   const slug = parseLocationSlug(locationParam);
   if (!slug) {
-    return { title: "Not found — RoamKit" };
+    return { title: "Not found — RoamKit.net" };
   }
 
   try {
     const location = await fetchLocation(slug);
     return {
-      title: `${location.title} eSIMs — RoamKit`,
-      description: `Browse ${location.title} eSIM data plans on RoamKit.`,
+      title: `${location.title} eSIMs — RoamKit.net`,
+      description: `Browse ${location.title} eSIM data plans on RoamKit.net.`,
     };
   } catch {
-    return { title: "Destination — RoamKit" };
+    return { title: "Destination — RoamKit.net" };
   }
 }
 

@@ -18,7 +18,7 @@ export function OpsShell({ children }: PropsWithChildren) {
               href={routes.adminDashboard}
               className="text-sm font-semibold tracking-tight text-slate-900"
             >
-              RoamKit Ops
+              RoamKit.net Ops
             </Link>
             <nav className="flex gap-3 text-sm">
               <Link

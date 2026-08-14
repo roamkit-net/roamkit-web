@@ -73,7 +73,7 @@ export function CompatibilityModal({ onClose }: { onClose: () => void }) {
 
         <div className="space-y-3 border-b border-slate-100 px-5 py-4 text-sm leading-6 text-slate-600">
           <p>
-            To use a RoamKit eSIM, a device must meet the following conditions:
+            To use a RoamKit.net eSIM, a device must meet the following conditions:
           </p>
           <ul className="list-disc space-y-1 pl-5">
             <li>The device supports eSIMs.</li>

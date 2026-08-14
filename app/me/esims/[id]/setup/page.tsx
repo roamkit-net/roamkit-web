@@ -489,7 +489,7 @@ export default function EsimSetupWizardPage() {
                   <h2 className="text-lg font-semibold">Enable eSIM</h2>
                   <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
                     <li>Open Settings → Cellular / Mobile Network.</li>
-                    <li>Turn on the new RoamKit eSIM line.</li>
+                    <li>Turn on the new RoamKit.net eSIM line.</li>
                     <li>Keep your primary SIM for calls if you prefer.</li>
                   </ul>
                   <button
@@ -514,14 +514,14 @@ export default function EsimSetupWizardPage() {
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
                     <li>
                       <span className="font-medium">Data roaming</span> — ON for
-                      the RoamKit eSIM.
+                      the RoamKit.net eSIM.
                     </li>
                     <li>
                       <span className="font-medium">Primary SIM</span> — calls /
                       SMS as usual.
                     </li>
                     <li>
-                      <span className="font-medium">RoamKit eSIM</span> — Mobile
+                      <span className="font-medium">RoamKit.net eSIM</span> — Mobile
                       data.
                     </li>
                   </ol>
