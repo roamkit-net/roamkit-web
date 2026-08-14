@@ -4,8 +4,8 @@ import { describe, it } from "node:test";
 import { join } from "node:path";
 
 /**
- * Isolation contract: details card uses the usage clock helper and does not
- * change Paid / ICCID / LPA, the list, or the Packages card.
+ * Isolation contract: details card uses the usage clock helper and Paid total.
+ * ICCID / LPA, the list, and the Packages card stay unchanged.
  */
 describe("eSIM detail live Data/Validity contract", () => {
   const detailPage = readFileSync(
@@ -32,7 +32,8 @@ describe("eSIM detail live Data/Validity contract", () => {
     assert.match(detailPage, />Paid</);
     assert.match(detailPage, />ICCID</);
     assert.match(detailPage, />LPA</);
-    assert.match(detailPage, /CatalogPriceDisplay amount=\{esim\.paid_usd\}/);
+    assert.match(detailPage, /esimPaidTotal/);
+    assert.match(detailPage, /CatalogPriceDisplay amount=\{paidTotal\}/);
     assert.match(detailPage, /\{esim\.iccid\}/);
     assert.match(detailPage, /\{esim\.lpa\}/);
   });
