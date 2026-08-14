@@ -175,6 +175,13 @@ async function mockEsimDetailRoutes(page: Page) {
       }),
     });
   });
+  await page.route(`**/api/v1/me/esims/${ESIM_ID}/packages/`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ results: [] }),
+    });
+  });
   await page.route(`**/api/v1/me/esims/${ESIM_ID}/topups/**`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -187,7 +194,8 @@ async function mockEsimDetailRoutes(page: Page) {
     if (
       url.includes("/auto-topup") ||
       url.includes("/topups") ||
-      url.includes("/usage")
+      url.includes("/usage") ||
+      url.includes("/packages")
     ) {
       await route.fallback();
       return;
@@ -447,6 +455,13 @@ test.describe("eSIM auto top-up controls", () => {
         }),
       });
     });
+    await page.route(`**/api/v1/me/esims/${ESIM_ID}/packages/`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ results: [] }),
+      });
+    });
     await page.route(`**/api/v1/me/esims/${ESIM_ID}/topups/**`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -459,7 +474,8 @@ test.describe("eSIM auto top-up controls", () => {
       if (
         url.includes("/auto-topup") ||
         url.includes("/topups") ||
-        url.includes("/usage")
+        url.includes("/usage") ||
+        url.includes("/packages")
       ) {
         await route.fallback();
         return;
