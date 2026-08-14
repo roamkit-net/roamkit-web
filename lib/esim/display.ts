@@ -1,6 +1,21 @@
 /** Display helpers for My eSIMs list/detail (order product snapshot). */
 
 import type { Esim } from "@/lib/api";
+import { formatDataMb } from "@/lib/esim/packages";
+
+const MS_PER_DAY = 86_400_000;
+const NEUTRAL_LABEL = "—";
+
+export type EsimDetailsUsageInput = {
+  total_mb?: number | null;
+  is_unlimited?: boolean | null;
+  expired_at?: string | null;
+};
+
+export type EsimDetailsLabels = {
+  data: string;
+  validity: string;
+};
 
 export function formatEsimStatus(status: string | null | undefined): string {
   if (!status) {
@@ -43,6 +58,67 @@ export function esimValidityLabel(esim: Esim): string | null {
   }
   const days = esim.validity_days;
   return days === 1 ? "1 day" : `${days} days`;
+}
+
+function dataLabelFromLayer(
+  isUnlimited: boolean | null | undefined,
+  totalMb: number | null | undefined,
+): string | null {
+  if (isUnlimited === true) {
+    return "Unlimited";
+  }
+  if (totalMb !== undefined && totalMb !== null && Number.isFinite(totalMb)) {
+    return formatDataMb(totalMb);
+  }
+  return null;
+}
+
+function snapshotDataLabel(esim: Esim): string | null {
+  const raw = esim.data_allowance?.trim();
+  return raw ? raw : null;
+}
+
+function remainingDaysLabel(
+  iso: string | null | undefined,
+  nowMs: number,
+): string | null {
+  if (iso == null || iso === "") {
+    return null;
+  }
+  const expiredMs = Date.parse(iso);
+  if (Number.isNaN(expiredMs)) {
+    return null;
+  }
+  const days = Math.max(0, Math.ceil((expiredMs - nowMs) / MS_PER_DAY));
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
+function snapshotValidityLabel(esim: Esim): string | null {
+  return esimValidityLabel(esim);
+}
+
+/**
+ * Headline Data / Validity for the eSIM details card.
+ * Each field resolves independently: live usage → esim cache → purchase snapshot.
+ * ``0`` is a real total (not missing). Invalid expiry never yields NaN / Invalid Date.
+ */
+export function esimDetailsLabels(
+  esim: Esim,
+  usage?: EsimDetailsUsageInput | null,
+  now: number | Date = Date.now(),
+): EsimDetailsLabels {
+  const nowMs = typeof now === "number" ? now : now.getTime();
+  const data =
+    dataLabelFromLayer(usage?.is_unlimited, usage?.total_mb) ??
+    dataLabelFromLayer(esim.usage_is_unlimited, esim.usage_total_mb) ??
+    snapshotDataLabel(esim) ??
+    NEUTRAL_LABEL;
+  const validity =
+    remainingDaysLabel(usage?.expired_at, nowMs) ??
+    remainingDaysLabel(esim.usage_expired_at, nowMs) ??
+    snapshotValidityLabel(esim) ??
+    NEUTRAL_LABEL;
+  return { data, validity };
 }
 
 /** Normalized note value (missing/undefined → empty string). */
