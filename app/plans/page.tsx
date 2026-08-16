@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { Suspense } from "react";
 
@@ -5,6 +6,9 @@ import { PlansStore } from "@/components/PlansStore";
 import { ApiError, fetchAllLocations, type LocationListType } from "@/lib/api";
 import { isPopularGeoRankingEnabled } from "@/lib/popular/flags";
 import { getViewerCountry } from "@/lib/popular/viewer-country";
+import { plansMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = plansMetadata();
 
 function parseTab(value: string | string[] | undefined): LocationListType {
   const raw = Array.isArray(value) ? value[0] : value;
