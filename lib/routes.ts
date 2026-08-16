@@ -35,6 +35,16 @@ export function locationEsimPath(slug: string): string {
   return `/${slug}-esim`;
 }
 
+/** Crawlable catalog tab href. Popular is canonical `/plans` (no query). */
+export function plansTabHref(
+  tab: "popular" | "local" | "regional" | "global" | "all",
+): string {
+  if (tab === "popular") {
+    return routes.plans;
+  }
+  return `${routes.plans}?tab=${tab}`;
+}
+
 export const CONTACT_EMAIL = "support@roamkit.net";
 
 export const contactMailto = `mailto:${CONTACT_EMAIL}`;
