@@ -40,7 +40,8 @@ describe("Cap5.1 tabs theme binding", () => {
 
   it("tab navigation / SegmentButton filter left untouched", () => {
     const plans = read("components/PlansStore.tsx");
-    assert.match(plans, /params\.set\("tab", tab\)/);
+    assert.match(plans, /plansTabHref\(tab\.id\)/);
+    assert.match(plans, /<Link/);
     assert.match(plans, /aria-selected=\{isActive\}/);
     const detail = read("components/LocationDetail.tsx");
     assert.match(detail, /function SegmentButton/);

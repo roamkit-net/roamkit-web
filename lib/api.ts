@@ -462,7 +462,7 @@ export async function fetchAllPackages(options?: {
 
 export async function fetchLocations(
   type?: LocationListType,
-  options?: { page?: number },
+  options?: { page?: number; revalidate?: number },
 ): Promise<PaginatedResponse<Location>> {
   const params = new URLSearchParams();
   if (type && type !== "all") {
@@ -473,19 +473,28 @@ export async function fetchLocations(
   }
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
-  return fetchApi<PaginatedResponse<Location>>(`/api/v1/locations/${suffix}`, {
-    cache: "no-store",
-  });
+  const init =
+    options?.revalidate != null
+      ? { next: { revalidate: options.revalidate } }
+      : { cache: "no-store" as const };
+  return fetchApi<PaginatedResponse<Location>>(
+    `/api/v1/locations/${suffix}`,
+    init,
+  );
 }
 
 export async function fetchAllLocations(
   type?: LocationListType,
+  options?: { revalidate?: number },
 ): Promise<Location[]> {
   const results: Location[] = [];
   let page = 1;
 
   for (;;) {
-    const response = await fetchLocations(type, { page });
+    const response = await fetchLocations(type, {
+      page,
+      revalidate: options?.revalidate,
+    });
     results.push(...response.results);
     if (!response.next || page >= 40) {
       break;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 
 import { FeaturedPlans } from "@/components/landing/FeaturedPlans";
@@ -14,6 +15,9 @@ import { selectFeaturedFromPopular } from "@/lib/landing/featuredLocations";
 import { isPopularGeoRankingEnabled } from "@/lib/popular/flags";
 import { selectPopularLocations } from "@/lib/popular/ranking";
 import { getViewerCountry } from "@/lib/popular/viewer-country";
+import { homeMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = homeMetadata();
 
 /**
  * Await catalog in the page so Featured is present (or absent) on first paint.

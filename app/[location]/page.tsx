@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { LocationDetail } from "@/components/LocationDetail";
-import { ApiError, fetchAllPackages, fetchLocation } from "@/lib/api";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { locationBreadcrumbJsonLd } from "@/lib/seo/jsonld";
+import { loadLocationPage } from "@/lib/seo/locationLoader";
+import { locationMetadata, noIndexMetadata } from "@/lib/seo/metadata";
 
 const ESIM_SUFFIX = "-esim";
 
@@ -30,18 +33,21 @@ export async function generateMetadata({
   const { location: locationParam } = await params;
   const slug = parseLocationSlug(locationParam);
   if (!slug) {
-    return { title: "Not found — RoamKit.net" };
+    return { title: "Not found — RoamKit.net", ...noIndexMetadata };
   }
 
-  try {
-    const location = await fetchLocation(slug);
-    return {
-      title: `${location.title} eSIMs — RoamKit.net`,
-      description: `Browse ${location.title} eSIM data plans on RoamKit.net.`,
-    };
-  } catch {
-    return { title: "Destination — RoamKit.net" };
+  if (GLOBAL_SLUG_REDIRECTS.has(slug.toLowerCase())) {
+    return { title: "Global eSIMs — RoamKit.net" };
   }
+
+  const result = await loadLocationPage(slug);
+  if (result.status === "FOUND") {
+    return locationMetadata(result.data.location);
+  }
+  if (result.status === "UPSTREAM_ERROR") {
+    return { title: "Destination — RoamKit.net", ...noIndexMetadata };
+  }
+  return { title: "Not found — RoamKit.net", ...noIndexMetadata };
 }
 
 export default async function LocationEsimPage({
@@ -59,17 +65,21 @@ export default async function LocationEsimPage({
     permanentRedirect("/global-esim");
   }
 
-  try {
-    const [location, packages] = await Promise.all([
-      fetchLocation(slug),
-      fetchAllPackages({ location: slug }),
-    ]);
-
-    return <LocationDetail location={location} packages={packages} />;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      notFound();
-    }
-    throw error;
+  const result = await loadLocationPage(slug);
+  if (result.status === "NOT_FOUND" || result.status === "NO_ACTIVE_PLAN") {
+    notFound();
   }
+  if (result.status === "UPSTREAM_ERROR") {
+    throw result.error;
+  }
+
+  return (
+    <>
+      <JsonLd data={locationBreadcrumbJsonLd(result.data.location)} />
+      <LocationDetail
+        location={result.data.location}
+        packages={result.data.packages}
+      />
+    </>
+  );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AppPageHeader } from "@/components/AppPageHeader";
 import { AppShell } from "@/components/AppShell";
@@ -13,6 +14,7 @@ import { Empty } from "@/components/ui/Empty";
 import type { Location, LocationListType } from "@/lib/api";
 import { selectPopularLocations } from "@/lib/popular/ranking";
 import { recordPopularRankingMeta } from "@/lib/popular/telemetry";
+import { plansTabHref } from "@/lib/routes";
 
 const TABS: { id: LocationListType; label: string }[] = [
   { id: "popular", label: "Popular" },
@@ -81,7 +83,6 @@ export function PlansStore({
   viewerCountry?: string | null;
   geoRankingEnabled?: boolean;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = isLocationListType(tabParam) ? tabParam : initialTab;
@@ -122,17 +123,6 @@ export function PlansStore({
     });
   }, [activeTab, isSearching, popularSelection.ranking_source, viewerCountry]);
 
-  function selectTab(tab: LocationListType) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === "popular") {
-      params.delete("tab");
-    } else {
-      params.set("tab", tab);
-    }
-    const query = params.toString();
-    router.push(query ? `/plans?${query}` : "/plans", { scroll: false });
-  }
-
   return (
     <AppShell>
       <AppPageHeader
@@ -161,12 +151,12 @@ export function PlansStore({
         {TABS.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
-            <button
+            <Link
               key={tab.id}
-              type="button"
+              href={plansTabHref(tab.id)}
+              scroll={false}
               role="tab"
               aria-selected={isActive}
-              onClick={() => selectTab(tab.id)}
               className={
                 isActive
                   ? "rounded-lg bg-[var(--app-primary)] px-3 py-1.5 text-sm font-medium text-[var(--app-primary-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
@@ -174,7 +164,7 @@ export function PlansStore({
               }
             >
               {tab.label}
-            </button>
+            </Link>
           );
         })}
       </div>
