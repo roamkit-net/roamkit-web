@@ -69,6 +69,7 @@ jobs:
             echo "api_url=https://api.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "app_url=https://roamkit.net" >> "$GITHUB_OUTPUT"
             echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "seo_indexing=true" >> "$GITHUB_OUTPUT"
             echo "require_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${PRODUCTION_SITE_KEY:-}"
@@ -92,6 +93,7 @@ jobs:
             echo "api_url=https://api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "app_url=https://staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "environment=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "seo_indexing=" >> "$GITHUB_OUTPUT"
             echo "require_host=api.staging.roamkit.net" >> "$GITHUB_OUTPUT"
             echo "forbid_host=api.roamkit.net" >> "$GITHUB_OUTPUT"
             SITE_KEY="${STAGING_SITE_KEY:-}"
@@ -128,6 +130,7 @@ jobs:
             ROAMKIT_BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
             ROAMKIT_IMAGE_TAG=${{ github.sha }}
             ROAMKIT_ENVIRONMENT=${{ steps.urls.outputs.environment }}
+            SEO_INDEXING_ENABLED=${{ steps.urls.outputs.seo_indexing }}
 
       - name: Assert baked API host and Turnstile sitekey in image
         if: github.event_name == 'push'
