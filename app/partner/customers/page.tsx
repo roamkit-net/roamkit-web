@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { buttonClassName } from "@/components/ui/Button";
+import { accountLabel } from "@/lib/accountLabel";
 import { ApiError } from "@/lib/api";
 import {
   fetchCustomers,
@@ -134,7 +135,7 @@ export default function PartnerCustomersPage() {
           {rows.map((row) => (
             <li key={row.customer_id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
               <span>{row.customer_id}</span>
-              <span>{row.email}</span>
+              <span>{accountLabel(row.display_name, row.email)}</span>
               <span>{row.attributed_at}</span>
               <span>{row.total_partner_earned}</span>
               <span>{row.accrual_count}</span>
@@ -183,7 +184,7 @@ export default function PartnerCustomersPage() {
           <h2 id="grant-title" className="font-semibold">
             Give credit
           </h2>
-          <p className="mt-2 text-sm">{target.email}</p>
+          <p className="mt-2 text-sm">{accountLabel(target.display_name, target.email)}</p>
           <p className="text-sm">Available balance {balance ?? "…"}</p>
           <label className="mt-3 block text-sm" htmlFor="grant-amount">
             Amount

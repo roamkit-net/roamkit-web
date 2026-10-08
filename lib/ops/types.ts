@@ -149,6 +149,7 @@ export type OpsSearchResponse = {
 export type OpsUserListItem = {
   id: number;
   email: string;
+  display_name: string;
   is_active: boolean;
   is_staff: boolean;
   last_login: string | null;
@@ -167,6 +168,7 @@ export type OpsUserDetail = {
   schema_version: number;
   id: number;
   email: string;
+  display_name: string;
   is_active: boolean;
   is_staff: boolean;
   created_at: string;

@@ -535,6 +535,7 @@ export type AuthTokens = {
 export type User = {
   id: number;
   email: string;
+  display_name: string;
   is_staff: boolean;
   created_at: string;
   updated_at: string;

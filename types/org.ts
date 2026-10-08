@@ -48,6 +48,7 @@ export type OrganizationInvite = {
   organization_id: string;
   email: string;
   email_normalized: string;
+  display_name: string;
   role: InviteRole | string;
   status: InviteStatus | string;
   expires_at: string;

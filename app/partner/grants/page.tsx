@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { buttonClassName } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api";
+import { accountLabel } from "@/lib/accountLabel";
 import { fetchGrants, type PartnerGrant } from "@/lib/partner/client";
 
 function dash(value: string | null): string {
@@ -54,12 +55,12 @@ export default function PartnerGrantsPage() {
             <li key={row.grant_id} className="grid gap-1 py-3">
               <span>{row.grant_id}</span>
               <span>
-                {row.customer_id} · {dash(row.email)}
+                {row.customer_id} · {dash(accountLabel(row.display_name, row.email))}
               </span>
               <span>{row.amount}</span>
               <span>
                 {row.granted_by
-                  ? `${row.granted_by.user_id} · ${dash(row.granted_by.email)}`
+                  ? `${row.granted_by.user_id} · ${dash(accountLabel(row.granted_by.display_name, row.granted_by.email))}`
                   : "—"}
               </span>
               <span>{row.created_at}</span>
