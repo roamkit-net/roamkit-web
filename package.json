@@ -37,14 +37,15 @@
     "@x402/svm": "^2.19.0",
     "ethers": "^6.17.0",
     "html5-qrcode": "^2.3.8",
-    "next": "15.5.21",
+    "next": "15.5.27",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "sharp": "^0.35.0"
+    "sharp": "0.35.5"
   },
   "overrides": {
-    "sharp": "^0.35.0",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
     "postcss": "8.5.23",
     "nanoid": "3.3.18"
   },
@@ -59,7 +60,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.21",
+    "eslint-config-next": "15.5.27",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
