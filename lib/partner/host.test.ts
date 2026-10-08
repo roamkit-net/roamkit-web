@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { isTeamHost, teamNextPath } from "./host";
+import { isTeamHost, teamContentSecurityPolicy, teamNextPath } from "./host";
 
 describe("partner host", () => {
   it("recognizes the team hosts and not the consumer hosts", () => {
@@ -10,6 +10,12 @@ describe("partner host", () => {
     assert.equal(isTeamHost("roamkit.net"), false);
     assert.equal(isTeamHost("www.roamkit.net"), false);
     assert.equal(isTeamHost("staging.roamkit.net"), false);
+  });
+
+  it("allows Next inline scripts through a per-request nonce", () => {
+    const policy = teamContentSecurityPolicy("abc123");
+    assert.match(policy, /script-src 'self' 'nonce-abc123' 'strict-dynamic'/);
+    assert.doesNotMatch(policy, /script-src[^;]*unsafe-inline/);
   });
 
   it("allows only portal routes as next", () => {

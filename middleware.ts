@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { TEAM_CSP, isTeamHost } from "@/lib/partner/host";
+import { isTeamHost, teamContentSecurityPolicy } from "@/lib/partner/host";
 
 const TEAM_PAGES = new Set(["/", "/customers", "/grants", "/login"]);
 
@@ -30,10 +30,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers } });
   }
 
+  const nonce = btoa(crypto.randomUUID());
+  const csp = teamContentSecurityPolicy(nonce);
+  headers.set("Content-Security-Policy", csp);
   const url = request.nextUrl.clone();
   url.pathname = path === "/" ? "/partner" : `/partner${path}`;
   const response = NextResponse.rewrite(url, { request: { headers } });
-  response.headers.set("Content-Security-Policy", TEAM_CSP);
+  response.headers.set("Content-Security-Policy", csp);
   response.headers.set("Cache-Control", "no-store");
   return response;
 }

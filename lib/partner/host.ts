@@ -23,13 +23,16 @@ export function teamNextPath(raw: string | null | undefined): string {
   return "/";
 }
 
-export const TEAM_CSP = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
-  "connect-src 'self' https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000",
-].join("; ");
+/** Per-request CSP. Next stamps its inline bootstrap scripts with the nonce. */
+export function teamContentSecurityPolicy(nonce: string): string {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "connect-src 'self' https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000",
+  ].join("; ");
+}
