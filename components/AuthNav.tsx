@@ -10,7 +10,7 @@ import {
 import { BalanceChip } from "@/components/billing/BalanceChip";
 import { UserMenu } from "@/components/UserMenu";
 import { buttonClassName } from "@/components/ui/Button";
-import { accountLabel } from "@/lib/accountLabel";
+import { ACCOUNT_LABEL_EVENT, accountLabel } from "@/lib/accountLabel";
 import {
   ApiError,
   clearTokens,
@@ -69,8 +69,23 @@ export function AuthNav({ variant = "app" }: AuthNavProps) {
     }
 
     void resolve();
+
+    function onLabel(event: Event) {
+      const label = (event as CustomEvent<string>).detail;
+      if (typeof label !== "string") {
+        return;
+      }
+      setState((current) =>
+        current.status === "authenticated"
+          ? { status: "authenticated", label }
+          : current,
+      );
+    }
+
+    window.addEventListener(ACCOUNT_LABEL_EVENT, onLabel);
     return () => {
       cancelled = true;
+      window.removeEventListener(ACCOUNT_LABEL_EVENT, onLabel);
     };
   }, []);
 

@@ -7,6 +7,7 @@ export const routes = {
   register: "/register",
   deposit: "/me/deposit",
   esims: "/me/esims",
+  account: "/me/account",
   orgs: "/me/orgs",
   orgCreate: "/me/orgs/new",
   orgInviteAccept: "/me/orgs/invites/accept",

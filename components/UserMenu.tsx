@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { logout } from "@/lib/api";
+import { routes } from "@/lib/routes";
 
 function emailInitial(email: string): string {
   const local = email.split("@")[0] ?? "";
@@ -115,6 +116,14 @@ export function UserMenu({ email }: UserMenuProps) {
             onClick={() => setOpen(false)}
           >
             Browse plans
+          </Link>
+          <Link
+            href={routes.account}
+            role="menuitem"
+            className="block px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            onClick={() => setOpen(false)}
+          >
+            Display name
           </Link>
           <div className="my-1 border-t border-slate-100" />
           <button
