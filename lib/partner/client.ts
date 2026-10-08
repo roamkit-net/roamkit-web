@@ -23,6 +23,7 @@ export type PartnerSummary = {
 export type PartnerCustomer = {
   customer_id: number;
   email: string;
+  display_name: string;
   attributed_at: string;
   total_partner_earned: string;
   accrual_count: number;
@@ -39,8 +40,13 @@ export type PartnerGrant = {
   grant_id: string;
   customer_id: number;
   email: string | null;
+  display_name: string;
   amount: string;
-  granted_by: { user_id: number; email: string | null } | null;
+  granted_by: {
+    user_id: number;
+    email: string | null;
+    display_name: string;
+  } | null;
   created_at: string;
 };
 

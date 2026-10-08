@@ -24,6 +24,7 @@ const invite: OrganizationInvite = {
   organization_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
   email: "new@example.com",
   email_normalized: "new@example.com",
+  display_name: "",
   role: "member",
   status: "pending",
   expires_at: "2026-01-08T00:00:00Z",

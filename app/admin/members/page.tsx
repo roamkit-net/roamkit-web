@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ApiError, clearTokens } from "@/lib/api";
+import { accountLabel } from "@/lib/accountLabel";
 import { fetchOpsUsers } from "@/lib/ops/client";
 import type { OpsUserListItem } from "@/lib/ops/types";
 import { loginHref } from "@/lib/navigation/safePath";
@@ -187,7 +188,7 @@ export default function AdminMembersPage() {
                         href={adminMemberPath(member.id)}
                         className="font-medium text-slate-900 hover:underline"
                       >
-                        {member.email}
+                        {accountLabel(member.display_name, member.email)}
                       </Link>
                     </td>
                     <td className="px-4 py-3 tabular-nums text-slate-700">

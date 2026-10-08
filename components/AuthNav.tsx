@@ -10,6 +10,7 @@ import {
 import { BalanceChip } from "@/components/billing/BalanceChip";
 import { UserMenu } from "@/components/UserMenu";
 import { buttonClassName } from "@/components/ui/Button";
+import { accountLabel } from "@/lib/accountLabel";
 import {
   ApiError,
   clearTokens,
@@ -21,7 +22,7 @@ import { routes } from "@/lib/routes";
 type AuthNavState =
   | { status: "loading" }
   | { status: "anonymous" }
-  | { status: "authenticated"; email: string };
+  | { status: "authenticated"; label: string };
 
 export type AuthNavVariant = "app" | "landing";
 
@@ -51,7 +52,10 @@ export function AuthNav({ variant = "app" }: AuthNavProps) {
       try {
         const me = await fetchMe();
         if (!cancelled) {
-          setState({ status: "authenticated", email: me.email });
+          setState({
+            status: "authenticated",
+            label: accountLabel(me.display_name, me.email),
+          });
         }
       } catch (err) {
         if (cancelled) {
@@ -78,7 +82,7 @@ export function AuthNav({ variant = "app" }: AuthNavProps) {
     return (
       <AccountCluster>
         <BalanceChip embedded />
-        <UserMenu email={state.email} />
+        <UserMenu email={state.label} />
       </AccountCluster>
     );
   }
