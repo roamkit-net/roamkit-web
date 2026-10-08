@@ -1,4 +1,5 @@
 import { clearPendingDeposit } from "@/lib/billing/pendingDeposit";
+import { isTeamHost } from "@/lib/partner/host";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 import type {
   AutoTopupPolicy,
@@ -703,14 +704,20 @@ export async function registerUser(
   turnstileToken?: string,
 ): Promise<{ detail: string }> {
   try {
-    return await fetchApi<{ detail: string }>("/api/v1/auth/register/", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         email,
         ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
       }),
+      cache: "no-store",
     });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new ApiError("Registration failed.", response.status, body);
+    }
+    return body as { detail: string };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
@@ -888,6 +895,10 @@ export async function loginWithGoogle(
 
 export function logout(): void {
   clearTokens();
+  const host = typeof window !== "undefined" ? window.location?.host : undefined;
+  if (host && isTeamHost(host)) {
+    window.location.assign("/login");
+  }
 }
 
 export async function fetchMe(): Promise<User> {
