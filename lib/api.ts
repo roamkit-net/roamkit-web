@@ -790,9 +790,9 @@ export async function confirmPasswordReset(
   token: string,
   password: string,
   passwordConfirm: string,
-): Promise<{ detail: string }> {
+): Promise<AuthTokens> {
   try {
-    return await fetchApi<{ detail: string }>(
+    const body = await fetchApi<Partial<AuthTokens>>(
       "/api/v1/auth/password-reset/confirm/",
       {
         method: "POST",
@@ -805,6 +805,14 @@ export async function confirmPasswordReset(
         }),
       },
     );
+    if (!body.access || !body.refresh) {
+      throw new ApiError(
+        "Unable to reset password.",
+        200,
+        body,
+      );
+    }
+    return { access: body.access, refresh: body.refresh };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
