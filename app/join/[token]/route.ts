@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 
+import { INVITE_REGISTER_PATH } from "@/lib/partner/inviteFlow";
 import { publicOrigin } from "@/lib/partner/publicOrigin";
 
 export const dynamic = "force-dynamic";
+
+const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const UTM_FIELDS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+] as const;
+
+function firstQuery(url: URL, name: string): string {
+  return url.searchParams.getAll(name)[0] ?? "";
+}
 
 function apiBase(): string {
   return (
@@ -17,10 +30,14 @@ export async function GET(
   context: { params: Promise<{ token: string }> },
 ) {
   const { token } = await context.params;
+  const url = new URL(request.url);
+  const utm = Object.fromEntries(
+    UTM_FIELDS.map((field) => [field, firstQuery(url, field)]),
+  );
   const signed = await fetch(`${apiBase()}/api/internal/partner/join-sign/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token, ...utm }),
     cache: "no-store",
   });
   if (!signed.ok) {
@@ -37,13 +54,13 @@ export async function GET(
     });
   }
   const origin = publicOrigin(request);
-  const response = NextResponse.redirect(new URL("/join/complete", origin));
+  const response = NextResponse.redirect(new URL(INVITE_REGISTER_PATH, origin));
   response.cookies.set("partner_pending", body.payload, {
     httpOnly: true,
     secure: origin.startsWith("https://"),
     sameSite: "lax",
     path: "/",
-    maxAge: 86400,
+    maxAge: COOKIE_MAX_AGE_SECONDS,
   });
   response.headers.set("Cache-Control", "no-store");
   return response;

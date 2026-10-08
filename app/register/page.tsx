@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AuthShell, EmailOnlyForm } from "@/components/AuthForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
@@ -13,18 +13,27 @@ import {
   loginWithGoogle,
   registerUser,
 } from "@/lib/api";
+import {
+  googleLandingPath,
+  isInviteRegistration,
+  registerLandingPath,
+} from "@/lib/partner/inviteFlow";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromInvite = isInviteRegistration(searchParams.get("from"));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace("/me/esims");
+      router.replace(
+        registerLandingPath({ fromInvite, authenticated: true }),
+      );
     }
-  }, [router]);
+  }, [fromInvite, router]);
 
   async function handleSubmit(email: string, turnstileToken?: string) {
     setError(null);
@@ -49,7 +58,7 @@ export default function RegisterPage() {
       setIsLoading(true);
       try {
         await loginWithGoogle(credential, getRememberMePreference());
-        router.push("/me/esims");
+        router.push(googleLandingPath());
       } catch (err) {
         if (err instanceof ApiError) {
           setError(err.message);
@@ -106,6 +115,13 @@ export default function RegisterPage() {
       }
     >
       <div className="space-y-6">
+        {fromInvite ? (
+          <p className="text-sm leading-6 text-[var(--auth-chrome-text-muted)]">
+            Register through this invitation to join the partner account. If
+            this invitation includes a registration bonus, it will be added
+            after your account is successfully created and verified.
+          </p>
+        ) : null}
         <GoogleSignInButton
           onCredential={handleGoogle}
           onError={setError}
@@ -120,5 +136,30 @@ export default function RegisterPage() {
         />
       </div>
     </AuthShell>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthShell
+          title="Create account"
+          subtitle="Enter your email and we will send a confirmation link to set your password."
+          footer={
+            <>
+              Already registered?{" "}
+              <Link href="/login" className="font-medium">
+                Sign in
+              </Link>
+            </>
+          }
+        >
+          <p className="text-sm text-[var(--auth-chrome-text-muted)]">Loading…</p>
+        </AuthShell>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -51,7 +51,7 @@ test.describe("Google OAuth login", () => {
     });
 
     let googlePosts = 0;
-    await page.route("**/api/v1/auth/google/", async (route) => {
+    await page.route("**/api/auth/google", async (route) => {
       if (route.request().method() !== "POST") {
         await route.continue();
         return;
@@ -113,27 +113,14 @@ test.describe("Google OAuth login", () => {
 
     // Simulate GIS callback → same client path as GoogleSignInButton (loginWithGoogle).
     await page.evaluate(async () => {
-      const bases = [
-        "https://api.staging.roamkit.net",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-      ];
-      let tokens: { access: string; refresh: string } | null = null;
-      for (const base of bases) {
-        try {
-          const res = await fetch(`${base}/api/v1/auth/google/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ credential: "mock-google-credential" }),
-          });
-          if (res.ok) {
-            tokens = (await res.json()) as { access: string; refresh: string };
-            break;
-          }
-        } catch {
-          // try next base
-        }
-      }
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: "mock-google-credential" }),
+      });
+      const tokens = res.ok
+        ? ((await res.json()) as { access: string; refresh: string })
+        : null;
       if (!tokens?.access || !tokens.refresh) {
         throw new Error("mocked Google auth failed");
       }

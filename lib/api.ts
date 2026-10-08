@@ -874,11 +874,21 @@ export async function loginWithGoogle(
   rememberMe: boolean = getRememberMePreference(),
 ): Promise<AuthTokens> {
   try {
-    const tokens = await fetchApi<AuthTokens>("/api/v1/auth/google/", {
+    const response = await fetch("/api/auth/google", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ credential }),
+      cache: "no-store",
     });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new ApiError(
+        formatGoogleAuthError(body, "Unable to sign in with Google."),
+        response.status,
+        body,
+      );
+    }
+    const tokens = body as AuthTokens;
     setRememberMePreference(rememberMe);
     setTokens(tokens.access, tokens.refresh, rememberMe);
     return tokens;

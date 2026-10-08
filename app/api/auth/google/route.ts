@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { partnerPendingHeaders } from "@/lib/partner/inviteFlow";
 import { publicOrigin } from "@/lib/partner/publicOrigin";
 
 export const dynamic = "force-dynamic";
@@ -14,36 +15,33 @@ function apiBase(): string {
 }
 
 export async function POST(request: Request) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization) {
-    return NextResponse.json(
-      { code: "authentication_required" },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-  const pending = (await cookies()).get("partner_pending")?.value ?? "";
-  const upstream = await fetch(`${apiBase()}/api/internal/partner/consume/`, {
+  const body = await request.text();
+  const pending = (await cookies()).get("partner_pending")?.value;
+  const headers = new Headers({
+    "Content-Type": request.headers.get("content-type") ?? "application/json",
+    Accept: "application/json",
+    ...partnerPendingHeaders(pending),
+  });
+  const upstream = await fetch(`${apiBase()}/api/v1/auth/google/`, {
     method: "POST",
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ payload: pending }),
+    headers,
+    body,
     cache: "no-store",
   });
   const text = await upstream.text();
-  const response = new NextResponse(text || "{}", {
+  const response = new NextResponse(text, {
     status: upstream.status,
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type":
+        upstream.headers.get("content-type") ?? "application/json",
       "Cache-Control": "no-store",
     },
   });
-  if (upstream.ok) {
+  if (upstream.ok && pending) {
+    const secure = publicOrigin(request).startsWith("https://");
     response.cookies.set("partner_pending", "", {
       httpOnly: true,
-      secure: publicOrigin(request).startsWith("https://"),
+      secure,
       sameSite: "lax",
       path: "/",
       maxAge: 0,

@@ -32,6 +32,8 @@ export default function JoinCompletePage() {
           setMessage("The invite could not be applied. Retry this page.");
           return;
         }
+        // created, noop, and ignored are all successful finishes. An invalid
+        // invite does not keep the visitor on this page.
         window.location.assign("/me/esims");
       })
       .catch(() => {
