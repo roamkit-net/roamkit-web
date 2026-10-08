@@ -22,8 +22,9 @@
     "test:ops": "npx --yes tsx --test lib/ops/*.test.ts",
     "test:seo": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/seo/*.test.ts",
     "test:org": "npx --yes tsx --tsconfig tsconfig.test.json --test lib/org/*.test.ts components/org/*.test.tsx",
+    "test:partner": "npx --yes tsx --test lib/partner/*.test.ts",
     "test:e2e": "playwright test",
-    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:navigation && npm run test:auth && npm run test:components && npm run test:version && npm run test:esim && npm run test:popular && npm run test:landing && npm run test:ops && npm run test:org && npm run test:seo"
+    "test": "npm run test:plan-filters && npm run test:eip681 && npm run test:billing && npm run test:orders && npm run test:navigation && npm run test:auth && npm run test:components && npm run test:version && npm run test:esim && npm run test:popular && npm run test:landing && npm run test:ops && npm run test:org && npm run test:seo && npm run test:partner"
   },
   "dependencies": {
     "@reown/appkit": "^1.8.23",

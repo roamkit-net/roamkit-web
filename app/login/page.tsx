@@ -14,17 +14,22 @@ import {
   loginWithGoogle,
 } from "@/lib/api";
 import { safeNextPath } from "@/lib/navigation/safePath";
+import { isTeamHost, teamNextPath } from "@/lib/partner/host";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
+  const [teamHost, setTeamHost] = useState(false);
+  const nextPath = teamHost
+    ? teamNextPath(searchParams.get("next"))
+    : safeNextPath(searchParams.get("next"));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
     setRememberMe(getRememberMePreference());
+    setTeamHost(isTeamHost(window.location.host));
   }, []);
 
   useEffect(() => {
