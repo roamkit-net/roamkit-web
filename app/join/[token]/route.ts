@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { publicOrigin } from "@/lib/partner/publicOrigin";
+
 export const dynamic = "force-dynamic";
 
 function apiBase(): string {
@@ -34,11 +36,11 @@ export async function GET(
       headers: { "Cache-Control": "no-store" },
     });
   }
-  const host = new URL(request.url).hostname;
-  const response = NextResponse.redirect(new URL("/join/complete", request.url));
+  const origin = publicOrigin(request);
+  const response = NextResponse.redirect(new URL("/join/complete", origin));
   response.cookies.set("partner_pending", body.payload, {
     httpOnly: true,
-    secure: host !== "localhost" && host !== "127.0.0.1",
+    secure: origin.startsWith("https://"),
     sameSite: "lax",
     path: "/",
     maxAge: 86400,
