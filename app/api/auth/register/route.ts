@@ -25,6 +25,8 @@ export async function POST(request: Request) {
     cache: "no-store",
   });
   const text = await upstream.text();
+  // Do not clear partner_pending. Email submit must not reveal whether the
+  // address was new, and the pending row becomes the authority after submit.
   return new NextResponse(text, {
     status: upstream.status,
     headers: {
