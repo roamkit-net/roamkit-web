@@ -906,6 +906,30 @@ export async function fetchMe(): Promise<User> {
   return fetchApi<User>("/api/v1/auth/me/", { auth: true, cache: "no-store" });
 }
 
+export async function updateDisplayName(displayName: string): Promise<User> {
+  try {
+    return await fetchApi<User>("/api/v1/auth/me/", {
+      method: "PATCH",
+      auth: true,
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: displayName }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatApiValidationMessage(
+          error.body,
+          "Unable to save display name.",
+        ),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
+}
+
 export async function fetchMyEsims(options?: {
   includeArchived?: boolean;
 }): Promise<PaginatedResponse<Esim>> {
