@@ -9,7 +9,9 @@ import { Alert } from "@/components/ui/Alert";
 import {
   ApiError,
   confirmPasswordReset,
+  getRememberMePreference,
   isAuthenticated,
+  setTokens,
 } from "@/lib/api";
 
 function ResetPasswordForm() {
@@ -20,7 +22,6 @@ function ResetPasswordForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -42,8 +43,18 @@ function ResetPasswordForm() {
 
     setIsLoading(true);
     try {
-      await confirmPasswordReset(uid, token, password, passwordConfirm);
-      setDone(true);
+      const tokens = await confirmPasswordReset(
+        uid,
+        token,
+        password,
+        passwordConfirm,
+      );
+      if (!tokens.access || !tokens.refresh) {
+        setError("Unable to reset your password right now.");
+        return;
+      }
+      setTokens(tokens.access, tokens.refresh, getRememberMePreference());
+      router.replace("/me/esims");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -53,27 +64,6 @@ function ResetPasswordForm() {
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (done) {
-    return (
-      <AuthShell
-        title="Password updated"
-        subtitle="Your password has been reset. You can sign in with your new password."
-        footer={
-          <Link href="/login" className="font-medium">
-            Sign in
-          </Link>
-        }
-      >
-        <Link
-          href="/login"
-          className="inline-flex w-full items-center justify-center rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
-        >
-          Continue to sign in
-        </Link>
-      </AuthShell>
-    );
   }
 
   return (
