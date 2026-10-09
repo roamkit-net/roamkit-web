@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardSection } from "@/components/ui/Card";
 import { DetailSkeleton } from "@/components/ui/ListSkeleton";
 import { ApiError, clearTokens } from "@/lib/api";
+import { accountLabel } from "@/lib/accountLabel";
 import { fetchOpsUser } from "@/lib/ops/client";
 import type { OpsUserDetail } from "@/lib/ops/types";
 import { loginHref } from "@/lib/navigation/safePath";
@@ -89,7 +90,7 @@ export default function AdminMemberDetailPage() {
           ← Members
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-          {data.email}
+          {accountLabel(data.display_name, data.email)}
         </h1>
         <div className="mt-2 flex flex-wrap gap-2">
           {data.badges.map((badge) => (

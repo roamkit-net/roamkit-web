@@ -11,6 +11,7 @@ import { Field, HelpText, Label } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { ListRow } from "@/components/ui/ListRow";
 import { ApiError } from "@/lib/api";
+import { accountLabel } from "@/lib/accountLabel";
 import {
   createOrganizationInvite,
   revokeOrganizationInvite,
@@ -21,6 +22,7 @@ import type { InviteRole, OrganizationInvite } from "@/types/org";
 type IssuedToken = {
   token: string;
   email: string;
+  displayName: string;
   created: boolean;
 };
 
@@ -67,6 +69,7 @@ export function OrgInviteSection({
       setIssued({
         token: result.token,
         email: result.invite.email,
+        displayName: result.invite.display_name,
         created: result.created,
       });
       const others = invites.filter((row) => row.id !== result.invite.id);
@@ -144,7 +147,7 @@ export function OrgInviteSection({
           data-testid="org-invite-token-banner"
         >
           <p className="mt-2 text-sm text-slate-700">
-            For <span className="font-medium">{issued.email}</span>. This token is
+            For <span className="font-medium">{accountLabel(issued.displayName, issued.email)}</span>. This token is
             shown only once and cannot be retrieved again.
           </p>
           <code
@@ -260,7 +263,7 @@ export function OrgInviteSection({
             >
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-900">
-                  {invite.email}
+                  {accountLabel(invite.display_name, invite.email)}
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <Badge variant="neutral">{invite.role}</Badge>

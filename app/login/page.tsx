@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AuthForm, AuthShell } from "@/components/AuthForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { Alert } from "@/components/ui/Alert";
 import {
   ApiError,
   getRememberMePreference,
@@ -14,17 +15,24 @@ import {
   loginWithGoogle,
 } from "@/lib/api";
 import { safeNextPath } from "@/lib/navigation/safePath";
+import { isTeamHost, teamNextPath } from "@/lib/partner/host";
+import { accountExistsNotice } from "@/lib/partner/inviteFlow";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
+  const [teamHost, setTeamHost] = useState(false);
+  const nextPath = teamHost
+    ? teamNextPath(searchParams.get("next"))
+    : safeNextPath(searchParams.get("next"));
+  const existingAccountNotice = accountExistsNotice(searchParams.get("notice"));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
     setRememberMe(getRememberMePreference());
+    setTeamHost(isTeamHost(window.location.host));
   }, []);
 
   useEffect(() => {
@@ -89,6 +97,11 @@ function LoginForm() {
       }
     >
       <div className="space-y-6">
+        {existingAccountNotice ? (
+          <Alert variant="info" size="sm">
+            {existingAccountNotice}
+          </Alert>
+        ) : null}
         <GoogleSignInButton
           onCredential={handleGoogle}
           onError={setError}

@@ -5,9 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell, PasswordPairForm } from "@/components/AuthForm";
-import { isTurnstileConfigured } from "@/components/auth/TurnstileField";
 import { Alert } from "@/components/ui/Alert";
-import { activateAccount, ApiError, getRememberMePreference, isAuthenticated, login } from "@/lib/api";
+import {
+  activateAccount,
+  ApiError,
+  getRememberMePreference,
+  isAuthenticated,
+  setTokens,
+} from "@/lib/api";
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -38,14 +43,18 @@ function SetPasswordForm() {
 
     setIsLoading(true);
     try {
-      const user = await activateAccount(uid, token, password, passwordConfirm);
-      // Auto-login needs a Turnstile token when enabled — send user to /login instead.
-      if (isTurnstileConfigured()) {
-        router.push("/login");
+      const tokens = await activateAccount(
+        uid,
+        token,
+        password,
+        passwordConfirm,
+      );
+      if (!tokens.access || !tokens.refresh) {
+        setError("Unable to set your password right now.");
         return;
       }
-      await login(user.email, password, undefined, getRememberMePreference());
-      router.push("/me/esims");
+      setTokens(tokens.access, tokens.refresh, getRememberMePreference());
+      router.replace("/me/esims");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

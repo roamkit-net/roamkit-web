@@ -1,4 +1,5 @@
 import { clearPendingDeposit } from "@/lib/billing/pendingDeposit";
+import { isTeamHost } from "@/lib/partner/host";
 import { clearPendingSpend } from "@/lib/orders/pendingSpend";
 import type {
   AutoTopupPolicy,
@@ -534,6 +535,7 @@ export type AuthTokens = {
 export type User = {
   id: number;
   email: string;
+  display_name: string;
   is_staff: boolean;
   created_at: string;
   updated_at: string;
@@ -701,16 +703,30 @@ async function tryRefreshAccessToken(): Promise<boolean> {
 export async function registerUser(
   email: string,
   turnstileToken?: string,
-): Promise<{ detail: string }> {
+): Promise<{ detail: string } | { code: "account_exists" }> {
   try {
-    return await fetchApi<{ detail: string }>("/api/v1/auth/register/", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         email,
         ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
       }),
+      cache: "no-store",
     });
+    const body = await response.json().catch(() => null);
+    if (
+      response.status === 409 &&
+      body &&
+      typeof body === "object" &&
+      (body as { code?: unknown }).code === "account_exists"
+    ) {
+      return { code: "account_exists" };
+    }
+    if (!response.ok) {
+      throw new ApiError("Registration failed.", response.status, body);
+    }
+    return body as { detail: string };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
@@ -728,9 +744,9 @@ export async function activateAccount(
   token: string,
   password: string,
   passwordConfirm: string,
-): Promise<User> {
+): Promise<AuthTokens> {
   try {
-    return await fetchApi<User>("/api/v1/auth/activate/", {
+    const body = await fetchApi<Partial<AuthTokens>>("/api/v1/auth/activate/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -740,6 +756,10 @@ export async function activateAccount(
         password_confirm: passwordConfirm,
       }),
     });
+    if (!body.access || !body.refresh) {
+      throw new ApiError("Unable to activate account.", 200, body);
+    }
+    return { access: body.access, refresh: body.refresh };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
@@ -782,9 +802,9 @@ export async function confirmPasswordReset(
   token: string,
   password: string,
   passwordConfirm: string,
-): Promise<{ detail: string }> {
+): Promise<AuthTokens> {
   try {
-    return await fetchApi<{ detail: string }>(
+    const body = await fetchApi<Partial<AuthTokens>>(
       "/api/v1/auth/password-reset/confirm/",
       {
         method: "POST",
@@ -797,6 +817,14 @@ export async function confirmPasswordReset(
         }),
       },
     );
+    if (!body.access || !body.refresh) {
+      throw new ApiError(
+        "Unable to reset password.",
+        200,
+        body,
+      );
+    }
+    return { access: body.access, refresh: body.refresh };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
@@ -866,11 +894,21 @@ export async function loginWithGoogle(
   rememberMe: boolean = getRememberMePreference(),
 ): Promise<AuthTokens> {
   try {
-    const tokens = await fetchApi<AuthTokens>("/api/v1/auth/google/", {
+    const response = await fetch("/api/auth/google", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ credential }),
+      cache: "no-store",
     });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new ApiError(
+        formatGoogleAuthError(body, "Unable to sign in with Google."),
+        response.status,
+        body,
+      );
+    }
+    const tokens = body as AuthTokens;
     setRememberMePreference(rememberMe);
     setTokens(tokens.access, tokens.refresh, rememberMe);
     return tokens;
@@ -888,10 +926,38 @@ export async function loginWithGoogle(
 
 export function logout(): void {
   clearTokens();
+  const host = typeof window !== "undefined" ? window.location?.host : undefined;
+  if (host && isTeamHost(host)) {
+    window.location.assign("/login");
+  }
 }
 
 export async function fetchMe(): Promise<User> {
   return fetchApi<User>("/api/v1/auth/me/", { auth: true, cache: "no-store" });
+}
+
+export async function updateDisplayName(displayName: string): Promise<User> {
+  try {
+    return await fetchApi<User>("/api/v1/auth/me/", {
+      method: "PATCH",
+      auth: true,
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: displayName }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        formatApiValidationMessage(
+          error.body,
+          "Unable to save display name.",
+        ),
+        error.status,
+        error.body,
+      );
+    }
+    throw error;
+  }
 }
 
 export async function fetchMyEsims(options?: {

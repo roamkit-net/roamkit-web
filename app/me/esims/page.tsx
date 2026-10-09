@@ -27,6 +27,7 @@ import {
   unarchiveMyEsim,
 } from "@/lib/api";
 import { actionRequiredEsims, partitionMyEsims } from "@/lib/esim/display";
+import { accountLabel } from "@/lib/accountLabel";
 import { loginHref } from "@/lib/navigation/safePath";
 
 /**
@@ -160,7 +161,7 @@ export default function MyEsimsPage() {
         description={
           <p className="max-w-2xl text-base leading-7 text-[var(--app-chrome-text-muted)]">
             {user
-              ? `Signed in as ${user.email}. Manage your plans and installation.`
+              ? `Signed in as ${accountLabel(user.display_name, user.email)}. Manage your plans and installation.`
               : "Manage your plans and installation."}
           </p>
         }
