@@ -4,10 +4,14 @@ import { describe, it } from "node:test";
 
 import { GET } from "../../app/join/[token]/route";
 import {
+  ACCOUNT_EXISTS_LOGIN_MESSAGE,
   INVITE_REGISTER_PATH,
   JOIN_COMPLETE_PATH,
   PORTAL_PATH,
+  accountExistsLoginPath,
+  accountExistsNotice,
   googleLandingPath,
+  isAccountExistsCode,
   isInviteRegistration,
   partnerPendingHeaders,
   registerLandingPath,
@@ -139,5 +143,34 @@ describe("invite web wiring", () => {
     const page = source("app/join/complete/page.tsx");
     assert.match(page, /window\.location\.assign\("\/me\/esims"\)/);
     assert.match(page, /created, noop, and ignored/);
+  });
+
+  it("sends only account_exists to login and keeps the invite cookie", () => {
+    assert.equal(isAccountExistsCode("account_exists"), true);
+    assert.equal(isAccountExistsCode("account_disabled"), false);
+    assert.equal(isAccountExistsCode(null), false);
+    assert.equal(
+      accountExistsLoginPath(),
+      `/login?next=${encodeURIComponent(JOIN_COMPLETE_PATH)}&notice=account-exists`,
+    );
+    assert.equal(accountExistsNotice("account-exists"), ACCOUNT_EXISTS_LOGIN_MESSAGE);
+    assert.equal(accountExistsNotice("other"), null);
+    assert.equal(accountExistsNotice(null), null);
+
+    const register = source("app/register/page.tsx");
+    const branch = register.slice(register.indexOf("isAccountExistsCode"));
+    assert.match(branch, /router\.replace\(accountExistsLoginPath\(\)\)/);
+    assert.match(branch, /return;/);
+    assert.match(branch.slice(branch.indexOf("return;")), /setSubmittedEmail/);
+    assert.equal(register.includes("Check your email") && branch.includes("setSubmittedEmail"), true);
+    assert.equal(register.includes("maxAge: 0"), false);
+
+    const login = source("app/login/page.tsx");
+    assert.match(login, /accountExistsNotice/);
+    assert.equal(login.includes("partner_pending"), false);
+    assert.equal(login.includes("maxAge"), false);
+
+    const proxy = source("app/api/auth/register/route.ts");
+    assert.equal(proxy.includes("maxAge: 0"), false);
   });
 });
