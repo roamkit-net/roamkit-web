@@ -703,7 +703,7 @@ async function tryRefreshAccessToken(): Promise<boolean> {
 export async function registerUser(
   email: string,
   turnstileToken?: string,
-): Promise<{ detail: string }> {
+): Promise<{ detail: string } | { code: "account_exists" }> {
   try {
     const response = await fetch("/api/auth/register", {
       method: "POST",
@@ -715,6 +715,14 @@ export async function registerUser(
       cache: "no-store",
     });
     const body = await response.json().catch(() => null);
+    if (
+      response.status === 409 &&
+      body &&
+      typeof body === "object" &&
+      (body as { code?: unknown }).code === "account_exists"
+    ) {
+      return { code: "account_exists" };
+    }
     if (!response.ok) {
       throw new ApiError("Registration failed.", response.status, body);
     }

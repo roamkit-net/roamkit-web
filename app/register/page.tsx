@@ -14,7 +14,9 @@ import {
   registerUser,
 } from "@/lib/api";
 import {
+  accountExistsLoginPath,
   googleLandingPath,
+  isAccountExistsCode,
   isInviteRegistration,
   registerLandingPath,
 } from "@/lib/partner/inviteFlow";
@@ -39,7 +41,11 @@ function RegisterForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await registerUser(email, turnstileToken);
+      const result = await registerUser(email, turnstileToken);
+      if ("code" in result && isAccountExistsCode(result.code)) {
+        router.replace(accountExistsLoginPath());
+        return;
+      }
       setSubmittedEmail(email);
     } catch (err) {
       if (err instanceof ApiError) {
