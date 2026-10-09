@@ -736,9 +736,9 @@ export async function activateAccount(
   token: string,
   password: string,
   passwordConfirm: string,
-): Promise<User> {
+): Promise<AuthTokens> {
   try {
-    return await fetchApi<User>("/api/v1/auth/activate/", {
+    const body = await fetchApi<Partial<AuthTokens>>("/api/v1/auth/activate/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -748,6 +748,10 @@ export async function activateAccount(
         password_confirm: passwordConfirm,
       }),
     });
+    if (!body.access || !body.refresh) {
+      throw new ApiError("Unable to activate account.", 200, body);
+    }
+    return { access: body.access, refresh: body.refresh };
   } catch (error) {
     if (error instanceof ApiError) {
       throw new ApiError(
