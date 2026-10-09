@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { isTeamHost, teamContentSecurityPolicy, teamNextPath } from "./host";
+import { isTeamHost, isTeamPublicAsset, teamContentSecurityPolicy, teamNextPath } from "./host";
 
 describe("partner host", () => {
   it("recognizes the team hosts and not the consumer hosts", () => {
@@ -16,6 +16,15 @@ describe("partner host", () => {
     const policy = teamContentSecurityPolicy("abc123");
     assert.match(policy, /script-src 'self' 'nonce-abc123' 'strict-dynamic'/);
     assert.doesNotMatch(policy, /script-src[^;]*unsafe-inline/);
+  });
+
+  it("serves the logo and other public files on the team host", () => {
+    assert.equal(isTeamPublicAsset("/landing/logo-r.png"), true);
+    assert.equal(isTeamPublicAsset("/icons/favicon-32x32.png"), true);
+    assert.equal(isTeamPublicAsset("/"), false);
+    assert.equal(isTeamPublicAsset("/login"), false);
+    assert.equal(isTeamPublicAsset("/customers"), false);
+    assert.equal(isTeamPublicAsset("/../logo-r.png"), false);
   });
 
   it("allows only portal routes as next", () => {

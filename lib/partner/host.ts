@@ -14,6 +14,15 @@ export function isTeamHost(host: string | null | undefined): boolean {
   return TEAM_HOSTS.has(hostnameOf(host));
 }
 
+/** Public files such as `/landing/logo-r.png` must be served, not sent home. */
+export function isTeamPublicAsset(path: string): boolean {
+  if (!path.startsWith("/") || path.includes("..")) {
+    return false;
+  }
+  const last = path.slice(path.lastIndexOf("/") + 1);
+  return last.includes(".");
+}
+
 /** Team `next` may only be the portal routes. Anything else falls back to `/`. */
 export function teamNextPath(raw: string | null | undefined): string {
   const path = (raw ?? "/").split("?")[0].split("#")[0];

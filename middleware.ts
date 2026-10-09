@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isTeamHost, teamContentSecurityPolicy } from "@/lib/partner/host";
+import { isTeamHost, isTeamPublicAsset, teamContentSecurityPolicy } from "@/lib/partner/host";
 
 const TEAM_PAGES = new Set(["/", "/customers", "/grants", "/login"]);
 
@@ -20,13 +20,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers } });
   }
 
-  if (!TEAM_PAGES.has(path) && !path.startsWith("/_next") && !path.startsWith("/api/")) {
+  if (
+    !TEAM_PAGES.has(path) &&
+    !path.startsWith("/_next") &&
+    !path.startsWith("/api/") &&
+    !isTeamPublicAsset(path)
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  if (path === "/login" || path.startsWith("/_next") || path.startsWith("/api/")) {
+  if (
+    path === "/login" ||
+    path.startsWith("/_next") ||
+    path.startsWith("/api/") ||
+    isTeamPublicAsset(path)
+  ) {
     return NextResponse.next({ request: { headers } });
   }
 
