@@ -41,7 +41,9 @@ export function middleware(request: NextRequest) {
   }
 
   const nonce = btoa(crypto.randomUUID());
-  const csp = teamContentSecurityPolicy(nonce);
+  const csp = teamContentSecurityPolicy(nonce, {
+    development: process.env.NODE_ENV === "development",
+  });
   headers.set("Content-Security-Policy", csp);
   const url = request.nextUrl.clone();
   url.pathname = path === "/" ? "/partner" : `/partner${path}`;

@@ -372,7 +372,7 @@ export function LocationDetail({
         <div className="flex flex-col gap-4">
           {showServiceTabs ? (
             <div
-              className="flex gap-8 border-b border-[var(--app-border)]"
+              className="flex gap-8 border-b border-[var(--app-border-chrome)]"
               role="tablist"
               aria-label="Service type"
             >
@@ -390,7 +390,7 @@ export function LocationDetail({
               </ServiceTab>
             </div>
           ) : (
-            <h2 className="border-b border-slate-200 pb-3 text-xl font-semibold text-slate-900">
+            <h2 className="border-b border-[var(--app-border-chrome)] pb-3 text-xl font-semibold text-[var(--app-chrome-text)]">
               {plansHeading}
             </h2>
           )}
@@ -416,7 +416,7 @@ export function LocationDetail({
             </div>
           ) : null}
 
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-[var(--app-chrome-text-muted)]">
             Choose your package
           </p>
         </div>
@@ -453,7 +453,7 @@ export function LocationDetail({
           <div className="mt-4 flex flex-col gap-6">
             {mostPopular ? (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                <h3 className="mb-2 text-sm font-semibold text-[var(--app-chrome-text)]">
                   Most Popular
                 </h3>
                 <PackageRow
@@ -469,7 +469,7 @@ export function LocationDetail({
             ) : null}
             {dayGroups.map((group) => (
               <div key={group.days}>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                <h3 className="mb-2 text-sm font-semibold text-[var(--app-chrome-text)]">
                   {formatValidityHeading(group.days)}
                 </h3>
                 <ul className="flex flex-col gap-3">
@@ -494,10 +494,10 @@ export function LocationDetail({
 
       {broader.length > 0 ? (
         <section className="mt-14">
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-xl font-semibold text-[var(--app-chrome-text)]">
             Need broader coverage?
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--app-chrome-text-muted)]">
             Regional and global plans that include {location.title}.
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -545,8 +545,8 @@ function ServiceTab({
       onClick={onClick}
       className={
         active
-          ? "-mb-px border-b-2 border-[var(--app-primary)] pb-3.5 text-[15px] font-semibold tracking-tight text-[var(--app-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
-          : "-mb-px border-b-2 border-transparent pb-3.5 text-[15px] font-medium tracking-tight text-[var(--app-text-muted)] outline-none transition-colors hover:text-[var(--app-text)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
+          ? "-mb-px border-b-2 border-[var(--app-primary)] pb-3.5 text-[15px] font-semibold tracking-tight text-[var(--app-chrome-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
+          : "-mb-px border-b-2 border-transparent pb-3.5 text-[15px] font-medium tracking-tight text-[var(--app-chrome-text-muted)] outline-none transition-colors hover:text-[var(--app-chrome-text)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]"
       }
     >
       {children}
