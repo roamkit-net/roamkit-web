@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import {
+  isPartnerAccessDenied,
+  usePartnerPortal,
+} from "@/components/partner/PartnerShell";
+import { usePartnerChannelGuard } from "@/components/partner/usePartnerChannel";
+import { partnerErrorMessage } from "@/lib/partner/errors";
 import { buttonClassName } from "@/components/ui/Button";
 import { accountLabel } from "@/lib/accountLabel";
 import { ApiError } from "@/lib/api";
@@ -10,13 +16,16 @@ import {
   fetchSummary,
   postGrant,
   type PartnerCustomer,
-  type PartnerRole,
 } from "@/lib/partner/client";
+import { rowsForChannel } from "@/lib/partner/selection";
 
 export default function PartnerCustomersPage() {
+  const { context, reportAccessDenied } = usePartnerPortal();
+  const channelId = context.channel_id;
+  const { isCurrent } = usePartnerChannelGuard(channelId);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
   const [rows, setRows] = useState<PartnerCustomer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState<PartnerRole>("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
@@ -26,8 +35,9 @@ export default function PartnerCustomersPage() {
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [grantError, setGrantError] = useState<string | null>(null);
 
-  async function load(nextPage = page, nextQuery = query) {
+  async function load(selected: string, nextPage = page, nextQuery = query) {
     setError(null);
+    setLoadedId(null);
     setRows(null);
     const params = new URLSearchParams({
       page: String(nextPage),
@@ -39,29 +49,53 @@ export default function PartnerCustomersPage() {
       params.set("q", nextQuery.trim());
     }
     try {
-      const result = await fetchCustomers(params);
+      const result = await fetchCustomers(selected, params);
+      if (!isCurrent(selected)) {
+        return;
+      }
       setRows(result.data.results);
       setCount(result.data.count);
-      setRole(result.role);
+      setLoadedId(selected);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "request_failed");
+      if (!isCurrent(selected)) {
+        return;
+      }
+      if (isPartnerAccessDenied(err)) {
+        await reportAccessDenied();
+        return;
+      }
+      const code = err instanceof ApiError ? err.message : "request_failed";
+      setError(partnerErrorMessage(code));
     }
   }
 
   useEffect(() => {
-    void load(1, "");
-    // Initial load only.
+    setTarget(null);
+    setPage(1);
+    void load(channelId, 1, "");
+    // Reload when the selected channel changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [channelId]);
 
   function openGrant(row: PartnerCustomer) {
+    const selected = channelId;
     setTarget(row);
     setAmount("");
     setIdempotencyKey(crypto.randomUUID());
     setGrantError(null);
-    fetchSummary()
-      .then((result) => setBalance(result.data.available_balance))
-      .catch(() => setBalance(null));
+    fetchSummary(selected)
+      .then((result) => {
+        if (selected === channelId) {
+          setBalance(result.data.available_balance);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isPartnerAccessDenied(err)) {
+          void reportAccessDenied();
+          return;
+        }
+        setBalance(null);
+      });
   }
 
   function onAmount(value: string) {
@@ -74,30 +108,44 @@ export default function PartnerCustomersPage() {
     if (!target || !idempotencyKey) {
       return;
     }
+    const selected = channelId;
+    const body = {
+      customer_id: target.customer_id,
+      amount,
+      idempotency_key: idempotencyKey,
+    };
     setGrantError(null);
     try {
-      await postGrant({
-        customer_id: target.customer_id,
-        amount,
-        idempotency_key: idempotencyKey,
-      });
+      await postGrant(selected, body);
+      if (!isCurrent(selected)) {
+        return;
+      }
       setTarget(null);
-      const summary = await fetchSummary().catch(() => null);
+      const summary = await fetchSummary(selected).catch(() => null);
       setBalance(summary?.data.available_balance ?? null);
-      await load();
+      await load(selected);
     } catch (err) {
+      if (!isCurrent(selected)) {
+        return;
+      }
+      if (isPartnerAccessDenied(err)) {
+        await reportAccessDenied();
+        return;
+      }
       const code = err instanceof ApiError ? err.message : "request_failed";
       if (code === "insufficient_funds") {
-        const summary = await fetchSummary().catch(() => null);
+        const summary = await fetchSummary(selected).catch(() => null);
         setBalance(summary?.data.available_balance ?? null);
       }
       if (code === "customer_attribution_changed" || code === "customer_not_found") {
         setTarget(null);
-        await load();
+        await load(selected);
       }
-      setGrantError(code);
+      setGrantError(partnerErrorMessage(code));
     }
   }
+
+  const visibleRows = rowsForChannel(channelId, loadedId, rows);
 
   return (
     <section>
@@ -107,7 +155,7 @@ export default function PartnerCustomersPage() {
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
-          void load(1, query);
+          void load(channelId, 1, query);
         }}
       >
         <label className="sr-only" htmlFor="customer-q">
@@ -124,22 +172,22 @@ export default function PartnerCustomersPage() {
         </button>
       </form>
       {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
-      {rows === null && !error ? (
+      {visibleRows === null && !error ? (
         <p className="mt-4 text-sm text-slate-500">Loading customers…</p>
       ) : null}
-      {rows && rows.length === 0 ? (
+      {visibleRows && visibleRows.length === 0 ? (
         <p className="mt-4 text-sm text-slate-600">No customers.</p>
       ) : null}
-      {rows && rows.length > 0 ? (
+      {visibleRows && visibleRows.length > 0 ? (
         <ul className="mt-4 divide-y divide-slate-200">
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <li key={row.customer_id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
               <span>{row.customer_id}</span>
               <span>{accountLabel(row.display_name, row.email)}</span>
               <span>{row.attributed_at}</span>
               <span>{row.total_partner_earned}</span>
               <span>{row.accrual_count}</span>
-              {role === "owner" || role === "admin" ? (
+              {context.capabilities.can_grant ? (
                 <button
                   type="button"
                   className={buttonClassName({ variant: "secondary", size: "sm" })}
@@ -160,7 +208,7 @@ export default function PartnerCustomersPage() {
           onClick={() => {
             const next = page - 1;
             setPage(next);
-            void load(next);
+            void load(channelId, next);
           }}
         >
           Previous
@@ -169,11 +217,11 @@ export default function PartnerCustomersPage() {
         <button
           type="button"
           className={buttonClassName({ variant: "ghost", size: "sm" })}
-          disabled={rows !== null && page * 50 >= count}
+          disabled={visibleRows !== null && page * 50 >= count}
           onClick={() => {
             const next = page + 1;
             setPage(next);
-            void load(next);
+            void load(channelId, next);
           }}
         >
           Next
