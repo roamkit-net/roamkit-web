@@ -1,7 +1,7 @@
 export const PARTNER_CHANNEL_STORAGE_KEY = "roamkit.partner.channelId";
 
 export type PartnerKind = "individual" | "team";
-export type PartnerRole = "owner" | "admin" | "viewer";
+export type PartnerRole = "owner" | "admin" | "member" | "viewer";
 
 export type PartnerContextItem = {
   channel_id: string;
@@ -12,6 +12,7 @@ export type PartnerContextItem = {
   capabilities: {
     can_grant: boolean;
     can_manage_invite: boolean;
+    can_view_customer_plans: boolean;
   };
 };
 

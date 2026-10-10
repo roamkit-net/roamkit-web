@@ -206,6 +206,7 @@ export function PartnerShell({ children }: { children: ReactNode }) {
   return (
     <PortalContext.Provider value={portal}>
       <PartnerFrame
+        role={portal.context.effective_role}
         switcher={
           contexts.length > 1 ? (
             <PartnerContextPicker
