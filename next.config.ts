@@ -9,7 +9,7 @@ const AUTH_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://challenges.cloudflare.com",
   "frame-src https://accounts.google.com https://challenges.cloudflare.com",
-  "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000",
+  "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000 http://localhost:8001 http://127.0.0.1:8001",
 ].join("; ");
 
 const nextConfig: NextConfig = {

@@ -53,23 +53,25 @@ export function PartnerContextPicker({
   value: string;
   onSelect: (channelId: string) => void;
 }) {
+  const optionClass = "bg-[var(--app-surface)] text-[var(--app-chrome-text)]";
   return (
-    <label className="grid gap-1 text-sm">
-      Organization
-      <select
-        aria-label="Organization"
-        className="rounded-lg border border-slate-300 px-3 py-2"
-        value={value}
-        onChange={(event) => onSelect(event.target.value)}
-      >
-        {value === "" ? <option value="">Select a channel</option> : null}
-        {contexts.map((item) => (
-          <option key={item.channel_id} value={item.channel_id}>
-            {partnerContextLabel(item)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label="Organization"
+      className="rounded-lg border border-[var(--app-border-chrome)] bg-[var(--app-surface)] px-3 py-2 text-sm text-[var(--app-chrome-text)] [color-scheme:dark]"
+      value={value}
+      onChange={(event) => onSelect(event.target.value)}
+    >
+      {value === "" ? (
+        <option className={optionClass} value="">
+          Select a channel
+        </option>
+      ) : null}
+      {contexts.map((item) => (
+        <option key={item.channel_id} className={optionClass} value={item.channel_id}>
+          {partnerContextLabel(item)}
+        </option>
+      ))}
+    </select>
   );
 }
 
