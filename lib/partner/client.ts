@@ -6,6 +6,7 @@ import {
 } from "@/lib/api";
 
 import { teamNextPath } from "./host";
+import type { PartnerContextItem } from "./selection";
 
 export type PartnerRole = "owner" | "admin" | "viewer" | "";
 
@@ -107,40 +108,76 @@ export async function partnerFetch<T>(
   return { data: body as T, role: roleOf(response) };
 }
 
-export function fetchSummary() {
-  return partnerFetch<PartnerSummary>("/api/v1/orgs/partner/summary/");
+function channelPath(channelId: string, suffix: string): string {
+  return `/api/v1/partner/channels/${encodeURIComponent(channelId)}/${suffix}`;
 }
 
-export function fetchCustomers(params: URLSearchParams) {
+export function partnerContextsPath(): string {
+  return "/api/v1/partner/contexts/";
+}
+
+export function partnerSummaryPath(channelId: string): string {
+  return channelPath(channelId, "summary/");
+}
+
+export function partnerCustomersPath(channelId: string, params: URLSearchParams): string {
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
-  return partnerFetch<PartnerCustomersPage>(
-    `/api/v1/orgs/partner/customers/${suffix}`,
-  );
+  return `${channelPath(channelId, "customers/")}${suffix}`;
 }
 
-export function fetchGrants(params: URLSearchParams) {
+export function partnerGrantsPath(channelId: string, params: URLSearchParams): string {
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
-  return partnerFetch<PartnerGrantsPage>(`/api/v1/orgs/partner/grants/${suffix}`);
+  return `${channelPath(channelId, "grants/")}${suffix}`;
 }
 
-export function fetchInvite() {
-  return partnerFetch<PartnerInvite>("/api/v1/orgs/partner/invite-link/");
+export function partnerInvitePath(
+  channelId: string,
+  action?: "regenerate" | "activate" | "deactivate",
+): string {
+  const suffix = action ? `invite-link/${action}/` : "invite-link/";
+  return channelPath(channelId, suffix);
 }
 
-export function mutateInvite(action: "regenerate" | "activate" | "deactivate") {
-  return partnerFetch<PartnerInvite>(`/api/v1/orgs/partner/invite-link/${action}/`, {
+export function fetchPartnerContexts() {
+  return partnerFetch<{ contexts: PartnerContextItem[] }>(partnerContextsPath());
+}
+
+export function fetchSummary(channelId: string) {
+  return partnerFetch<PartnerSummary>(partnerSummaryPath(channelId));
+}
+
+export function fetchCustomers(channelId: string, params: URLSearchParams) {
+  return partnerFetch<PartnerCustomersPage>(partnerCustomersPath(channelId, params));
+}
+
+export function fetchGrants(channelId: string, params: URLSearchParams) {
+  return partnerFetch<PartnerGrantsPage>(partnerGrantsPath(channelId, params));
+}
+
+export function fetchInvite(channelId: string) {
+  return partnerFetch<PartnerInvite>(partnerInvitePath(channelId));
+}
+
+export function mutateInvite(
+  channelId: string,
+  action: "regenerate" | "activate" | "deactivate",
+) {
+  return partnerFetch<PartnerInvite>(partnerInvitePath(channelId, action), {
     method: "POST",
   });
 }
 
-export function postGrant(body: {
-  customer_id: number;
-  amount: string;
-  idempotency_key: string;
-}) {
-  return partnerFetch<{ grant_id: string }>("/api/v1/billing/partner-grants/", {
+export function postGrant(
+  channelId: string,
+  body: {
+    customer_id: number;
+    amount: string;
+    idempotency_key: string;
+  },
+) {
+  return partnerFetch<{ grant_id: string }>(partnerGrantsPath(channelId, new URLSearchParams()), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
