@@ -51,6 +51,10 @@ export default function PartnerDashboardPage() {
           return;
         }
         if (isPartnerAccessDenied(error)) {
+          if (context.effective_role === "member") {
+            setSummaryError(partnerErrorMessage("partner_access_denied"));
+            return;
+          }
           void reportAccessDenied();
           return;
         }
@@ -70,6 +74,10 @@ export default function PartnerDashboardPage() {
           return;
         }
         if (isPartnerAccessDenied(error)) {
+          if (context.effective_role === "member") {
+            setInviteError(partnerErrorMessage("partner_access_denied"));
+            return;
+          }
           void reportAccessDenied();
           return;
         }
@@ -79,7 +87,7 @@ export default function PartnerDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [channelId, isCurrent, reportAccessDenied]);
+  }, [channelId, context.effective_role, isCurrent, reportAccessDenied]);
 
   async function changeInvite(action: "regenerate" | "activate" | "deactivate") {
     const selected = channelId;
@@ -103,6 +111,10 @@ export default function PartnerDashboardPage() {
         return;
       }
       if (isPartnerAccessDenied(error)) {
+        if (context.effective_role === "member") {
+          setInviteError(partnerErrorMessage("partner_access_denied"));
+          return;
+        }
         await reportAccessDenied();
         return;
       }

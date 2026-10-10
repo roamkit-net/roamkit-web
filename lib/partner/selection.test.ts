@@ -29,7 +29,11 @@ function context(
     label: id,
     effective_role: "viewer",
     is_active: true,
-    capabilities: { can_grant: false, can_manage_invite: false },
+    capabilities: {
+      can_grant: false,
+      can_manage_invite: false,
+      can_view_customer_plans: false,
+    },
     ...extras,
   };
 }

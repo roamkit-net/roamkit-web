@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { logout } from "@/lib/api";
 import { clearStoredPartnerChannelId } from "@/lib/partner/selection";
 import { buttonClassName } from "@/components/ui/Button";
+import type { PartnerRole } from "@/lib/partner/selection";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -17,16 +18,19 @@ const LINKS = [
 export function PartnerFrame({
   children,
   switcher,
+  role,
 }: {
   children: ReactNode;
   switcher?: ReactNode;
+  role?: PartnerRole;
 }) {
+  const links = role === "member" ? LINKS.filter((link) => link.href === "/customers") : LINKS;
   return (
     <AppShell
       nav={
         <div className="flex flex-wrap items-center gap-4">
           <nav aria-label="Partner" className="flex gap-4 text-sm">
-            {LINKS.map((link) => (
+            {links.map((link) => (
               <Link key={link.href} href={link.href}>
                 {link.label}
               </Link>
