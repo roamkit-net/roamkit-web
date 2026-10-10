@@ -32,8 +32,8 @@ describe("Cap5.1 tabs theme binding", () => {
     const end = source.indexOf("\nfunction SegmentButton", start);
     const tab = source.slice(start, end > start ? end : undefined);
     assert.match(tab, /border-\[var\(--app-primary\)\]/);
-    assert.match(tab, /text-\[var\(--app-text\)\]/);
-    assert.match(tab, /text-\[var\(--app-text-muted\)\]/);
+    assert.match(tab, /text-\[var\(--app-chrome-text\)\]/);
+    assert.match(tab, /text-\[var\(--app-chrome-text-muted\)\]/);
     assert.match(tab, /ring-\[var\(--app-focus-ring\)\]/);
     assert.doesNotMatch(tab, /border-slate-900|text-slate-900|text-slate-400/);
   });
