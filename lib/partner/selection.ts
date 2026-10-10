@@ -20,6 +20,13 @@ export type PartnerSelection =
   | { status: "choose" }
   | { status: "ready"; context: PartnerContextItem; announced: boolean };
 
+export function partnerChooseNotice(storedChannelId: string | null): string | null {
+  if (!storedChannelId) {
+    return null;
+  }
+  return "That organization is no longer available. Choose another.";
+}
+
 export function choosePartnerContext(
   contexts: PartnerContextItem[],
   storedChannelId: string | null,
