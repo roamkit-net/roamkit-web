@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { logout } from "@/lib/api";
+import { clearStoredPartnerChannelId } from "@/lib/partner/selection";
 import { buttonClassName } from "@/components/ui/Button";
 
 const LINKS = [
@@ -13,23 +14,35 @@ const LINKS = [
   { href: "/grants", label: "Grants" },
 ];
 
-export function PartnerFrame({ children }: { children: ReactNode }) {
+export function PartnerFrame({
+  children,
+  switcher,
+}: {
+  children: ReactNode;
+  switcher?: ReactNode;
+}) {
   return (
     <AppShell
       nav={
-        <nav aria-label="Partner" className="flex gap-4 text-sm">
-          {LINKS.map((link) => (
-            <Link key={link.href} href={link.href}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex flex-wrap items-center gap-4">
+          <nav aria-label="Partner" className="flex gap-4 text-sm">
+            {LINKS.map((link) => (
+              <Link key={link.href} href={link.href}>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          {switcher}
+        </div>
       }
       rightSlot={
         <button
           type="button"
           className={buttonClassName({ variant: "ghost", size: "sm" })}
-          onClick={() => logout()}
+          onClick={() => {
+            clearStoredPartnerChannelId();
+            logout();
+          }}
         >
           Log out
         </button>
