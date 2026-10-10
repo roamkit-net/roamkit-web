@@ -33,7 +33,16 @@ export function teamNextPath(raw: string | null | undefined): string {
 }
 
 /** Per-request CSP. Next stamps its inline bootstrap scripts with the nonce. */
-export function teamContentSecurityPolicy(nonce: string): string {
+export function teamContentSecurityPolicy(
+  nonce: string,
+  options?: { development?: boolean },
+): string {
+  const scriptSrc = options?.development
+    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' 'strict-dynamic'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+  const connectSrc = options?.development
+    ? "connect-src 'self' https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000 http://localhost:8001 http://127.0.0.1:8001"
+    : "connect-src 'self' https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000";
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -41,7 +50,7 @@ export function teamContentSecurityPolicy(nonce: string): string {
     "frame-ancestors 'none'",
     "img-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    "connect-src 'self' https://api.staging.roamkit.net https://api.roamkit.net http://localhost:8000 http://127.0.0.1:8000",
+    scriptSrc,
+    connectSrc,
   ].join("; ");
 }

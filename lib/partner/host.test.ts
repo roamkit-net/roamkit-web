@@ -16,6 +16,15 @@ describe("partner host", () => {
     const policy = teamContentSecurityPolicy("abc123");
     assert.match(policy, /script-src 'self' 'nonce-abc123' 'strict-dynamic'/);
     assert.doesNotMatch(policy, /script-src[^;]*unsafe-inline/);
+    assert.doesNotMatch(policy, /unsafe-eval/);
+    assert.doesNotMatch(policy, /localhost:8001/);
+  });
+
+  it("allows React Refresh eval and the local API only in development", () => {
+    const policy = teamContentSecurityPolicy("abc123", { development: true });
+    assert.match(policy, /script-src 'self' 'nonce-abc123' 'unsafe-eval' 'strict-dynamic'/);
+    assert.match(policy, /http:\/\/localhost:8001/);
+    assert.match(policy, /http:\/\/127\.0\.0\.1:8001/);
   });
 
   it("serves the logo and other public files on the team host", () => {
