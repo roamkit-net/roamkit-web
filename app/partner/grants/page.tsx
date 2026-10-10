@@ -51,6 +51,10 @@ export default function PartnerGrantsPage() {
         return;
       }
       if (isPartnerAccessDenied(err)) {
+        if (context.effective_role === "member") {
+          setError(partnerErrorMessage("partner_access_denied"));
+          return;
+        }
         await reportAccessDenied();
         return;
       }

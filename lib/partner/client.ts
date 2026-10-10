@@ -8,7 +8,7 @@ import {
 import { teamNextPath } from "./host";
 import type { PartnerContextItem } from "./selection";
 
-export type PartnerRole = "owner" | "admin" | "viewer" | "";
+export type PartnerRole = "owner" | "admin" | "member" | "viewer" | "";
 
 export type PartnerSummary = {
   total_earned: string;
@@ -26,8 +26,12 @@ export type PartnerCustomer = {
   email: string;
   display_name: string;
   attributed_at: string;
-  total_partner_earned: string;
-  accrual_count: number;
+  /** Omitted when the role cannot see balance. Null when the Account is missing. */
+  credit_balance?: string | null;
+  /** Omitted for member and viewer. */
+  total_partner_earned?: string;
+  /** Omitted for viewer. */
+  accrual_count?: number;
 };
 
 export type PartnerCustomersPage = {
@@ -69,7 +73,7 @@ type PartnerResult<T> = { data: T; role: PartnerRole };
 
 function roleOf(response: Response): PartnerRole {
   const value = response.headers.get("X-Partner-Role");
-  if (value === "owner" || value === "admin" || value === "viewer") {
+  if (value === "owner" || value === "admin" || value === "member" || value === "viewer") {
     return value;
   }
   return "";
@@ -148,8 +152,35 @@ export function fetchSummary(channelId: string) {
   return partnerFetch<PartnerSummary>(partnerSummaryPath(channelId));
 }
 
+export type PartnerCustomerPlan = {
+  location_title: string;
+  package_title: string;
+  data_allowance: string;
+  validity_days: number | null;
+  status: string;
+  usage_remaining_mb: number | null;
+  usage_total_mb: number | null;
+  usage_is_unlimited: boolean | null;
+  usage_expired_at: string | null;
+  usage_synced_at: string | null;
+  created_at: string;
+};
+
+export type PartnerCustomerPlans = {
+  active: PartnerCustomerPlan[];
+  expired: PartnerCustomerPlan[];
+};
+
+export function partnerCustomerPlansPath(channelId: string, customerId: number): string {
+  return channelPath(channelId, `customers/${customerId}/plans/`);
+}
+
 export function fetchCustomers(channelId: string, params: URLSearchParams) {
   return partnerFetch<PartnerCustomersPage>(partnerCustomersPath(channelId, params));
+}
+
+export function fetchCustomerPlans(channelId: string, customerId: number) {
+  return partnerFetch<PartnerCustomerPlans>(partnerCustomerPlansPath(channelId, customerId));
 }
 
 export function fetchGrants(channelId: string, params: URLSearchParams) {
