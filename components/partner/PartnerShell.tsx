@@ -18,6 +18,7 @@ import { loginHref } from "@/lib/navigation/safePath";
 import {
   choosePartnerContext,
   clearStoredPartnerChannelId,
+  partnerChooseNotice,
   partnerContextLabel,
   readStoredPartnerChannelId,
   recoverPartnerContext,
@@ -54,9 +55,9 @@ export function PartnerContextPicker({
 }) {
   return (
     <label className="grid gap-1 text-sm">
-      Partner channel
+      Organization
       <select
-        aria-label="Partner channel"
+        aria-label="Organization"
         className="rounded-lg border border-slate-300 px-3 py-2"
         value={value}
         onChange={(event) => onSelect(event.target.value)}
@@ -77,23 +78,28 @@ export function PartnerShell({ children }: { children: ReactNode }) {
   const [contexts, setContexts] = useState<PartnerContextItem[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const apply = useCallback((next: PartnerSelection, items: PartnerContextItem[]) => {
-    setContexts(items);
-    setSelection(next);
-    if (next.status === "ready") {
-      writeStoredPartnerChannelId(next.context.channel_id);
-      setNotice(
-        next.announced
-          ? `This channel is no longer available. The remaining channel is ${next.context.label}.`
-          : null,
-      );
-      return;
-    }
-    clearStoredPartnerChannelId();
-    if (next.status === "choose") {
-      setNotice("Choose a partner channel. The previous channel is no longer available.");
-    }
-  }, []);
+  const apply = useCallback(
+    (
+      next: PartnerSelection,
+      items: PartnerContextItem[],
+      storedChannelId: string | null,
+    ) => {
+      setContexts(items);
+      setSelection(next);
+      if (next.status === "ready") {
+        writeStoredPartnerChannelId(next.context.channel_id);
+        setNotice(
+          next.announced
+            ? `This organization is no longer available. The remaining organization is ${next.context.label}.`
+            : null,
+        );
+        return;
+      }
+      clearStoredPartnerChannelId();
+      setNotice(next.status === "choose" ? partnerChooseNotice(storedChannelId) : null);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -107,7 +113,8 @@ export function PartnerShell({ children }: { children: ReactNode }) {
           return;
         }
         const items = result.data.contexts;
-        apply(choosePartnerContext(items, readStoredPartnerChannelId()), items);
+        const stored = readStoredPartnerChannelId();
+        apply(choosePartnerContext(items, stored), items, stored);
       })
       .catch((error: unknown) => {
         if (cancelled) {
@@ -145,7 +152,7 @@ export function PartnerShell({ children }: { children: ReactNode }) {
     try {
       const result = await fetchPartnerContexts();
       const items = result.data.contexts;
-      apply(recoverPartnerContext(items, denied ?? ""), items);
+      apply(recoverPartnerContext(items, denied ?? ""), items, denied);
     } catch {
       setSelection({ status: "unavailable" });
     }
@@ -181,11 +188,14 @@ export function PartnerShell({ children }: { children: ReactNode }) {
   if (selection.status === "choose" || portal === null) {
     return (
       <PartnerFrame>
-        <PartnerContextPicker
-          contexts={contexts}
-          value=""
-          onSelect={selectChannel}
-        />
+        <h1 className="text-lg font-semibold">Which organization are you opening?</h1>
+        <div className="mt-4 max-w-md">
+          <PartnerContextPicker
+            contexts={contexts}
+            value=""
+            onSelect={selectChannel}
+          />
+        </div>
         {notice ? <p className="mt-3 text-sm text-slate-600">{notice}</p> : null}
       </PartnerFrame>
     );
@@ -193,14 +203,17 @@ export function PartnerShell({ children }: { children: ReactNode }) {
 
   return (
     <PortalContext.Provider value={portal}>
-      <PartnerFrame>
-        {contexts.length > 1 ? (
-          <PartnerContextPicker
-            contexts={contexts}
-            value={portal.context.channel_id}
-            onSelect={selectChannel}
-          />
-        ) : null}
+      <PartnerFrame
+        switcher={
+          contexts.length > 1 ? (
+            <PartnerContextPicker
+              contexts={contexts}
+              value={portal.context.channel_id}
+              onSelect={selectChannel}
+            />
+          ) : null
+        }
+      >
         {notice ? <p className="mt-3 text-sm text-slate-600">{notice}</p> : null}
         {portal.context.is_active ? null : (
           <p className="mt-3 text-sm text-amber-800">

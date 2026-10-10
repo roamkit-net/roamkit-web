@@ -12,6 +12,7 @@ import {
 } from "@/lib/partner/client";
 import {
   choosePartnerContext,
+  partnerChooseNotice,
   partnerContextLabel,
   recoverPartnerContext,
   rowsForChannel,
@@ -63,6 +64,11 @@ describe("partner context selection", () => {
     assert.deepEqual(choosePartnerContext([team, other], "missing"), {
       status: "choose",
     });
+    assert.equal(partnerChooseNotice(null), null);
+    assert.equal(
+      partnerChooseNotice("missing"),
+      "That organization is no longer available. Choose another.",
+    );
   });
 
   it("keeps an inactive context selectable", () => {
@@ -143,6 +149,7 @@ describe("partner context labels", () => {
         onSelect: () => undefined,
       }),
     );
+    assert.match(html, /aria-label="Organization"/);
     assert.match(html, /Ante Vrcan — Individual · owner/);
     assert.match(html, /Acme Travel — Team · admin · paused/);
     assert.equal(html.includes("account"), false);
