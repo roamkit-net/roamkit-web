@@ -16,6 +16,7 @@ import {
   PurchaseConfirmDialog,
   validityLabelFromDays,
 } from "@/components/orders/PurchaseConfirmDialog";
+import { LocationSeoContent } from "@/components/seo/LocationSeoContent";
 import { useBuyPackage } from "@/components/orders/useBuyPackage";
 import { PackageRow } from "@/components/PackageRow";
 import { Card, CardSection } from "@/components/ui/Card";
@@ -491,6 +492,8 @@ export function LocationDetail({
           </div>
         )}
       </section>
+
+      <LocationSeoContent location={location} packages={initialPackages} />
 
       {broader.length > 0 ? (
         <section className="mt-14">

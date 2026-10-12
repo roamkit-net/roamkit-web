@@ -42,7 +42,7 @@ export async function generateMetadata({
 
   const result = await loadLocationPage(slug);
   if (result.status === "FOUND") {
-    return locationMetadata(result.data.location);
+    return locationMetadata(result.data.location, result.data.packages);
   }
   if (result.status === "UPSTREAM_ERROR") {
     return { title: "Destination — RoamKit.net", ...noIndexMetadata };
