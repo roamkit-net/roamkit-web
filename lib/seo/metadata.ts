@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import type { Location } from "@/lib/api";
+import type { Location, Package } from "@/lib/api";
 import { locationEsimPath, routes } from "@/lib/routes";
 
 import { isSeoIndexingEnabled } from "./indexing";
@@ -58,19 +58,54 @@ function coveragePhrase(coverageType: Location["coverage_type"]): string {
   return "Worldwide coverage";
 }
 
-export function locationSeoDescription(location: Location): string {
+export function locationSeoDescription(
+  location: Location,
+  packages: Pick<Package, "price_usd" | "validity_days">[] = [],
+): string {
   const coverage = coveragePhrase(location.coverage_type);
-  if (location.min_price_usd) {
-    return `${location.title} eSIM data plans on RoamKit.net. ${coverage}. From $${location.min_price_usd}.`;
+  if (packages.length === 0) {
+    if (location.min_price_usd) {
+      return `${location.title} eSIM data plans on RoamKit.net. ${coverage}. From $${location.min_price_usd}.`;
+    }
+    return `${location.title} eSIM data plans on RoamKit.net. ${coverage}.`;
   }
-  return `${location.title} eSIM data plans on RoamKit.net. ${coverage}.`;
+
+  const prices = packages
+    .map((pkg) => Number.parseFloat(pkg.price_usd))
+    .filter((price) => Number.isFinite(price) && price >= 0);
+  const validities = [
+    ...new Set(
+      packages
+        .map((pkg) => pkg.validity_days)
+        .filter((days) => Number.isFinite(days) && days > 0),
+    ),
+  ].sort((a, b) => a - b);
+  const planLabel = packages.length === 1 ? "plan" : "plans";
+  const price =
+    prices.length > 0 ? ` from $${Math.min(...prices).toFixed(2)}` : "";
+  const validity =
+    validities.length === 1
+      ? ` valid for ${validities[0]} days`
+      : validities.length > 1
+        ? ` with ${validities[0]}–${validities[validities.length - 1]} day options`
+        : "";
+  const coverageCount = new Set(location.covered_country_codes ?? []).size;
+  const scope =
+    location.coverage_type === "local" || coverageCount === 0
+      ? coverage
+      : `${coverage} across ${coverageCount} countries and areas`;
+
+  return `Compare ${packages.length} prepaid ${location.title} eSIM data ${planLabel}${price}${validity}. ${scope} on RoamKit.net.`;
 }
 
-export function locationMetadata(location: Location): Metadata {
+export function locationMetadata(
+  location: Location,
+  packages: Pick<Package, "price_usd" | "validity_days">[] = [],
+): Metadata {
   const path = locationEsimPath(location.slug);
   const url = canonicalUrl(path);
   const title = `${location.title} eSIMs — RoamKit.net`;
-  const description = locationSeoDescription(location);
+  const description = locationSeoDescription(location, packages);
   return {
     title,
     description,
@@ -81,6 +116,11 @@ export function locationMetadata(location: Location): Metadata {
       url,
       siteName: "RoamKit.net",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }
